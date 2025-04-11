@@ -123,13 +123,13 @@ class RBMBase(nn.Module):
         self._initialize_parameter(self.visible_bias, self.visible_bias_init)
         self._initialize_parameter(self.hidden_bias, self.hidden_bias_init)
 
-    def visible_activation(self, pre_activation: torch.Tensor) -> torch.Tensor:
+    def visible_activation(self, pre_v: torch.Tensor) -> torch.Tensor:
         """
         Apply the visible activation function to the given pre-activation tensor.
 
         Parameters
         ----------
-        pre_activation : torch.Tensor
+        pre_v : torch.Tensor
             The pre-activation values for visible units.
 
         Returns
@@ -137,16 +137,16 @@ class RBMBase(nn.Module):
         torch.Tensor
             The activated visible units.
         """
-        # shape: pre_activation (batch_size, num_visible) -> return (batch_size, num_visible)
-        return self.visible_activation_fn(pre_activation)
+        # shape: pre_v (N, num_visible, ...) -> return (N, num_visible, ...)
+        return self.visible_activation_fn(pre_v)
 
-    def hidden_activation(self, pre_activation: torch.Tensor) -> torch.Tensor:
+    def hidden_activation(self, pre_h: torch.Tensor) -> torch.Tensor:
         """
         Apply the hidden activation function to the given pre-activation tensor.
 
         Parameters
         ----------
-        pre_activation : torch.Tensor
+        pre_h : torch.Tensor
             The pre-activation values for hidden units.
 
         Returns
@@ -154,8 +154,8 @@ class RBMBase(nn.Module):
         torch.Tensor
             The activated hidden units.
         """
-        # shape: pre_activation (batch_size, num_hidden) -> return (batch_size, num_hidden)
-        return self.hidden_activation_fn(pre_activation)
+        # shape: pre_h (N, num_hidden, ...) -> return (N, num_hidden, ...)
+        return self.hidden_activation_fn(pre_h)
 
     @torch.no_grad()
     def init_visible_bias_from_means(self, means: torch.Tensor) -> None:
@@ -183,7 +183,7 @@ class RBMBase(nn.Module):
         Parameters
         ----------
         x : torch.Tensor
-            Input tensor of shape (batch_size, num_visible).
+            Input tensor of shape (N, num_visible, ...).
 
         Raises
         ------
@@ -191,7 +191,7 @@ class RBMBase(nn.Module):
             Always raised, since an RBM typically does not use a forward pass
             in the conventional sense.
         """
-        # shape: x (batch_size, num_visible) -> NotImplementedError
+        # shape: x (N, num_visible, ...) -> NotImplementedError
         raise NotImplementedError(
             "Energy-based model; no typical forward pass."
         )
