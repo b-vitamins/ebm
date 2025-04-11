@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "ebm"
+version = "0.1.0"
+description = "Energy based models in PyTorch"
+authors = ["Ayan Das <bvits@riseup.net>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.5.1"
+torchvision = "0.20.1a0"
+numpy = "1.24.4"
+matplotlib = "3.8.2"
+imageio = "2.36.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+hypothesis = "^6.54.5"
+ruff = "0.9.3"
+mypy = "1.13.0"
+pydocstyle = "6.3.0"
+
+[tool.ruff]
+line-length = 80
+select = ["E", "F", "I", "UP", "B", "N", "D"]
+ignore = ["E203", "E501"]
+target-version = "py310"
+exclude = [".venv", "build", "dist"]
+
+[tool.ruff.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.per-file-ignores]
+"tests/*.py" = ["D", "ANN"]
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_configs = true
+warn_return_any = true
+strict_optional = true
+
+[tool.pydocstyle]
+convention = "numpy"
+match-dir = "(?!tests).*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
