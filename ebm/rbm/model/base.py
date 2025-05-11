@@ -194,7 +194,7 @@ class RBMConfig:
     device: torch.device | str | None = None
 
 
-class RBMBase(nn.Module, ABC):
+class BaseRBM(nn.Module, ABC):
     """Abstract interface of an RBM variant.
 
     This class defines the interface that all RBM variants must implement.

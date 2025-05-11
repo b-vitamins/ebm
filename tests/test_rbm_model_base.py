@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from ebm.rbm.model.base import (
-    RBMBase,
+    BaseRBM,
     RBMConfig,
     init_bias_tensor,
     init_weight_tensor,
@@ -173,7 +173,7 @@ class TestRBMConfig:
 
 
 # Create a simple concrete RBM implementation for testing
-class SimpleBinaryRBM(RBMBase):
+class SimpleBinaryRBM(BaseRBM):
     """A minimal implementation of binary RBM for testing."""
 
     def __init__(self, config: RBMConfig) -> None:
