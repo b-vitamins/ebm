@@ -24,6 +24,7 @@ import torch.nn as nn
 # Type aliases for initialization parameters
 WeightInit = torch.Tensor | float | None
 BiasInit = torch.Tensor | float | None
+OffsetInit = torch.Tensor | float | None
 
 
 def init_weight_tensor(
@@ -131,6 +132,52 @@ def init_bias_tensor(
     value = 0.0 if init is None else float(init)
     nn.init.constant_(bias, value)
     return bias
+
+
+def init_offset_tensor(
+    init: OffsetInit,
+    size: int,
+    *,
+    device: torch.device | str | None = None,
+    dtype: torch.dtype | None = None,
+) -> torch.Tensor:
+    """Initialize an offset tensor based on the initialization strategy.
+
+    Parameters
+    ----------
+    init : OffsetInit
+        Initialization strategy, which can be:
+        - A tensor to use directly (must match *size*)
+        - A float for constant initialization
+        - None to initialize every element to **0.5**
+    size : int
+        Length of the offset vector
+    device : torch.device or str or None, optional
+        Device on which to allocate the tensor, by default None
+    dtype : torch.dtype or None, optional
+        Data type of the tensor, by default None
+
+    Returns
+    -------
+    torch.Tensor
+        The initialized offset tensor with shape ``(size,)``
+
+    Raises
+    ------
+    ValueError
+        If a tensor is provided with an incorrect shape
+    """
+    # Direct tensor provided
+    if isinstance(init, torch.Tensor):
+        if init.shape != (size,):
+            raise ValueError(f"Offset tensor shape mismatch: expected ({size},), got {init.shape}")
+        return init.to(device=device, dtype=dtype)
+
+    # Create tensor and fill with constant
+    offsets = torch.empty(size, device=device, dtype=dtype)
+    value = 0.5 if init is None else float(init)
+    nn.init.constant_(offsets, value)
+    return offsets
 
 
 @dataclass(slots=True, frozen=True)

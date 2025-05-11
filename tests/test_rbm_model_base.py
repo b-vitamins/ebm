@@ -8,6 +8,7 @@ from ebm.rbm.model.base import (
     BaseRBM,
     RBMConfig,
     init_bias_tensor,
+    init_offset_tensor,
     init_weight_tensor,
 )
 
@@ -117,6 +118,53 @@ class TestInitBiasTensor:
 
         assert bias.device == device
         assert bias.dtype == dtype
+
+
+class TestInitOffsetTensor:
+    """Tests for offset tensor initialization function."""
+
+    def test_init_with_none(self) -> None:
+        """Default (None) should fill with 0.5."""
+        size = 5
+        offsets = init_offset_tensor(None, size)
+
+        assert offsets.shape == (size,)
+        assert torch.all(offsets.eq(torch.full((size,), 0.5)))
+
+    def test_init_with_float(self) -> None:
+        """Constant-value initialisation via float."""
+        size = 7
+        constant = 1.25
+        offsets = init_offset_tensor(constant, size)
+
+        assert offsets.shape == (size,)
+        assert torch.all(offsets.eq(torch.full((size,), constant)))
+
+    def test_init_with_tensor(self) -> None:
+        """Use an explicitly provided tensor verbatim."""
+        size = 6
+        input_tensor = torch.randn(size)
+        offsets = init_offset_tensor(input_tensor, size)
+
+        assert offsets.shape == (size,)
+        assert torch.all(offsets.eq(input_tensor))
+
+    def test_init_with_incorrect_tensor_shape(self) -> None:
+        """Shape mismatch should raise ValueError."""
+        size = 4
+        wrong_tensor = torch.randn(size + 2)  # incorrect length
+        with pytest.raises(ValueError, match="Offset tensor shape mismatch"):
+            init_offset_tensor(wrong_tensor, size)
+
+    def test_init_with_device_and_dtype(self) -> None:
+        """Respect explicit device and dtype kwargs."""
+        size = 3
+        device = torch.device("cpu")
+        dtype = torch.float64
+        offsets = init_offset_tensor(None, size, device=device, dtype=dtype)
+
+        assert offsets.device == device
+        assert offsets.dtype == dtype
 
 
 class TestRBMConfig:
