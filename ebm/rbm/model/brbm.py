@@ -77,6 +77,7 @@ class BernoulliRBM(BaseRBM):
     w: torch.nn.Parameter
     vb: torch.nn.Parameter
     hb: torch.nn.Parameter
+    base_rate_vb: torch.Tensor
 
     def __init__(self, cfg: BernoulliRBMConfig, *, init_now: bool = True) -> None:
         """Initialize the Bernoulli RBM model.
@@ -296,7 +297,7 @@ class BernoulliRBM(BaseRBM):
         else:
             # With temperature scaling
             β = shape_beta(beta, visible_term)
-            scaled_visible_term = visible_term * β
+            scaled_visible_term = visible_term if β is None else visible_term * β  # satisfy mypy
 
             # Apply beta to pre-activation directly
             s = self.preact_h(v, beta=beta)
