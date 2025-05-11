@@ -49,8 +49,8 @@ class TestBernoulliRBM:
         assert mnist_sized_rbm.hb.shape == (500,)
 
         # Check initial parameter distributions
-        # Weights should be normally distributed with std close to 0.01
-        assert 0.009 <= mnist_sized_rbm.w.std().item() <= 0.011
+        # Weights should be normally distributed with std close to 1/(500 * 784)**0.25 (~0.04)
+        assert 0.038 <= mnist_sized_rbm.w.std().item() <= 0.04
         assert abs(mnist_sized_rbm.w.mean().item()) < 0.001
 
         # Biases should be initialized to zero
@@ -68,7 +68,7 @@ class TestBernoulliRBM:
         mnist_sized_rbm.reset_parameters()
 
         # Verify they are reset properly
-        assert 0.009 <= mnist_sized_rbm.w.std().item() <= 0.011
+        assert 0.038 <= mnist_sized_rbm.w.std().item() <= 0.04
         assert abs(mnist_sized_rbm.w.mean().item()) < 0.001
         assert torch.allclose(mnist_sized_rbm.vb, torch.zeros_like(mnist_sized_rbm.vb))
         assert torch.allclose(mnist_sized_rbm.hb, torch.zeros_like(mnist_sized_rbm.hb))

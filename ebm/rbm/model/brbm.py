@@ -16,7 +16,7 @@ import torch.nn.functional as F  # noqa: N812
 
 from ebm.rbm.utils import shape_beta
 
-from .base import BaseRBM, RBMConfig
+from .base import BaseRBM, RBMConfig, init_bias_tensor, init_weight_tensor
 
 
 @dataclass(slots=True, frozen=True)
@@ -102,15 +102,35 @@ class BernoulliRBM(BaseRBM):
         if init_now:
             self.reset_parameters()
 
+    @torch.no_grad()
     def reset_parameters(self) -> None:
-        """Reset model parameters with default initialization.
-
-        For weights: normal distribution with std=0.01
-        For biases: initialized to zeros
-        """
-        torch.nn.init.normal_(self.w, std=0.01)
-        torch.nn.init.zeros_(self.vb)
-        torch.nn.init.zeros_(self.hb)
+        """Reset model parameters with default initialization."""
+        self.w.copy_(
+            init_weight_tensor(
+                getattr(self.cfg, "w_init", None),
+                self.cfg.visible,
+                self.cfg.hidden,
+                device=self.cfg.device,
+                dtype=self.cfg.dtype,
+            )
+        )
+        self.vb.copy_(
+            init_bias_tensor(
+                getattr(self.cfg, "vb_init", None),
+                self.cfg.visible,
+                device=self.cfg.device,
+                dtype=self.cfg.dtype,
+            )
+        )
+        self.base_rate_vb.copy_(self.vb)
+        self.hb.copy_(
+            init_bias_tensor(
+                getattr(self.cfg, "hb_init", None),
+                self.cfg.hidden,
+                device=self.cfg.device,
+                dtype=self.cfg.dtype,
+            )
+        )
 
     def preact_h(self, v: torch.Tensor, *, beta: torch.Tensor | None = None) -> torch.Tensor:
         """Calculate pre-activation values for hidden units.
