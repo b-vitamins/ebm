@@ -294,11 +294,14 @@ class CenteredBernoulliRBM(BernoulliRBM):
         β = shape_beta(beta, visible_term)
 
         # 4a.  scale the two linear terms
-        visible_term = visible_term * β  # β (−v_c·vb)
-        offset_term = (s * β * self.h_off).sum(dim=-1)  # β Σ s·h_off
+        visible_term = visible_term if β is None else visible_term * β  # β (−v_c·vb)
+        offset_term = (
+            (s * self.h_off).sum(dim=-1) if β is None else (s * β * self.h_off).sum(dim=-1)
+        )  # β Σ s·h_off
 
         # 4b.  hidden softplus gets β inside its argument
-        hidden_term = -F.softplus(s * β).sum(dim=-1)  # −Σ log(1+e^{βs})
+        scaled_s = s if β is None else s * β
+        hidden_term = -F.softplus(scaled_s).sum(dim=-1)  # −Σ log(1+e^{βs})
 
         return visible_term + offset_term + hidden_term
 
