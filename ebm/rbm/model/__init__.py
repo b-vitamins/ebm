@@ -6,13 +6,16 @@ including the base classes and specific variants.
 
 from .base import BaseRBM, BiasInit, OffsetInit, RBMConfig, WeightInit
 from .brbm import BernoulliRBM, BernoulliRBMConfig
+from .cbrbm import CenteredBernoulliRBM, CenteredBernoulliRBMConfig
 
 __all__ = [
-    "WeightInit",
+    "BaseRBM",
     "BiasInit",
     "OffsetInit",
-    "BaseRBM",
     "RBMConfig",
-    "BernoulliRBMConfig",
+    "WeightInit",
     "BernoulliRBM",
+    "BernoulliRBMConfig",
+    "CenteredBernoulliRBM",
+    "CenteredBernoulliRBMConfig",
 ]
