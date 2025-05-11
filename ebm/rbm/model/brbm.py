@@ -78,7 +78,7 @@ class BernoulliRBM(BaseRBM):
     vb: torch.nn.Parameter
     hb: torch.nn.Parameter
 
-    def __init__(self, cfg: BernoulliRBMConfig) -> None:
+    def __init__(self, cfg: BernoulliRBMConfig, *, init_now: bool = True) -> None:
         """Initialize the Bernoulli RBM model.
 
         Parameters
@@ -98,7 +98,8 @@ class BernoulliRBM(BaseRBM):
         self.register_buffer(
             "base_rate_vb", torch.zeros(cfg.visible, dtype=cfg.dtype, device=cfg.device)
         )
-        self.reset_parameters()
+        if init_now:
+            self.reset_parameters()
 
     def reset_parameters(self) -> None:
         """Reset model parameters with default initialization.
