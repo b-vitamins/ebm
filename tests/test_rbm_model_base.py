@@ -17,6 +17,7 @@ class TestInitWeightTensor:
 
     def test_init_with_none(self) -> None:
         """Test default initialization (None)."""
+        torch.manual_seed(0)
         visible_size, hidden_size = 10, 5
         weights = init_weight_tensor(None, visible_size, hidden_size)
 
