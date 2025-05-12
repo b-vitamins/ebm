@@ -10,4 +10,5 @@
        "python-pytest"
        "python-pytest-cov"
        "python-pytorch-cuda"
-       "python-torchvision-cuda"))
+       "python-torchvision-cuda"
+       "python-numpy"))
