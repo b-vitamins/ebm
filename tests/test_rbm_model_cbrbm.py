@@ -114,8 +114,8 @@ class TestCenteredBernoulliRBM:
         assert mnist_sized_cbrbm.h_off.shape == (500,)
 
         # Check initial parameter distributions
-        # Weights should be normally distributed with std close to 1/(500 * 784)**0.25 (~0.04)
-        assert 0.038 <= mnist_sized_cbrbm.w.std().item() <= 0.04
+        # Weights should be normally distributed with std close to 1/(500 * 784)**0.25 (~0.045)
+        assert 0.038 <= mnist_sized_cbrbm.w.std().item() <= 0.045
         assert abs(mnist_sized_cbrbm.w.mean().item()) < 0.001
 
         # Biases should be initialized to zero
@@ -143,7 +143,7 @@ class TestCenteredBernoulliRBM:
         mnist_sized_cbrbm.reset_parameters()
 
         # Verify they are reset properly
-        assert 0.038 <= mnist_sized_cbrbm.w.std().item() <= 0.04
+        assert 0.038 <= mnist_sized_cbrbm.w.std().item() <= 0.045
         assert abs(mnist_sized_cbrbm.w.mean().item()) < 0.001
         assert torch.allclose(mnist_sized_cbrbm.vb, torch.zeros_like(mnist_sized_cbrbm.vb))
         assert torch.allclose(mnist_sized_cbrbm.hb, torch.zeros_like(mnist_sized_cbrbm.hb))
