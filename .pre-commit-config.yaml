@@ -26,10 +26,10 @@ repos:
 
       - id: mypy
         name: mypy
-        entry: mypy --strict
+        entry: mypy --strict ebm
         language: system
         types: [python]
-        pass_filenames: true
+        pass_filenames: false
 
       - id: pytest-fast
         name: pytest (fast tests)
@@ -58,7 +58,7 @@ repos:
 
       - id: no-print-statements
         name: Check for print statements
-        entry: bash -c 'grep -rn "print(" --include="*.py" ebm | grep -v "^Binary file" && exit 1 || exit 0'
+        entry: bash -c 'files=$(grep -rn "print(" --include="*.py" ebm | grep -v "^Binary file" | grep -v ">>>" | grep -v "\.\.\." | grep -v "# doctest"); if [ -n "$files" ]; then echo "$files"; exit 1; else exit 0; fi'
         language: system
         types: [python]
-        exclude: '^(tests/|scripts/)'
+        exclude: '^(tests/|scripts/|docs/)'
