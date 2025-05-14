@@ -1,3 +1,4 @@
+# tests/test_rbm_sampler_base.py
 """Comprehensive battle tests for the base RBM sampler module.
 
 This test suite thoroughly exercises all aspects of the base module to ensure
@@ -23,6 +24,7 @@ from ebm.rbm.sampler.base import (
     SamplingStepBundle,
     TensorType,
     _HookEntry,
+    _unpack_impl,
     _WrappedHookSig,
 )
 
@@ -130,6 +132,34 @@ class TestSampleRBM:
         sample = SampleRBM(tensor)
         assert sample.requires_grad == tensor.requires_grad
 
+    def test_metadata_properties(self) -> None:
+        """Test convenient metadata properties."""
+        tensor = torch.randn(3, 4)
+        initial = torch.randn(3, 4)
+        hidden = torch.randn(3, 5)
+        intermediate = [torch.randn(3, 4) for _ in range(3)]
+
+        # Full metadata
+        sample = SampleRBM(
+            tensor, initial_state=initial, final_hidden=hidden, intermediate_states=intermediate
+        )
+
+        assert sample.has_initial_state
+        assert sample.has_hidden
+        assert sample.has_chain
+
+        # Partial metadata
+        sample2 = SampleRBM(tensor, initial_state=initial)
+        assert sample2.has_initial_state
+        assert not sample2.has_hidden
+        assert not sample2.has_chain
+
+        # No metadata
+        sample3 = SampleRBM(tensor)
+        assert not sample3.has_initial_state
+        assert not sample3.has_hidden
+        assert not sample3.has_chain
+
     def test_attribute_error_handling(self) -> None:
         """Test clear error messages for non-existent attributes."""
         sample = SampleRBM(torch.randn(3, 4))
@@ -177,6 +207,41 @@ class TestSampleRBM:
             numpy_array = np.array(sample)
             assert numpy_array.shape == (3, 4)
             assert isinstance(numpy_array, np.ndarray)
+
+    def test_singledispatch_unpacking(self) -> None:
+        """Test singledispatch-based unpacking."""
+        t1 = torch.randn(2, 3)
+        t2 = torch.randn(2, 3)
+        s1 = SampleRBM(t1)
+        s2 = SampleRBM(t2)
+
+        # Test direct unpacking
+        assert torch.equal(_unpack_impl(s1), t1)
+
+        # Test various types
+        assert _unpack_impl(5) == 5
+        assert _unpack_impl("hello") == "hello"
+        assert torch.equal(_unpack_impl(t1), t1)
+
+        # Test collections
+        unpacked_list = _unpack_impl([s1, s2, t1])
+        assert torch.equal(unpacked_list[0], t1)
+        assert torch.equal(unpacked_list[1], t2)
+        assert torch.equal(unpacked_list[2], t1)
+
+        unpacked_dict = _unpack_impl({"a": s1, "b": t2})
+        assert torch.equal(unpacked_dict["a"], t1)
+        assert torch.equal(unpacked_dict["b"], t2)
+
+        unpacked_tuple = _unpack_impl((s1, s2))
+        assert torch.equal(unpacked_tuple[0], t1)
+        assert torch.equal(unpacked_tuple[1], t2)
+
+        # Note: Sets require hashable elements, and SampleRBM is not hashable
+        # So we test with regular tensors in sets
+        t3 = 3.14
+        unpacked_set = _unpack_impl({t3})
+        assert next(iter(unpacked_set)) == t3
 
     def test_nested_structure_unpacking(self) -> None:
         """Test comprehensive nested structure unpacking."""
@@ -380,6 +445,28 @@ class TestBaseSamplerRBM:
         # Based on mock implementation
         assert len(result.intermediate_states) == 3
 
+    def test_metadata_properties_in_sampling(self, sampler: ConcreteSampler) -> None:
+        """Test convenient metadata properties in sampling results."""
+        v0 = torch.randn(2, 4)
+
+        # Test with full metadata
+        result1 = sampler.sample(v0, return_hidden=True, track_chains=True)
+        assert result1.has_initial_state
+        assert result1.has_hidden
+        assert result1.has_chain
+
+        # Test with partial metadata
+        result2 = sampler.sample(v0, return_hidden=True)
+        assert result2.has_initial_state
+        assert result2.has_hidden
+        assert not result2.has_chain
+
+        # Test with no metadata
+        result3 = sampler.sample(v0)
+        assert not result3.has_initial_state
+        assert not result3.has_hidden
+        assert not result3.has_chain
+
     def test_hook_registration_and_dispatch(self, sampler: ConcreteSampler) -> None:
         """Test hook registration with both styles."""
         call_log: list[tuple[str, int, torch.Size, torch.Size, Any]] = []
@@ -414,6 +501,67 @@ class TestBaseSamplerRBM:
         # Check step numbers
         for i, (_style, step, _, _, _) in enumerate(unbundled_calls):
             assert step == i
+
+    def test_temporary_hook_context_manager(self, sampler: ConcreteSampler) -> None:
+        """Test the temporary_hook context manager."""
+        call_log: list[tuple[int, torch.Size]] = []
+
+        def monitoring_hook(
+            sampler: BaseSamplerRBM,
+            step: int,
+            v: TensorType,
+            h: TensorType,
+            beta: TensorType | None,
+        ) -> None:
+            call_log.append((step, v.shape))
+
+        v0 = torch.randn(2, 4)
+
+        # Test unbundled style (default)
+        with sampler.temporary_hook(monitoring_hook):
+            assert len(sampler._sampling_hooks) == 1
+            sampler.sample(v0)
+            assert len(call_log) == 3  # 3 steps
+
+        # Hook should be automatically removed
+        assert len(sampler._sampling_hooks) == 0
+
+        # Test bundled style
+        call_log.clear()
+
+        def bundled_monitoring_hook(sampler: BaseSamplerRBM, bundle: SamplingStepBundle) -> None:
+            step, v, h, beta = bundle
+            call_log.append((step, v.shape))
+
+        with sampler.temporary_hook(bundled_monitoring_hook, style="bundled"):
+            assert len(sampler._sampling_hooks) == 1
+            sampler.sample(v0)
+            assert len(call_log) == 3
+
+        assert len(sampler._sampling_hooks) == 0
+
+        # Test exception handling
+        call_log.clear()
+
+        class TestExceptionError(Exception):
+            pass
+
+        def failing_hook(
+            sampler: BaseSamplerRBM,
+            step: int,
+            v: TensorType,
+            h: TensorType,
+            beta: TensorType | None,
+        ) -> None:
+            if step == 1:
+                raise TestExceptionError("Test error")
+
+        with pytest.raises(TestExceptionError):
+            with sampler.temporary_hook(failing_hook):
+                sampler.sample(v0)
+
+        # Hook should still be removed even with exception
+        assert len(sampler._sampling_hooks) == 0
 
     def test_hook_removal_during_iteration(self, sampler: ConcreteSampler) -> None:
         """Test self-removal during hook iteration."""
@@ -638,6 +786,8 @@ class TestIntegration:
         # Verify results
         assert isinstance(result, SampleRBM)
         assert result.shape == (32, 10)
+        assert result.has_hidden
+        assert result.has_chain
         if result.final_hidden is not None:
             assert result.final_hidden.shape == (32, 8)
         if result.intermediate_states is not None:
@@ -650,6 +800,42 @@ class TestIntegration:
 
         # Clean up
         handle.remove()
+
+    def test_complete_workflow_with_temporary_hook(self) -> None:
+        """Test complete workflow using temporary hook context manager."""
+        model = MockRBMModel(visible_size=10, hidden_size=8)
+        sampler = ConcreteSampler(model)
+
+        metrics: dict[str, list[int | float]] = {
+            "steps": [],
+            "v_norms": [],
+        }
+
+        def monitoring_hook(
+            sampler: BaseSamplerRBM,
+            step: int,
+            v: TensorType,
+            h: TensorType,
+            beta: TensorType | None,
+        ) -> None:
+            metrics["steps"].append(step)
+            metrics["v_norms"].append(torch.norm(v).item())
+
+        v0 = torch.randn(16, 10)
+
+        # Use temporary hook
+        with sampler.temporary_hook(monitoring_hook):
+            result = sampler.sample(v0, return_hidden=True)
+
+        # Hook should be automatically removed
+        assert len(sampler._sampling_hooks) == 0
+
+        # Check results
+        assert isinstance(result, SampleRBM)
+        assert result.shape == (16, 10)
+        assert result.has_hidden
+        assert metrics["steps"] == [0, 1, 2]
+        assert len(metrics["v_norms"]) == 3
 
     def test_cuda_compatibility(self) -> None:
         """Test CUDA compatibility if available."""
