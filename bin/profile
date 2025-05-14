@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Profile code performance
+
+if [[ $# -lt 1 ]]; then
+  echo "Usage: profile <script.py> [args...]"
+  exit 1
+fi
+
+python -m cProfile -o profile.stats "$@"
+python -c "
+import pstats
+stats = pstats.Stats('profile.stats')
+stats.sort_stats('cumulative')
+stats.print_stats(20)
+"

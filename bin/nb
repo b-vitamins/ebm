@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Launch Jupyter with project settings
+
+export JUPYTER_PATH=$PWD:$JUPYTER_PATH
+jupyter ${1:-lab} --no-browser --port=${2:-8888}

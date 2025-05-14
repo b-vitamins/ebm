@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import pytest
 import torch
 
 from ebm.rbm.model.base import BaseRBM, RBMConfig
@@ -65,6 +66,7 @@ class BetaTests:
     temperature parameters for parallel tempering.
     """
 
+    @pytest.mark.fast
     def test_beta_scalar_propagation(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -97,6 +99,7 @@ class BetaTests:
         for recorded_beta in model.betas:
             assert recorded_beta is beta_scalar, "Beta not propagated correctly"
 
+    @pytest.mark.fast
     def test_beta_vector_propagation(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -127,6 +130,7 @@ class BetaTests:
         # This should not raise (validation happens inside model)
         _ = sampler.sample(v0, beta=beta_vector)
 
+    @pytest.mark.fast
     def test_beta_shape_broadcasting(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -172,6 +176,7 @@ class BetaTests:
             result = sampler.sample(v0, beta=beta)
             assert result.shape == v0_shape, f"Shape mismatch for {desc}"
 
+    @pytest.mark.fast
     def test_beta_result_shapes(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -213,6 +218,8 @@ class StatisticalTests:
     mathematical properties that any correct sampler must satisfy.
     """
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_markov_property(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -285,6 +292,8 @@ class StatisticalTests:
         max_diff = float((m_a.mean(0) - m_b.mean(0)).abs().max())
         assert max_diff < 0.08, f"Markov property violated: max Δ⟨v⟩ = {max_diff:.3f} (gate 0.08)"
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_stationarity(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -362,6 +371,8 @@ class StatisticalTests:
 
         assert tv < 0.05, f"Stationarity violated: TV = {tv:.3f}"
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_ergodicity(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -430,6 +441,8 @@ class StatisticalTests:
 
         assert tv < 0.08, f"Ergodicity failed: TV = {tv:.3f} ≥ 0.08"
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_mixing_time(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -520,6 +533,8 @@ class StatisticalTests:
 
         assert tau_mix < 80, f"Slow mixing: τ_mix = {tau_mix:.1f} (> 80 sweeps)"
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_detailed_balance(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -616,6 +631,8 @@ class StatisticalTests:
             f"Detailed balance violated: median relative error {median_err:.3f}"
         )
 
+    @pytest.mark.slow
+    @pytest.mark.statistical
     def test_state_space_irreducibility(
         self,
         sampler_class: type[BaseSamplerRBM],

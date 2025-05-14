@@ -11,4 +11,5 @@
        "python-pytest-cov"
        "python-pytorch-cuda"
        "python-torchvision-cuda"
-       "python-numpy"))
+       "python-numpy@2.2.5"
+       "python-pre-commit"))

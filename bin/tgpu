@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Run GPU tests only if GPU available
+
+if nvidia-smi &>/dev/null; then
+  pytest -m gpu "$@"
+else
+  echo "No GPU detected, skipping GPU tests"
+  exit 0
+fi

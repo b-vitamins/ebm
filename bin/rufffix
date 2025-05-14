@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo "🔧 Auto-fixing code style issues..."
+ruff check --fix .
+echo "✨ Done!"

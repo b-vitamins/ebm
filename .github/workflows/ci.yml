@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ master ]
+    branches: [ main, master ]
 
 jobs:
-  lint-test:
+  quick-check:
     runs-on: ubuntu-22.04
 
     steps:
@@ -22,8 +22,25 @@ jobs:
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: poetry-${{ runner.os }}-py3.11-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-py3.11-
+            poetry-${{ runner.os }}-
+
       - name: Install dependencies
         run: poetry install --with dev
+
+      - name: Run pre-commit
+        run: poetry run pre-commit run --all-files
 
       - name: Lint with Ruff
         run: poetry run ruff check .
@@ -31,9 +48,52 @@ jobs:
       - name: Type check with mypy
         run: poetry run mypy --strict ebm
 
-      - name: Test with pytest
-        run: poetry run pytest --cov=ebm
+      - name: Run fast tests
+        run: poetry run pytest -m "not slow and not statistical" --cov=ebm
+
+  full-test:
+    runs-on: ubuntu-22.04
+    needs: quick-check
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: poetry-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-py${{ matrix.python-version }}-
+            poetry-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Run all tests (including slow)
+        run: poetry run pytest --cov=ebm --cov-report=xml
+        timeout-minutes: 30
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v3
-        if: success()
+        if: success() && matrix.python-version == '3.11'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: true

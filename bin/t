@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+pytest -m "not slow and not statistical" "$@"

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Smarter test runner that detects what changed
+
+if [[ $# -eq 0 ]]; then
+  # No args - run tests based on git changes
+  changed_files=$(git diff --name-only HEAD~ -- '*.py' 2>/dev/null)
+  if [[ -n "$changed_files" ]]; then
+    echo "Running tests for changed files..."
+    pytest -xvs $(echo "$changed_files" | grep -E "(ebm|tests)/" | sed 's/ebm\//tests\/test_/g')
+  else
+    echo "No changes detected, running fast tests..."
+    t
+  fi
+else
+  # Args provided - pass through
+  pytest "$@"
+fi

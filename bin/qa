@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+echo "🔍 Running ruff..."
+ruff check .
+echo "🔍 Running mypy..."
+mypy --strict ebm
+echo "🔍 Running fast tests..."
+pytest -m "not slow and not statistical"
+echo "✅ All checks passed!"

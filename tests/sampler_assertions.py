@@ -39,6 +39,7 @@ class ShapeTests:
     produce outputs with the expected shapes.
     """
 
+    @pytest.mark.fast
     def test_output_shape(self, sampler: BaseSamplerRBM, sample_input: torch.Tensor) -> None:
         """Test that output shapes match input batch size.
 
@@ -80,6 +81,7 @@ class DeviceAutogradTests:
     and gradient computation.
     """
 
+    @pytest.mark.fast
     def test_device_preservation(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -110,6 +112,7 @@ class DeviceAutogradTests:
             result = sampler_on_device.sample(v0)
             assert result.device.type == device
 
+    @pytest.mark.fast
     def test_dtype_preservation(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -166,6 +169,7 @@ class HookTests:
     system works correctly.
     """
 
+    @pytest.mark.fast
     def test_hook_registration_and_removal(
         self,
         sampler: BaseSamplerRBM,
@@ -253,6 +257,7 @@ class HookTests:
         finally:
             handle.remove()
 
+    @pytest.mark.fast
     def test_hook_self_removal(
         self,
         sampler: BaseSamplerRBM,
@@ -291,6 +296,7 @@ class HookTests:
         # Hook should have been called at least once
         assert call_count >= 1
 
+    @pytest.mark.fast
     def test_hook_self_removal_during_iteration(
         self,
         sampler: BaseSamplerRBM,
@@ -337,6 +343,7 @@ class HookTests:
         # Hook B should have been called for all steps
         assert len(calls_b) >= len(calls_a)
 
+    @pytest.mark.fast
     def test_hook_thread_safety(self, sampler: BaseSamplerRBM) -> None:
         """Test concurrent hook registration (document limitations).
 
@@ -366,6 +373,7 @@ class HookTests:
         for handle in handles:
             handle.remove()
 
+    @pytest.mark.fast
     def test_hook_garbage_collected_after_removal(self, sampler: BaseSamplerRBM) -> None:
         """Test that hooks are garbage collected after removal.
 
@@ -392,6 +400,7 @@ class HookTests:
 
         assert weak_ref() is None
 
+    @pytest.mark.fast
     def test_concurrent_registration_no_crash(self, sampler: BaseSamplerRBM) -> None:
         """Test concurrent hook registration doesn't crash.
 
@@ -413,6 +422,7 @@ class HookTests:
 
         assert len(sampler._sampling_hooks) >= 1
 
+    @pytest.mark.fast
     def test_hooks_receive_detached_tensors(
         self,
         sampler: BaseSamplerRBM,
@@ -450,6 +460,7 @@ class HookTests:
         finally:
             handle.remove()
 
+    @pytest.mark.fast
     def test_global_no_grad_respected(
         self,
         sampler: BaseSamplerRBM,
@@ -486,6 +497,7 @@ class HookTests:
         finally:
             handle.remove()
 
+    @pytest.mark.fast
     def test_no_graph_growth(
         self,
         sampler: BaseSamplerRBM,
@@ -515,6 +527,7 @@ class DeterminismTests:
     with fixed random seeds.
     """
 
+    @pytest.mark.fast
     def test_fixed_seed_reproducibility(
         self,
         sampler: BaseSamplerRBM,
@@ -543,6 +556,7 @@ class DeterminismTests:
         # Results should be identical
         assert torch.allclose(result1.to_tensor(), result2.to_tensor())
 
+    @pytest.mark.fast
     def test_different_seeds_give_different_results(
         self,
         sampler: BaseSamplerRBM,
@@ -576,6 +590,7 @@ class StressTests:
     edge cases gracefully.
     """
 
+    @pytest.mark.fast
     def test_large_batch(self, sampler: BaseSamplerRBM, visible_size: int) -> None:
         """Test handling of large batches.
 
@@ -599,6 +614,7 @@ class StressTests:
             else:
                 raise
 
+    @pytest.mark.fast
     def test_memory_stability(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -653,6 +669,7 @@ class StateTests:
     their state.
     """
 
+    @pytest.mark.fast
     def test_state_dict_roundtrip(
         self,
         sampler: BaseSamplerRBM,
@@ -798,6 +815,7 @@ class MetadataTests:
     metadata like initial states and chains.
     """
 
+    @pytest.mark.fast
     def test_fast_path_no_metadata(
         self,
         sampler: BaseSamplerRBM,
@@ -819,6 +837,7 @@ class MetadataTests:
         assert result.final_hidden is None
         assert result.intermediate_states is None
 
+    @pytest.mark.fast
     def test_metadata_fields_present(
         self,
         sampler: BaseSamplerRBM,
@@ -844,6 +863,7 @@ class MetadataTests:
         if hasattr(result, "final_hidden") and result.final_hidden is not None:
             assert result.final_hidden.shape[0] == sample_input.shape[0]
 
+    @pytest.mark.fast
     def test_metadata_absent_when_not_requested(
         self,
         sampler: BaseSamplerRBM,
@@ -872,6 +892,7 @@ class SerializationTests:
     and deserialized.
     """
 
+    @pytest.mark.fast
     def test_config_roundtrip(
         self,
         sampler: BaseSamplerRBM,
@@ -905,6 +926,7 @@ class PropertyBasedTests:
     """
 
     @given(data=sampler_model_config())  # type: ignore[misc]
+    @pytest.mark.fast
     def test_property_based_shapes_and_dtypes(
         self,
         data: tuple[BaseSamplerRBM, torch.Tensor, int, int, int],
@@ -937,6 +959,7 @@ class PerformanceTests:
     """
 
     @pytest.mark.performance
+    @pytest.mark.fast
     def test_cpu_performance(self, sampler: BaseSamplerRBM, visible_size: int) -> None:
         """Test CPU performance meets requirements.
 
@@ -951,6 +974,7 @@ class PerformanceTests:
 
     @pytest.mark.performance
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA required")
+    @pytest.mark.fast
     def test_gpu_performance(
         self,
         sampler: BaseSamplerRBM,
@@ -981,6 +1005,7 @@ class CUDATests:
     """
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.fast
     def test_cuda_chain_stays_on_gpu(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -1007,6 +1032,7 @@ class CUDATests:
             assert result.final_hidden.device.type == "cuda"
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.fast
     def test_cuda_to_numpy_conversion(
         self,
         sampler_class: type[BaseSamplerRBM],
@@ -1031,6 +1057,7 @@ class CUDATests:
         arr = np.asarray(result)
         assert arr.shape == v0.shape
 
+    @pytest.mark.fast
     def test_numpy_array_kwargs(
         self,
         sampler: BaseSamplerRBM,

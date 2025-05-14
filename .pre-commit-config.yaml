@@ -1,5 +1,19 @@
 # .pre-commit-config.yaml
 repos:
+  # ---------- pre-commit hooks ----------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: debug-statements
+      - id: check-merge-conflict
+
   # ---------- local hooks ----------
   - repo: local
     hooks:
@@ -9,19 +23,42 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
-      
+
       - id: mypy
         name: mypy
         entry: mypy --strict
         language: system
         types: [python]
         pass_filenames: true
-      
-      - id: pytest
-        name: pytest
-        entry: pytest
+
+      - id: pytest-fast
+        name: pytest (fast tests)
+        entry: pytest -m "not slow and not statistical" --tb=short
         language: system
         pass_filenames: false
         always_run: true
         types: [python]
-        verbose: true
+        verbose: false
+        stages: [commit]
+
+      - id: pytest-full
+        name: pytest (all tests)
+        entry: pytest
+        language: system
+        pass_filenames: false
+        types: [python]
+        stages: [manual]
+
+      - id: check-test-names
+        name: Check test naming convention
+        entry: bash -c 'files=$(find tests -name "test_*.py" -type f | grep -v __pycache__ | xargs grep -L "def test_" || true); if [ -n "$files" ]; then echo "Test files without test functions:"; echo "$files"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        files: '^tests/.*\.py$'
+
+      - id: no-print-statements
+        name: Check for print statements
+        entry: bash -c 'grep -rn "print(" --include="*.py" ebm | grep -v "^Binary file" && exit 1 || exit 0'
+        language: system
+        types: [python]
+        exclude: '^(tests/|scripts/)'

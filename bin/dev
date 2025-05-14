@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Quick project status dashboard
+
+echo "🎯 EBM Project Status"
+echo "===================="
+echo
+
+# Git status
+echo "📝 Git Status:"
+git status --short
+echo
+
+# Test coverage
+if [[ -f .coverage ]]; then
+  echo "📊 Coverage:"
+  coverage report --skip-covered --show-missing | tail -5
+  echo
+fi
+
+# Recent test results
+echo "🧪 Recent Tests:"
+find . -name ".pytest_cache" -exec ls -la {}/lastfailed 2>/dev/null \;
+echo
+
+# Environment
+echo "🔧 Environment:"
+echo "  Python: $(python --version)"
+echo "  PyTorch: $(python -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'not found')"
+echo "  CUDA: $CUDA_VISIBLE_DEVICES"
+echo
