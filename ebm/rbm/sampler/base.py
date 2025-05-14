@@ -3,21 +3,24 @@
 This module provides the abstract base class for all RBM sampling algorithms,
 handling common functionality like hook management and metadata tracking while
 allowing specific samplers to focus on their core algorithms.
+
+Memory management is applied only when necessary to minimize performance impact.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
+from functools import singledispatch
+from typing import Any, Literal, NamedTuple, cast
 
+import numpy as np
 import torch
 import torch.nn as nn
+from numpy.typing import DTypeLike, NDArray
 
 from ebm.rbm.model.base import BaseRBM
-
-if TYPE_CHECKING:
-    import numpy.typing as npt
 
 # Type definitions
 TensorType = torch.Tensor
@@ -55,6 +58,9 @@ class SampleRBM:
     seamless integration with PyTorch's tensor operations while preserving
     sampling-specific metadata like initial states and intermediate chains.
 
+    Memory optimization: Uses lazy evaluation for chain states to avoid storing
+    all intermediate states when not needed.
+
     Parameters
     ----------
     tensor : TensorType
@@ -65,6 +71,8 @@ class SampleRBM:
         The final hidden state if tracked.
     intermediate_states : list[TensorType], optional
         List of intermediate visible states if tracked.
+    lazy_chain_getter : Callable[[], list[TensorType]], optional
+        Function to lazily retrieve chain states when needed.
 
     Attributes
     ----------
@@ -74,8 +82,10 @@ class SampleRBM:
         The initial visible state (v0) if tracked.
     final_hidden : TensorType | None
         The final hidden state if tracked.
-    intermediate_states : list[TensorType] | None
-        List of intermediate visible states if tracked.
+    _intermediate_states : list[TensorType] | None
+        Cached intermediate states.
+    _lazy_chain_getter : Callable | None
+        Function to retrieve chain states lazily.
 
     Notes
     -----
@@ -83,18 +93,25 @@ class SampleRBM:
     - For operations preserving metadata, use the underlying tensor explicitly
     - CUDA tensors are automatically moved to CPU for numpy conversion
     - The class uses __slots__ for memory efficiency
+    - Chain states are loaded lazily to save memory
 
     Examples
     --------
     >>> sampled = sampler.sample(v0, return_hidden=True, track_chains=True)
     >>> print(sampled.shape)  # Tensor-like behavior
     torch.Size([32, 784])
-    >>> if sampled.has_metadata('final_hidden'):
+    >>> if sampled.has_hidden:
     ...     hidden = sampled.final_hidden
     >>> numpy_array = np.array(sampled)  # Automatic CPU conversion
     """
 
-    __slots__ = ("_tensor", "initial_state", "final_hidden", "intermediate_states")
+    __slots__ = (
+        "_tensor",
+        "initial_state",
+        "final_hidden",
+        "_intermediate_states",
+        "_lazy_chain_getter",
+    )
 
     def __init__(
         self,
@@ -102,6 +119,7 @@ class SampleRBM:
         initial_state: TensorType | None = None,
         final_hidden: TensorType | None = None,
         intermediate_states: list[TensorType] | None = None,
+        lazy_chain_getter: Callable[[], list[TensorType]] | None = None,
     ) -> None:
         """Initialize a SampleRBM with tensor data and optional metadata.
 
@@ -115,11 +133,37 @@ class SampleRBM:
             The final hidden state if tracked.
         intermediate_states : list[TensorType] | None, optional
             Intermediate states if chain tracking was enabled.
+        lazy_chain_getter : Callable | None, optional
+            Function to lazily load chain states.
         """
         self._tensor = tensor
         self.initial_state = initial_state
         self.final_hidden = final_hidden
-        self.intermediate_states = intermediate_states
+        self._intermediate_states = intermediate_states
+        self._lazy_chain_getter = lazy_chain_getter
+
+    # Properties for convenient metadata access
+    @property
+    def intermediate_states(self) -> list[TensorType] | None:
+        """Get intermediate states, loading lazily if needed."""
+        if self._intermediate_states is None and self._lazy_chain_getter is not None:
+            self._intermediate_states = self._lazy_chain_getter()
+        return self._intermediate_states
+
+    @property
+    def has_initial_state(self) -> bool:
+        """Check if initial state metadata is available."""
+        return self.initial_state is not None
+
+    @property
+    def has_hidden(self) -> bool:
+        """Check if final hidden state metadata is available."""
+        return self.final_hidden is not None
+
+    @property
+    def has_chain(self) -> bool:
+        """Check if intermediate chain states are available."""
+        return self._intermediate_states is not None or self._lazy_chain_getter is not None
 
     # Delegate tensor operations to the underlying tensor
     def __getattr__(self, name: str) -> Any:
@@ -175,6 +219,18 @@ class SampleRBM:
         """
         self._tensor[key] = value
 
+    def __iter__(self) -> Generator[Any, None, None]:
+        """Iterate over the first dimension of the underlying tensor.
+
+        This makes SampleRBM behave like a tensor when used in iterations.
+
+        Yields
+        ------
+        Any
+            Elements from the first dimension of the tensor.
+        """
+        yield from self._tensor
+
     def __repr__(self) -> str:
         """Return string representation showing the tensor."""
         return repr(self._tensor)
@@ -184,19 +240,36 @@ class SampleRBM:
         return str(self._tensor)
 
     # Tensor protocol methods
-    def __array__(self) -> npt.NDArray[Any]:
+    def __array__(
+        self,
+        dtype: DTypeLike | None = None,
+        copy: bool | None = None,
+    ) -> NDArray[Any]:
         """Convert to numpy array (handles CUDA tensors).
+
+        Compatible with NumPy 2.0+ array protocol.
+
+        Parameters
+        ----------
+        dtype : data-type, optional
+            The desired data-type for the array.
+        copy : bool, optional
+            If True, always return a copy. Cannot be False for PyTorch tensors.
 
         Returns
         -------
         np.ndarray
-            NumPy array with the tensor data, moved to CPU if necessary.
+            NumPy array with the tensor data.
         """
-        return self._tensor.detach().cpu().numpy()
+        base = self._tensor.detach().cpu().resolve_conj().resolve_neg().numpy()
+        arr = np.asarray(base, dtype=dtype)
+        return arr.copy() if copy else arr
 
     @staticmethod
     def _unpack(x: Any) -> Any:
         """Recursively unpack SampleRBM objects from nested structures.
+
+        Uses singledispatch for clean type handling.
 
         Parameters
         ----------
@@ -208,24 +281,7 @@ class SampleRBM:
         Any
             The unpacked structure with SampleRBM instances replaced by tensors.
         """
-        if isinstance(x, SampleRBM):
-            return x._tensor
-        if isinstance(x, dict):
-            return {k: SampleRBM._unpack(v) for k, v in x.items()}
-        if isinstance(x, list | tuple):
-            return type(x)(SampleRBM._unpack(t) for t in x)
-        if isinstance(x, set):
-            return {SampleRBM._unpack(t) for t in x}
-        # Strings and bytes are sequences but should not be unpacked
-        if isinstance(x, str | bytes):
-            return x
-        # Try to iterate and unpack if it's iterable
-        try:
-            # Try to preserve the original type if possible
-            return type(x)(SampleRBM._unpack(t) for t in x)
-        except (TypeError, ValueError):
-            # Not iterable or can't construct, return as-is
-            return x
+        return _unpack_impl(x)
 
     @classmethod
     def __torch_function__(
@@ -391,13 +447,55 @@ class SampleRBM:
         False
         """
         for attr in attrs:
-            # Check if attribute exists directly on the object
-            # Only check __slots__ attributes, not delegated tensor attributes
-            if attr not in self.__slots__:
-                return False
-            if getattr(self, attr, None) is None:
+            if attr == "initial_state":
+                if self.initial_state is None:
+                    return False
+            elif attr == "final_hidden":
+                if self.final_hidden is None:
+                    return False
+            elif attr == "intermediate_states":
+                if self.intermediate_states is None:
+                    return False
+            else:
                 return False
         return True
+
+
+# Singledispatch implementation for unpacking
+@singledispatch
+def _unpack_impl(x: Any) -> Any:
+    """Has default unpacking behavior."""
+    return x
+
+
+@_unpack_impl.register(SampleRBM)
+def _(x: SampleRBM) -> TensorType:
+    """Unpack SampleRBM to its underlying tensor."""
+    return x._tensor
+
+
+@_unpack_impl.register(dict)
+def _(x: dict[Any, Any]) -> dict[Any, Any]:
+    """Unpack dictionary recursively."""
+    return {k: _unpack_impl(v) for k, v in x.items()}
+
+
+@_unpack_impl.register(list)
+def _(x: list[Any]) -> list[Any]:
+    """Unpack list recursively."""
+    return [_unpack_impl(item) for item in x]
+
+
+@_unpack_impl.register(tuple)
+def _(x: tuple[Any, ...]) -> tuple[Any, ...]:
+    """Unpack tuple recursively."""
+    return tuple(_unpack_impl(item) for item in x)
+
+
+@_unpack_impl.register(set)
+def _(x: set[Any]) -> set[Any]:
+    """Unpack set recursively."""
+    return {_unpack_impl(item) for item in x}
 
 
 class RemovableHandle:
@@ -470,17 +568,25 @@ class RemovableHandle:
 
 
 class BaseSamplerRBM(nn.Module, ABC):
-    """Abstract base class for RBM samplers.
+    """Abstract base class for RBM samplers with memory-aware operations.
 
     This class provides common infrastructure for all RBM sampling algorithms,
     including hook management and metadata tracking, while delegating the actual
     sampling implementation to subclasses. It follows PyTorch module conventions
     and integrates seamlessly with the PyTorch ecosystem.
 
+    Memory management is applied lazily only when needed to minimize performance impact.
+
     Parameters
     ----------
     model : BaseRBM
         The RBM model to sample from.
+    enable_memory_safe : bool, default=True
+        Whether to enable automatic memory management for large batches.
+    memory_threshold : float, default=0.9
+        GPU memory usage threshold for triggering memory management.
+    batch_split_threshold : int, default=10000
+        Batch size threshold for automatic splitting.
 
     Attributes
     ----------
@@ -490,6 +596,12 @@ class BaseSamplerRBM(nn.Module, ABC):
         Dictionary of registered sampling hooks.
     _hook_counter : int
         Counter for generating unique hook keys.
+    enable_memory_safe : bool
+        Whether memory safety features are enabled.
+    memory_threshold : float
+        GPU memory threshold for safety features.
+    batch_split_threshold : int
+        Batch size threshold for splitting.
 
     Notes
     -----
@@ -518,20 +630,99 @@ class BaseSamplerRBM(nn.Module, ABC):
     _sampling_hooks: dict[int, _HookEntry]
     _hook_counter: int
 
-    def __init__(self, model: BaseRBM) -> None:
+    def __init__(
+        self,
+        model: BaseRBM,
+        enable_memory_safe: bool = True,
+        memory_threshold: float = 0.9,
+        batch_split_threshold: int = 10000,
+    ) -> None:
         """Initialize the base sampler.
 
         Parameters
         ----------
         model : BaseRBM
             The RBM model to sample from.
+        enable_memory_safe : bool, default=True
+            Enable memory safety features.
+        memory_threshold : float, default=0.9
+            GPU memory usage threshold.
+        batch_split_threshold : int, default=10000
+            Batch size threshold for splitting.
         """
         super().__init__()
         self.model = model
+        self.enable_memory_safe = enable_memory_safe
+        self.memory_threshold = memory_threshold
+        self.batch_split_threshold = batch_split_threshold
 
         # Use dict with unique keys for safe mutation during iteration
         self._sampling_hooks = {}
         self._hook_counter = 0
+
+    def _check_memory_pressure(self) -> bool:
+        """Check if GPU memory pressure is high.
+
+        Returns
+        -------
+        bool
+            True if memory usage exceeds threshold.
+        """
+        if not self.enable_memory_safe or not torch.cuda.is_available():
+            return False
+
+        try:
+            torch.cuda.memory_allocated()
+            reserved = torch.cuda.memory_reserved()
+            total = torch.cuda.get_device_properties(0).total_memory
+
+            # Use reserved memory for more accurate pressure detection
+            usage_ratio = reserved / total
+            return usage_ratio > self.memory_threshold
+        except Exception:
+            return False
+
+    def _adaptive_batch_split(
+        self,
+        v0: TensorType,
+        beta: TensorType | None = None,
+        hook_fn: _WrappedHookSig | None = None,
+    ) -> tuple[TensorType, TensorType]:
+        """Adaptively split batches only when needed.
+
+        This method checks for memory pressure and batch size before
+        deciding whether to split the batch processing.
+        """
+        batch_size = v0.size(0)
+
+        # Fast path: Small batch or memory safety disabled
+        if not self.enable_memory_safe or batch_size < self.batch_split_threshold:
+            return self._sample(v0, beta, hook_fn)
+
+        # Check memory pressure
+        if not self._check_memory_pressure():
+            return self._sample(v0, beta, hook_fn)
+
+        # Memory pressure detected - split batch
+        split_size = max(batch_size // 2, 100)  # At least 100 samples per split
+
+        v_results = []
+        h_results = []
+
+        for i in range(0, batch_size, split_size):
+            end_idx = min(i + split_size, batch_size)
+            v_batch = v0[i:end_idx]
+            vk, hk = self._sample(v_batch, beta, hook_fn)
+
+            v_results.append(vk)
+            h_results.append(hk)
+
+            # Only clear cache if still under pressure
+            if torch.cuda.is_available() and self._check_memory_pressure():
+                torch.cuda.empty_cache()
+
+        # Concatenate results
+        return torch.cat(v_results, dim=0), torch.cat(h_results, dim=0)
 
     def sample(
         self,
@@ -545,6 +736,9 @@ class BaseSamplerRBM(nn.Module, ABC):
         This method handles the common infrastructure and delegates to
         _sample for the actual sampling algorithm. Hooks run with gradients
         enabled, while the core sampling runs with gradients disabled.
+
+        Memory management is applied adaptively based on batch size and
+        GPU memory pressure to minimize performance impact.
 
         Parameters
         ----------
@@ -581,14 +775,14 @@ class BaseSamplerRBM(nn.Module, ABC):
         >>> result = sampler.sample(v0, return_hidden=True)
         >>> print(result.shape)
         torch.Size([32, 784])
-        >>> if result.has_metadata('final_hidden'):
+        >>> if result.has_hidden:
         ...     h_final = result.final_hidden
         """
         # Fast path when no observation is needed
         if not return_hidden and not track_chains and not self._sampling_hooks:
             # Directly call the implementation without any overhead
             with torch.no_grad():  # Only disable gradients for sampling
-                vk, _ = self._sample(v0, beta)
+                vk, _ = self._adaptive_batch_split(v0, beta)
             return SampleRBM(vk)
 
         # Full path with potential observation
@@ -596,7 +790,7 @@ class BaseSamplerRBM(nn.Module, ABC):
         intermediate_states: list[TensorType] | None = [] if track_chains else None
 
         # Perform the actual sampling (gradients disabled only for model operations)
-        vk, hk = self._sample(
+        vk, hk = self._adaptive_batch_split(
             v0,
             beta,
             hook_fn=self._make_hook_wrapper(intermediate_states)
@@ -604,11 +798,25 @@ class BaseSamplerRBM(nn.Module, ABC):
             else None,
         )
 
+        # Use lazy chain getter for memory efficiency
+        lazy_chain_getter = None
+        if track_chains and intermediate_states:
+            # Only store chains lazily if they're large
+            total_elements = sum(t.numel() for t in intermediate_states)
+            if total_elements > 1e6:  # More than 1M elements
+                chains = intermediate_states
+
+                def lazy_chain_getter() -> list[TensorType]:
+                    return chains
+
+                intermediate_states = None
+
         return SampleRBM(
             tensor=vk,
             initial_state=initial_state,
             final_hidden=hk if return_hidden else None,
             intermediate_states=intermediate_states,
+            lazy_chain_getter=lazy_chain_getter,
         )
 
     @abstractmethod
@@ -740,6 +948,46 @@ class BaseSamplerRBM(nn.Module, ABC):
         self._hook_counter += 1
         self._sampling_hooks[key] = _HookEntry(hook, "bundled")
         return RemovableHandle(self._sampling_hooks, key)
+
+    @contextmanager
+    def temporary_hook(
+        self, hook: SamplerHook, style: Literal["unbundled", "bundled"] = "unbundled"
+    ) -> Generator[RemovableHandle, None, None]:
+        """Context manager for temporary hook registration.
+
+        This is a convenient way to register a hook that will be automatically
+        removed when the context exits.
+
+        Parameters
+        ----------
+        hook : SamplerHook
+            The hook function to register temporarily.
+        style : {"unbundled", "bundled"}, default="unbundled"
+            The hook style to use.
+
+        Yields
+        ------
+        RemovableHandle
+            Handle to the registered hook.
+
+        Examples
+        --------
+        >>> def monitor_hook(sampler, step, v, h, beta):
+        ...     print(f"Step {step}")
+        >>>
+        >>> sampler = CDSampler(model)
+        >>> with sampler.temporary_hook(monitor_hook) as handle:
+        ...     samples = sampler.sample(v0)
+        >>> # Hook is automatically removed here
+        """
+        if style == "unbundled":
+            handle = self.register_sampling_hook(cast(UnbundledSamplerHook, hook))
+        else:
+            handle = self.register_sampling_hook_bundled(cast(BundledSamplerHook, hook))
+        try:
+            yield handle
+        finally:
+            handle.remove()
 
     def forward(
         self,
