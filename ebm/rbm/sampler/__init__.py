@@ -17,6 +17,8 @@ from ebm.rbm.sampler.base import (
     TensorType,
     UnbundledSamplerHook,
 )
+from ebm.rbm.sampler.cd import CDSampler
+from ebm.rbm.sampler.pcd import PCDSampler
 
 __all__ = [
     # Base classes and utilities
@@ -29,4 +31,7 @@ __all__ = [
     "UnbundledSamplerHook",
     "BundledSamplerHook",
     "SamplerHook",
+    # Specific samplers
+    "CDSampler",
+    "PCDSampler",
 ]
