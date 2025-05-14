@@ -231,6 +231,10 @@ class SampleRBM:
         """
         yield from self._tensor
 
+    def __len__(self) -> int:
+        """Return the size of the leading dimension (number of chains)."""
+        return self._tensor.shape[0]
+
     def __repr__(self) -> str:
         """Return string representation showing the tensor."""
         return repr(self._tensor)
