@@ -2,9 +2,12 @@
 
 import torch
 from torch import Tensor, nn
+from torch.utils.data import DataLoader, TensorDataset
+from collections.abc import Callable
 
 from ebm.core.config import RBMConfig
 from ebm.models.rbm.base import RBMAISAdapter, RBMBase
+from ebm.models.rbm.bernoulli import BernoulliRBM
 
 
 class ConcreteRBM(RBMBase):
@@ -25,7 +28,7 @@ class ConcreteRBM(RBMBase):
 class TestRBMBase:
     """Test RBMBase class."""
 
-    def test_initialization(self, small_rbm_config) -> None:
+    def test_initialization(self, small_rbm_config: RBMConfig) -> None:
         """Test RBM initialization."""
         rbm = ConcreteRBM(small_rbm_config)
 
@@ -253,7 +256,9 @@ class TestRBMBase:
         assert torch.allclose(h, x[:, 5:])
 
     def test_init_from_data(
-        self, synthetic_binary_data, make_data_loader
+        self,
+        synthetic_binary_data: dict[str, object],
+        make_data_loader: Callable[[TensorDataset, int, bool, int], DataLoader],
     ) -> None:
         """Test initialization from data statistics."""
         config = RBMConfig(visible_units=100, hidden_units=50)
@@ -310,7 +315,7 @@ class TestRBMBase:
 class TestRBMAISAdapter:
     """Test RBM AIS adapter."""
 
-    def test_initialization(self, simple_bernoulli_rbm) -> None:
+    def test_initialization(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test AIS adapter initialization."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -323,7 +328,9 @@ class TestRBMAISAdapter:
             adapter.base_hbias, torch.zeros_like(simple_bernoulli_rbm.hbias)
         )
 
-    def test_base_log_partition(self, simple_bernoulli_rbm) -> None:
+    def test_base_log_partition(
+        self, simple_bernoulli_rbm: BernoulliRBM
+    ) -> None:
         """Test base partition function calculation."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -342,7 +349,7 @@ class TestRBMAISAdapter:
 
         assert abs(log_z_base - expected) < 1e-5
 
-    def test_base_energy(self, simple_bernoulli_rbm) -> None:
+    def test_base_energy(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test base energy computation."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -357,7 +364,9 @@ class TestRBMAISAdapter:
         expected = -(v @ adapter.base_vbias + h @ adapter.base_hbias)
         assert torch.allclose(base_energy, expected)
 
-    def test_interpolated_energy(self, simple_bernoulli_rbm) -> None:
+    def test_interpolated_energy(
+        self, simple_bernoulli_rbm: BernoulliRBM
+    ) -> None:
         """Test interpolated energy for AIS."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -395,7 +404,9 @@ class TestRBMAISAdapter:
 
         assert torch.allclose(energy_mid, expected, atol=1e-5)
 
-    def test_ais_beta_property(self, simple_bernoulli_rbm) -> None:
+    def test_ais_beta_property(
+        self, simple_bernoulli_rbm: BernoulliRBM
+    ) -> None:
         """Test AIS beta property usage."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -415,7 +426,7 @@ class TestRBMAISAdapter:
 class TestRBMEdgeCases:
     """Test edge cases for RBM."""
 
-    def test_empty_batch(self, simple_bernoulli_rbm) -> None:
+    def test_empty_batch(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test handling of empty batches."""
         v = torch.empty(0, simple_bernoulli_rbm.num_visible)
         h = torch.empty(0, simple_bernoulli_rbm.num_hidden)
@@ -426,7 +437,7 @@ class TestRBMEdgeCases:
         free_energy = simple_bernoulli_rbm.free_energy(v)
         assert free_energy.shape == (0,)
 
-    def test_single_sample(self, simple_bernoulli_rbm) -> None:
+    def test_single_sample(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test single sample handling."""
         v = torch.rand(1, simple_bernoulli_rbm.num_visible)
 
@@ -436,7 +447,7 @@ class TestRBMEdgeCases:
         free_energy = simple_bernoulli_rbm.free_energy(v)
         assert free_energy.shape == (1,)
 
-    def test_large_batch(self, simple_bernoulli_rbm) -> None:
+    def test_large_batch(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test large batch handling."""
         # Large batch size
         v = torch.rand(10000, simple_bernoulli_rbm.num_visible)

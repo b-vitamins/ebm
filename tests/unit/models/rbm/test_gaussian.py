@@ -2,6 +2,8 @@
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
+from collections.abc import Callable
 
 from ebm.core.config import GaussianRBMConfig
 from ebm.models.rbm.gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM
@@ -10,7 +12,9 @@ from ebm.models.rbm.gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM
 class TestGaussianBernoulliRBM:
     """Test Gaussian-Bernoulli RBM."""
 
-    def test_initialization(self, gaussian_rbm_config) -> None:
+    def test_initialization(
+        self, gaussian_rbm_config: GaussianRBMConfig
+    ) -> None:
         """Test Gaussian RBM initialization."""
         rbm = GaussianBernoulliRBM(gaussian_rbm_config)
 
@@ -296,7 +300,9 @@ class TestWhitenedGaussianRBM:
         assert rbm.whitening_std is None
 
     def test_fit_whitening(
-        self, synthetic_continuous_data, make_data_loader
+        self,
+        synthetic_continuous_data: dict[str, object],
+        make_data_loader: Callable[[TensorDataset, int, bool, int], DataLoader],
     ) -> None:
         """Test fitting whitening transformation."""
         config = GaussianRBMConfig(

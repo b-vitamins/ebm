@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import ebm
+from ebm.core.config import ModelConfig
+from ebm.models.base import EnergyBasedModel
 from ebm import (
     AISEstimator,
     BernoulliRBM,
@@ -38,7 +40,7 @@ from ebm import (
 )
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Train RBM on MNIST")
 
@@ -130,7 +132,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def create_model(args):
+def create_model(
+    args: argparse.Namespace,
+) -> tuple[EnergyBasedModel, ModelConfig]:
     """Create RBM model based on arguments."""
     # Model configuration
     if args.model == "gaussian":
@@ -160,7 +164,9 @@ def create_model(args):
     return model, config
 
 
-def create_sampler(args, model):
+def create_sampler(
+    args: argparse.Namespace, model: EnergyBasedModel
+) -> ebm.GradientEstimator:
     """Create gradient estimator based on arguments."""
     if args.sampler == "cd":
         sampler = ContrastiveDivergence(k=args.k)

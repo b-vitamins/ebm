@@ -20,7 +20,7 @@ from ebm.models.base import EnergyBasedModel, LatentVariableModel
 class MockRBM(LatentVariableModel):
     """Mock RBM for testing partition function estimation."""
 
-    def __init__(self, n_visible=5, n_hidden=3) -> None:
+    def __init__(self, n_visible: int = 5, n_hidden: int = 3) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = torch.nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
@@ -29,7 +29,9 @@ class MockRBM(LatentVariableModel):
         self._device = torch.device("cpu")
         self._dtype = torch.float32
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: float | None = None
+    ) -> torch.Tensor:
         """Compute free energy of visible sample."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
@@ -40,7 +42,13 @@ class MockRBM(LatentVariableModel):
         h_term = torch.nn.functional.softplus(pre_h).sum(dim=-1)
         return -v_term - h_term
 
-    def sample_hidden(self, visible, *, beta=None, return_prob=False):
+    def sample_hidden(
+        self,
+        visible: torch.Tensor,
+        *,
+        beta: float | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample hidden units given visibles."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
@@ -52,7 +60,13 @@ class MockRBM(LatentVariableModel):
             return sample_h, prob_h
         return sample_h
 
-    def sample_visible(self, hidden, *, beta=None, return_prob=False):
+    def sample_visible(
+        self,
+        hidden: torch.Tensor,
+        *,
+        beta: float | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample visible units given hiddens."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
@@ -64,7 +78,9 @@ class MockRBM(LatentVariableModel):
             return sample_v, prob_v
         return sample_v
 
-    def sample_fantasy_particles(self, num_samples, num_steps):
+    def sample_fantasy_particles(
+        self, num_samples: int, num_steps: int
+    ) -> torch.Tensor:
         """Generate fantasy particles via Gibbs sampling."""
         v = torch.rand(num_samples, self.num_visible).round()
         for _ in range(num_steps):
@@ -72,23 +88,29 @@ class MockRBM(LatentVariableModel):
             v = self.sample_visible(h)
         return v
 
-    def ais_adapter(self):
+    def ais_adapter(self) -> "RBMAISAdapter":
         """Create AIS adapter."""
         from ebm.models.rbm.base import RBMAISAdapter
 
         return RBMAISAdapter(self)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return device used by the model."""
         return self._device
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return default tensor dtype."""
         return self._dtype
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: float | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor:
         """Compute joint energy of visible and hidden units."""
         v = x[:, : self.num_visible]
         h = x[:, self.num_visible :]
