@@ -181,8 +181,8 @@ class OptimizerConfig(BaseConfig):
     """Configuration for optimizers."""
 
     name: str = Field("adam", description="Optimizer name")
-    lr: float = Field(1e-3, description="Learning rate", gt=0)
-    weight_decay: float = Field(0.0, description="Weight decay", ge=0)
+    lr: float = Field(1e-3, description="Learning rate")
+    weight_decay: float = Field(0.0, description="Weight decay")
 
     # Adam-specific
     betas: tuple[float, float] = Field((0.9, 0.999), description="Adam betas")
@@ -225,8 +225,8 @@ class TrainingConfig(BaseConfig):
     """Configuration for training loop."""
 
     # Basic training parameters
-    epochs: int = Field(100, description="Number of epochs", gt=0)
-    batch_size: int = Field(64, description="Batch size", gt=0)
+    epochs: int = Field(100, description="Number of epochs")
+    batch_size: int = Field(64, description="Batch size")
     eval_batch_size: int | None = Field(
         None, description="Evaluation batch size"
     )
@@ -331,8 +331,8 @@ class ParallelTemperingConfig(SamplerConfig):
 class RBMConfig(ModelConfig):
     """Configuration for Restricted Boltzmann Machines."""
 
-    visible_units: int = Field(..., description="Number of visible units", gt=0)
-    hidden_units: int = Field(..., description="Number of hidden units", gt=0)
+    visible_units: int = Field(..., description="Number of visible units")
+    hidden_units: int = Field(..., description="Number of hidden units")
 
     # Initialization
     weight_init: str = Field(
@@ -345,8 +345,8 @@ class RBMConfig(ModelConfig):
     centered: bool = Field(False, description="Use centered RBM variant")
 
     # Regularization
-    l2_weight: float = Field(0.0, description="L2 weight regularization", ge=0)
-    l1_weight: float = Field(0.0, description="L1 weight regularization", ge=0)
+    l2_weight: float = Field(0.0, description="L2 weight regularization")
+    l1_weight: float = Field(0.0, description="L1 weight regularization")
 
     @validator("visible_units", "hidden_units")
     def validate_units(cls, v: int) -> int:  # noqa: N805
