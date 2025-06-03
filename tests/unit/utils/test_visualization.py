@@ -32,7 +32,9 @@ class TestSetupStyle:
     @patch("ebm.utils.visualization.HAS_SEABORN", True)
     @patch("seaborn.set_style")
     @patch("seaborn.set_context")
-    def test_with_seaborn(self, mock_set_context, mock_set_style) -> None:
+    def test_with_seaborn(
+        self, mock_set_context: MagicMock, mock_set_style: MagicMock
+    ) -> None:
         """Test style setup with seaborn available."""
         setup_style("whitegrid")
 
@@ -41,7 +43,7 @@ class TestSetupStyle:
 
     @patch("ebm.utils.visualization.HAS_SEABORN", False)
     @patch("matplotlib.pyplot.style.use")
-    def test_without_seaborn(self, mock_style_use) -> None:
+    def test_without_seaborn(self, mock_style_use: MagicMock) -> None:
         """Test style setup without seaborn."""
         # Mock available styles
         with patch(
@@ -164,7 +166,10 @@ class TestVisualizeFilters:
     @patch("matplotlib.pyplot.tight_layout")
     @patch("matplotlib.pyplot.colorbar")
     def test_square_filters(
-        self, mock_colorbar, mock_tight_layout, mock_savefig
+        self,
+        mock_colorbar: MagicMock,
+        mock_tight_layout: MagicMock,
+        mock_savefig: MagicMock,
     ) -> None:
         """Test visualizing square filters."""
         # Create filter weights (25 filters of size 16)
@@ -182,7 +187,7 @@ class TestVisualizeFilters:
         plt.close(fig)
 
     @patch("matplotlib.pyplot.savefig")
-    def test_non_square_filters(self, mock_savefig) -> None:
+    def test_non_square_filters(self, mock_savefig: MagicMock) -> None:
         """Test visualizing non-square filters."""
         # 10 filters of size 30 (not square)
         weights = torch.randn(10, 30)
@@ -194,7 +199,7 @@ class TestVisualizeFilters:
 
         plt.close(fig)
 
-    def test_save_filters(self, tmp_path) -> None:
+    def test_save_filters(self, tmp_path: Path) -> None:
         """Test saving filter visualization."""
         weights = torch.randn(16, 25)
         save_path = tmp_path / "filters.png"
@@ -280,7 +285,7 @@ class TestVisualizeSamples:
 
         plt.close(fig)
 
-    def test_save_samples(self, tmp_path) -> None:
+    def test_save_samples(self, tmp_path: Path) -> None:
         """Test saving sample visualization."""
         samples = torch.randn(16, 64)
         save_path = tmp_path / "samples.png"
@@ -385,7 +390,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_save_curves(self, tmp_path) -> None:
+    def test_save_curves(self, tmp_path: Path) -> None:
         """Test saving training curves."""
         history = {"train": [{"loss": 1.0}]}
         save_path = tmp_path / "curves.png"
@@ -501,7 +506,7 @@ class TestCreateAnimation:
     """Test animation creation."""
 
     @patch("matplotlib.animation.FuncAnimation")
-    def test_basic_animation(self, mock_animation) -> None:
+    def test_basic_animation(self, mock_animation: MagicMock) -> None:
         """Test creating basic animation."""
         # Create sequence of frames
         frames = [torch.randn(32, 32) for _ in range(10)]
@@ -517,7 +522,7 @@ class TestCreateAnimation:
         plt.close("all")
 
     @patch("matplotlib.animation.FuncAnimation")
-    def test_save_animation(self, mock_animation_class) -> None:
+    def test_save_animation(self, mock_animation_class: MagicMock) -> None:
         """Test saving animation."""
         frames = [torch.randn(16, 16) for _ in range(5)]
 

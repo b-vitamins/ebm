@@ -18,14 +18,20 @@ from ebm.sampling.mcmc import (
 class MockLatentModel(LatentVariableModel):
     """Mock model for testing."""
 
-    def __init__(self, n_visible=10, n_hidden=5) -> None:
+    def __init__(self, n_visible: int = 10, n_hidden: int = 5) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
         self.vbias = nn.Parameter(torch.zeros(n_visible))
         self.hbias = nn.Parameter(torch.zeros(n_hidden))
 
-    def sample_hidden(self, visible, *, beta=None, return_prob=False):
+    def sample_hidden(
+        self,
+        visible: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample hidden layer from visible units."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
@@ -40,7 +46,13 @@ class MockLatentModel(LatentVariableModel):
             return sample_h, prob_h
         return sample_h
 
-    def sample_visible(self, hidden, *, beta=None, return_prob=False):
+    def sample_visible(
+        self,
+        hidden: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample visible layer from hidden units."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
@@ -55,7 +67,9 @@ class MockLatentModel(LatentVariableModel):
             return sample_v, prob_v
         return sample_v
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
@@ -70,7 +84,13 @@ class MockLatentModel(LatentVariableModel):
         h_term = torch.nn.functional.softplus(pre_h).sum(dim=-1)
         return -v_term - h_term
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor | dict[str, torch.Tensor]:
         """Compute energy for joint configuration."""
         v = x[..., : self.num_visible]
         h = x[..., self.num_visible :]
@@ -94,12 +114,12 @@ class MockLatentModel(LatentVariableModel):
         return energy
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return the tensor device."""
         return self.W.device
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return the tensor dtype."""
         return self.W.dtype
 
@@ -192,7 +212,7 @@ class TestParallelTempering:
             pt.chains[0, 1] = torch.ones(5) * 1.0  # Chain 0, temp 1
 
         # Mock energy calculations to force acceptance
-        def mock_free_energy(v):
+        def mock_free_energy(v: torch.Tensor) -> torch.Tensor:
             # Make energy of state 1.0 lower than state 0.0
             return torch.where(
                 v.mean() > 0.5, torch.tensor(-10.0), torch.tensor(0.0)
