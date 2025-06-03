@@ -350,14 +350,14 @@ class TestDecorators:
         # Mock clear_cache
         original_clear_cache = DeviceManager.clear_cache
 
-        def mock_clear_cache(self) -> None:
+        def mock_clear_cache(self: DeviceManager) -> None:
             clear_cache_called.append(True)
             original_clear_cache(self)
 
         with patch.object(DeviceManager, "clear_cache", mock_clear_cache):
 
             @memory_efficient
-            def dummy_function():
+            def dummy_function() -> torch.Tensor:
                 return torch.randn(100, 100)
 
             result = dummy_function()

@@ -21,7 +21,13 @@ class ConcreteEnergyModel(EnergyBasedModel):
         self.weight = nn.Parameter(torch.randn(10, 10))
         self.bias = nn.Parameter(torch.zeros(10))
 
-    def energy(self, x: Tensor, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: Tensor,
+        *,
+        beta: float | None = None,
+        return_parts: bool = False,
+    ) -> Tensor | dict[str, Tensor]:
         """Compute the model energy for a batch."""
         x.shape[0]
         # Simple quadratic energy
@@ -38,13 +44,13 @@ class ConcreteEnergyModel(EnergyBasedModel):
             }
         return energy
 
-    def free_energy(self, v: Tensor, *, beta=None):
+    def free_energy(self, v: Tensor, *, beta: float | None = None) -> Tensor:
         """Return free energy, delegating to ``energy``."""
         # For testing, just use energy
         return self.energy(v, beta=beta)
 
     @classmethod
-    def get_config_class(cls):
+    def get_config_class(cls) -> type[ModelConfig]:
         """Return the config class used for this model."""
         return ModelConfig
 
@@ -57,7 +63,13 @@ class ConcreteLatentModel(LatentVariableModel):
         self.vbias = nn.Parameter(torch.zeros(10))
         self.hbias = nn.Parameter(torch.zeros(20))
 
-    def energy(self, x: Tensor, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: Tensor,
+        *,
+        beta: float | None = None,
+        return_parts: bool = False,
+    ) -> Tensor | dict[str, Tensor]:
         """Compute energy for visible and hidden units."""
         # Split into visible and hidden
         v = x[..., :10]
@@ -81,7 +93,7 @@ class ConcreteLatentModel(LatentVariableModel):
             }
         return energy
 
-    def free_energy(self, v: Tensor, *, beta=None):
+    def free_energy(self, v: Tensor, *, beta: float | None = None) -> Tensor:
         """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
@@ -95,7 +107,13 @@ class ConcreteLatentModel(LatentVariableModel):
         ).sum(-1)
         return v_term + h_term
 
-    def sample_hidden(self, visible: Tensor, *, beta=None, return_prob=False):
+    def sample_hidden(
+        self,
+        visible: Tensor,
+        *,
+        beta: float | None = None,
+        return_prob: bool = False,
+    ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units from visibles."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
@@ -107,7 +125,13 @@ class ConcreteLatentModel(LatentVariableModel):
             return sample_h, prob_h
         return sample_h
 
-    def sample_visible(self, hidden: Tensor, *, beta=None, return_prob=False):
+    def sample_visible(
+        self,
+        hidden: Tensor,
+        *,
+        beta: float | None = None,
+        return_prob: bool = False,
+    ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units from hiddens."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
@@ -120,7 +144,7 @@ class ConcreteLatentModel(LatentVariableModel):
         return sample_v
 
     @classmethod
-    def get_config_class(cls):
+    def get_config_class(cls) -> type[ModelConfig]:
         """Return the configuration class for the model."""
         return ModelConfig
 
@@ -478,7 +502,7 @@ class TestAISInterpolator:
             def base_log_partition(self) -> float:
                 return 0.0
 
-            def base_energy(self, x):
+            def base_energy(self, x: Tensor) -> Tensor:
                 # Simple base energy (uniform distribution)
                 return torch.zeros(x.shape[0])
 
@@ -518,7 +542,13 @@ class TestEdgeCases:
             def _build_model(self) -> None:
                 pass
 
-            def energy(self, x, *, beta=None, return_parts=False) -> None:
+            def energy(
+                self,
+                x: Tensor,
+                *,
+                beta: float | None = None,
+                return_parts: bool = False,
+            ) -> None:
                 """Unimplemented energy function."""
                 pass
 

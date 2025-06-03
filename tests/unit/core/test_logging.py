@@ -56,7 +56,7 @@ class TestLogConfig:
         assert config.file == Path("logs/test.log")
 
     @patch("structlog.configure")
-    def test_setup(self, mock_configure) -> None:
+    def test_setup(self, mock_configure: MagicMock) -> None:
         """Test logger setup."""
         config = LogConfig(
             level="INFO", console=True, structured=False, metrics=True
@@ -310,31 +310,31 @@ class TestConvenienceFunctions:
     """Test module-level convenience functions."""
 
     @patch("ebm.core.logging.logger")
-    def test_debug(self, mock_logger) -> None:
+    def test_debug(self, mock_logger: MagicMock) -> None:
         """Test debug convenience function."""
         debug("Debug message", value=123)
         mock_logger.debug.assert_called_once_with("Debug message", value=123)
 
     @patch("ebm.core.logging.logger")
-    def test_info(self, mock_logger) -> None:
+    def test_info(self, mock_logger: MagicMock) -> None:
         """Test info convenience function."""
         info("Info message", status="ok")
         mock_logger.info.assert_called_once_with("Info message", status="ok")
 
     @patch("ebm.core.logging.logger")
-    def test_warning(self, mock_logger) -> None:
+    def test_warning(self, mock_logger: MagicMock) -> None:
         """Test warning convenience function."""
         warning("Warning message")
         mock_logger.warning.assert_called_once_with("Warning message")
 
     @patch("ebm.core.logging.logger")
-    def test_error(self, mock_logger) -> None:
+    def test_error(self, mock_logger: MagicMock) -> None:
         """Test error convenience function."""
         error("Error message", code=500)
         mock_logger.error.assert_called_once_with("Error message", code=500)
 
     @patch("ebm.core.logging.logger")
-    def test_metrics(self, mock_logger) -> None:
+    def test_metrics(self, mock_logger: MagicMock) -> None:
         """Test metrics convenience function."""
         metrics("Training metrics", loss=0.123, accuracy=0.95)
         mock_logger.info.assert_called_once_with(
@@ -346,7 +346,7 @@ class TestSetupLogging:
     """Test setup_logging function."""
 
     @patch("ebm.core.logging.LogConfig")
-    def test_setup_logging_defaults(self, mock_config_class) -> None:
+    def test_setup_logging_defaults(self, mock_config_class: MagicMock) -> None:
         """Test setup with default parameters."""
         mock_config = MagicMock()
         mock_config.setup.return_value = MagicMock()
@@ -365,7 +365,7 @@ class TestSetupLogging:
         mock_config.setup.assert_called_once()
 
     @patch("ebm.core.logging.LogConfig")
-    def test_setup_logging_custom(self, mock_config_class) -> None:
+    def test_setup_logging_custom(self, mock_config_class: MagicMock) -> None:
         """Test setup with custom parameters."""
         mock_config = MagicMock()
         mock_config.setup.return_value = MagicMock()
@@ -393,7 +393,7 @@ class TestSetupLogging:
 class TestIntegration:
     """Integration tests for logging system."""
 
-    def test_full_logging_flow(self, tmp_path) -> None:
+    def test_full_logging_flow(self, tmp_path: Path) -> None:
         """Test complete logging workflow."""
         log_file = tmp_path / "test.log"
 
@@ -418,7 +418,7 @@ class TestIntegration:
         assert "Warning message" in content
         assert "Error message" in content
 
-    def test_structured_logging(self, tmp_path) -> None:
+    def test_structured_logging(self, tmp_path: Path) -> None:
         """Test structured JSON logging."""
         log_file = tmp_path / "structured.log"
 

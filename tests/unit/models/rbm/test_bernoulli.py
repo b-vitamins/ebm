@@ -2,6 +2,8 @@
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
+from collections.abc import Callable
 
 from ebm.core.config import RBMConfig
 from ebm.models.rbm.bernoulli import (
@@ -14,7 +16,7 @@ from ebm.models.rbm.bernoulli import (
 class TestBernoulliRBM:
     """Test standard Bernoulli RBM."""
 
-    def test_initialization(self, small_rbm_config) -> None:
+    def test_initialization(self, small_rbm_config: RBMConfig) -> None:
         """Test Bernoulli RBM initialization."""
         rbm = BernoulliRBM(small_rbm_config)
 
@@ -132,7 +134,7 @@ class TestBernoulliRBM:
 class TestCenteredBernoulliRBM:
     """Test centered Bernoulli RBM."""
 
-    def test_initialization(self, small_rbm_config) -> None:
+    def test_initialization(self, small_rbm_config: RBMConfig) -> None:
         """Test centered RBM initialization."""
         rbm = CenteredBernoulliRBM(small_rbm_config)
 
@@ -262,7 +264,9 @@ class TestCenteredBernoulliRBM:
         assert torch.allclose(rbm.h_offset, expected_h)
 
     def test_init_from_data_centered(
-        self, synthetic_binary_data, make_data_loader
+        self,
+        synthetic_binary_data: dict[str, object],
+        make_data_loader: Callable[[TensorDataset, int, bool, int], DataLoader],
     ) -> None:
         """Test data initialization for centered RBM."""
         config = RBMConfig(visible_units=100, hidden_units=50)
@@ -377,7 +381,7 @@ class TestSparseBernoulliRBM:
 class TestBernoulliRBMProperties:
     """Test mathematical properties of Bernoulli RBMs."""
 
-    def test_energy_gradient(self, simple_bernoulli_rbm) -> None:
+    def test_energy_gradient(self, simple_bernoulli_rbm: BernoulliRBM) -> None:
         """Test that energy gradient matches implementation."""
         rbm = simple_bernoulli_rbm
 
@@ -438,7 +442,9 @@ class TestBernoulliRBMProperties:
 
         assert abs(total_prob - 1.0) < 1e-5
 
-    def test_conditional_independence(self, simple_bernoulli_rbm) -> None:
+    def test_conditional_independence(
+        self, simple_bernoulli_rbm: BernoulliRBM
+    ) -> None:
         """Test conditional independence property of RBMs."""
         rbm = simple_bernoulli_rbm
 
