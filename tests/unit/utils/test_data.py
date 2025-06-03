@@ -91,9 +91,11 @@ class TestAddNoise:
         x = torch.zeros(1000, 10)
         result = transform(x)
 
-        # Should have mean close to 0, std close to noise_level
-        assert abs(result.mean()) < 0.01
-        assert abs(result.std() - 0.1) < 0.01
+        # Noise should be added but clipping introduces bias
+        # Mean should remain small and the standard deviation should
+        # not exceed the configured noise level
+        assert abs(result.mean()) < 0.05
+        assert 0.0 < result.std() < 0.1
 
         # Test clipping
         assert result.min() >= 0.0
@@ -184,15 +186,17 @@ class TestDequantizeTransform:
         x = torch.full((1000,), 0.5)
         result = transform_small(x)
 
-        # Noise should be smaller
+        # Noise should scale with the requested magnitude
         noise = result - x
-        assert noise.std() < 1.0 / 256
+        expected_std = (0.5 / 256) / (12**0.5)
+        assert pytest.approx(noise.std().item(), rel=0.1) == expected_std
 
         # Large scale
         transform_large = DequantizeTransform(levels=256, scale=2.0)
         result = transform_large(x)
         noise = result - x
-        assert noise.std() > 1.0 / 256
+        expected_std = (2.0 / 256) / (12**0.5)
+        assert pytest.approx(noise.std().item(), rel=0.1) == expected_std
 
 
 class TestEnergyDataset:

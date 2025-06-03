@@ -38,7 +38,7 @@ class BaseConfig(BaseModel, ABC):
             Path: str,
         }
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: object) -> None:
         """Prevent mutation of frozen models by raising AttributeError."""
         if self.__config__.frozen:
             raise AttributeError(f"{self.__class__.__name__} is immutable")
@@ -357,6 +357,7 @@ class RBMConfig(ModelConfig):
 
     @validator("l2_weight", "l1_weight")
     def validate_regularization(cls, v: float) -> float:  # noqa: N805
+        """Ensure regularization weights are non-negative."""
         if v < 0:
             raise ValueError("ensure this value is greater than or equal to 0")
         return v
