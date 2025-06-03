@@ -129,7 +129,7 @@ class Initializer:
             return mapping[method]
         raise ValueError(f"Unknown initialization method: {method}")
 
-    def _resolve_init_fn(self) -> Callable[[Tensor], None]:  # noqa: C901
+    def _resolve_init_fn(self) -> Callable[[Tensor], None]:
         """Resolve initialization method to a callable."""
         # Handle direct callables
         if callable(self.method):
