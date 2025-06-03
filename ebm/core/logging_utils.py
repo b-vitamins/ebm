@@ -263,9 +263,7 @@ def log_function_call(
 
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            logger.debug(
-                f"Calling {func.__name__}", args=args, kwargs=kwargs
-            )
+            logger.debug(f"Calling {func.__name__}", args=args, kwargs=kwargs)
             start_time = time.perf_counter()
 
             try:
