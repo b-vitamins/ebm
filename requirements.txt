@@ -1,0 +1,20 @@
+# Core dependencies
+torch>=1.10.0
+numpy>=1.19.0
+matplotlib>=3.3.0
+tqdm>=4.60.0
+pydantic>=2.0.0
+structlog>=21.0.0
+torchvision>=0.11.0
+
+# Optional but recommended
+seaborn>=0.11.0
+
+# Development dependencies (install with pip install -r requirements-dev.txt)
+# pytest>=6.0
+# pytest-cov>=2.0
+# black>=22.0
+# isort>=5.0
+# flake8>=4.0
+# mypy>=0.900
+# pre-commit>=2.0
