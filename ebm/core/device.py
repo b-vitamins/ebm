@@ -206,12 +206,16 @@ class DeviceManager:
 
         if self.is_cuda:
             dtype = dtype or torch.float16
-            with torch.cuda.amp.autocast(enabled=True, dtype=dtype):
+            with torch.amp.autocast(
+                device_type="cuda", enabled=True, dtype=dtype
+            ):
                 yield
         elif self.is_cpu:
             # CPU autocast uses bfloat16 by default
             dtype = dtype or torch.bfloat16
-            with torch.cpu.amp.autocast(enabled=True, dtype=dtype):
+            with torch.amp.autocast(
+                device_type="cpu", enabled=True, dtype=dtype
+            ):
                 yield
         else:
             # No autocast for other devices yet
