@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 
 from ebm.core.config import TrainingConfig
 from ebm.core.device import DeviceManager
-from ebm.core.logging import LoggerMixin, log_context
+from ebm.core.logging_utils import LoggerMixin, log_context
 from ebm.models.base import EnergyBasedModel
 from ebm.sampling.base import GradientEstimator
 

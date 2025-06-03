@@ -26,7 +26,7 @@ class MockModel(LatentVariableModel):
         self.hbias = torch.nn.Parameter(torch.zeros(n_hidden))
 
     def free_energy(
-        self, v: torch.Tensor, *, beta: torch.Tensor | None = None
+        self, v: torch.Tensor, *, _beta: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Compute a simple quadratic free energy."""
         # Simple quadratic energy
@@ -37,18 +37,18 @@ class MockModel(LatentVariableModel):
         x: torch.Tensor,
         *,
         beta: torch.Tensor | None = None,
-        return_parts: bool = False,
+        _return_parts: bool = False,
     ) -> torch.Tensor:
         """Delegate to ``free_energy`` using visible portion."""
         return self.free_energy(x[:, : self.num_visible], beta=beta)
 
-    def reconstruct(self, v: torch.Tensor, num_steps: int = 1) -> torch.Tensor:
+    def reconstruct(self, v: torch.Tensor, _num_steps: int = 1) -> torch.Tensor:
         """Return noisy reconstruction of ``v``."""
         # Simple reconstruction with noise
         return v + torch.randn_like(v) * 0.1
 
     def sample_fantasy_particles(
-        self, num_samples: int, num_steps: int
+        self, num_samples: int, _num_steps: int
     ) -> torch.Tensor:
         """Generate random samples for evaluation."""
         return torch.randn(num_samples, self.num_visible)
@@ -63,7 +63,7 @@ class MockModel(LatentVariableModel):
         self,
         visible: torch.Tensor,
         *,
-        beta: torch.Tensor | None = None,
+        _beta: torch.Tensor | None = None,
         return_prob: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample hidden layer given visible units."""
@@ -76,7 +76,7 @@ class MockModel(LatentVariableModel):
         self,
         hidden: torch.Tensor,
         *,
-        beta: torch.Tensor | None = None,
+        _beta: torch.Tensor | None = None,
         return_prob: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample visible layer given hidden units."""

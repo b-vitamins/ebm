@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any, TypeVar
 
 from .config import BaseConfig
-from .logging import logger
+from .logging_utils import logger
 
 T = TypeVar("T")
 ConfigT = TypeVar("ConfigT", bound=BaseConfig)

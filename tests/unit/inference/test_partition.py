@@ -113,7 +113,7 @@ class MockRBM(LatentVariableModel):
         x: torch.Tensor,
         *,
         beta: float | None = None,
-        return_parts: bool = False,
+        _return_parts: bool = False,
     ) -> torch.Tensor:
         """Compute joint energy of visible and hidden units."""
         v = x[:, : self.num_visible]
@@ -251,10 +251,11 @@ class TestAISEstimator:
         )
 
         # Run estimation and check that betas are used
-        with patch.object(
-            model, "sample_hidden", wraps=model.sample_hidden
-        ) as mock_hidden, patch.object(
-            model, "sample_visible", wraps=model.sample_visible
+        with (
+            patch.object(
+                model, "sample_hidden", wraps=model.sample_hidden
+            ) as mock_hidden,
+            patch.object(model, "sample_visible", wraps=model.sample_visible),
         ):
             estimator.estimate(show_progress=False)
 
@@ -532,7 +533,7 @@ class TestRatioEstimator:
         """Test error on invalid estimation method."""
         models = [MockRBM()]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="invalid"):
             RatioEstimator(models, method="invalid")
 
 
@@ -546,7 +547,7 @@ class TestEdgeCases:
         estimator = AISEstimator(model, num_temps=10, num_chains=5)
 
         # Should handle gracefully
-        with pytest.raises(Exception):  # noqa: B017 - error type not specified
+        with pytest.raises(Exception, match="."):
             estimator.estimate(show_progress=False)
 
     def test_extreme_temperatures(self) -> None:

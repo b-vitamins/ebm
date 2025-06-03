@@ -47,7 +47,7 @@ class ContrastiveDivergence(GradientEstimator):
         self.num_chains = num_chains
 
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using contrastive divergence.
 
@@ -236,7 +236,7 @@ class FastPersistentCD(PersistentContrastiveDivergence):
         self.velocities = {}
 
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients with fast weights.
 
@@ -264,7 +264,7 @@ class FastPersistentCD(PersistentContrastiveDivergence):
                     )
 
         # Get gradients with fast weights
-        gradients = super().estimate_gradient(model, data, **kwargs)
+        gradients = super().estimate_gradient(model, data, **_kwargs)
 
         # Restore original parameters
         with torch.no_grad():

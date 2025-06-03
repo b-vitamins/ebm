@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ebm.core.logging import (
+from ebm.core.logging_utils import (
     LogConfig,
     LoggerMixin,
     MetricProcessor,
@@ -207,22 +207,26 @@ class TestContextManagers:
 
     def test_log_context(self) -> None:
         """Test log context manager."""
-        with patch("structlog.contextvars.bind_contextvars") as mock_bind:
-            with patch("structlog.contextvars.clear_contextvars") as mock_clear:
-                with log_context(epoch=1, phase="training"):
-                    mock_bind.assert_called_once_with(epoch=1, phase="training")
+        with (
+            patch("structlog.contextvars.bind_contextvars") as mock_bind,
+            patch("structlog.contextvars.clear_contextvars") as mock_clear,
+            log_context(epoch=1, phase="training"),
+        ):
+            mock_bind.assert_called_once_with(epoch=1, phase="training")
 
-                # Context should be cleared on exit
-                assert mock_clear.call_count == 2  # Once on enter, once on exit
+        # Context should be cleared on exit
+        assert mock_clear.call_count == 2  # Once on enter, once on exit
 
     def test_log_duration(self) -> None:
         """Test duration logging context manager."""
         mock_logger = MagicMock()
 
-        with patch("time.perf_counter", side_effect=[1.0, 3.5]):
-            with log_duration(mock_logger, "Operation", extra="data"):
-                # Simulate some work
-                pass
+        with (
+            patch("time.perf_counter", side_effect=[1.0, 3.5]),
+            log_duration(mock_logger, "Operation", extra="data"),
+        ):
+            # Simulate some work
+            pass
 
         mock_logger.info.assert_called_once_with(
             "Operation", duration=2.5, extra="data"
@@ -232,10 +236,15 @@ class TestContextManagers:
         """Test duration logging with exception."""
         mock_logger = MagicMock()
 
-        with patch("time.perf_counter", side_effect=[1.0, 2.0]):
-            with pytest.raises(ValueError):
-                with log_duration(mock_logger, "Failing operation"):
-                    raise ValueError("Test error")
+        with (
+            patch("time.perf_counter", side_effect=[1.0, 2.0]),
+            pytest.raises(
+                ValueError,
+                match="Test error",
+            ),
+            log_duration(mock_logger, "Failing operation"),
+        ):
+            raise ValueError("Test error")
 
         # Should still log duration
         mock_logger.info.assert_called_once_with(
@@ -281,9 +290,14 @@ class TestFunctionDecorator:
         def failing_func() -> Never:
             raise ValueError("Test error")
 
-        with patch("time.perf_counter", side_effect=[1.0, 1.5]):
-            with pytest.raises(ValueError):
-                failing_func()
+        with (
+            patch("time.perf_counter", side_effect=[1.0, 1.5]),
+            pytest.raises(
+                ValueError,
+                match="Test error",
+            ),
+        ):
+            failing_func()
 
         # Should log the error
         mock_logger.error.assert_called_once()
@@ -309,31 +323,31 @@ class TestFunctionDecorator:
 class TestConvenienceFunctions:
     """Test module-level convenience functions."""
 
-    @patch("ebm.core.logging.logger")
+    @patch("ebm.core.logging_utils.logger")
     def test_debug(self, mock_logger: MagicMock) -> None:
         """Test debug convenience function."""
         debug("Debug message", value=123)
         mock_logger.debug.assert_called_once_with("Debug message", value=123)
 
-    @patch("ebm.core.logging.logger")
+    @patch("ebm.core.logging_utils.logger")
     def test_info(self, mock_logger: MagicMock) -> None:
         """Test info convenience function."""
         info("Info message", status="ok")
         mock_logger.info.assert_called_once_with("Info message", status="ok")
 
-    @patch("ebm.core.logging.logger")
+    @patch("ebm.core.logging_utils.logger")
     def test_warning(self, mock_logger: MagicMock) -> None:
         """Test warning convenience function."""
         warning("Warning message")
         mock_logger.warning.assert_called_once_with("Warning message")
 
-    @patch("ebm.core.logging.logger")
+    @patch("ebm.core.logging_utils.logger")
     def test_error(self, mock_logger: MagicMock) -> None:
         """Test error convenience function."""
         error("Error message", code=500)
         mock_logger.error.assert_called_once_with("Error message", code=500)
 
-    @patch("ebm.core.logging.logger")
+    @patch("ebm.core.logging_utils.logger")
     def test_metrics(self, mock_logger: MagicMock) -> None:
         """Test metrics convenience function."""
         metrics("Training metrics", loss=0.123, accuracy=0.95)
@@ -345,7 +359,7 @@ class TestConvenienceFunctions:
 class TestSetupLogging:
     """Test setup_logging function."""
 
-    @patch("ebm.core.logging.LogConfig")
+    @patch("ebm.core.logging_utils.LogConfig")
     def test_setup_logging_defaults(self, mock_config_class: MagicMock) -> None:
         """Test setup with default parameters."""
         mock_config = MagicMock()
@@ -364,7 +378,7 @@ class TestSetupLogging:
         )
         mock_config.setup.assert_called_once()
 
-    @patch("ebm.core.logging.LogConfig")
+    @patch("ebm.core.logging_utils.LogConfig")
     def test_setup_logging_custom(self, mock_config_class: MagicMock) -> None:
         """Test setup with custom parameters."""
         mock_config = MagicMock()

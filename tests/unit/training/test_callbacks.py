@@ -61,7 +61,7 @@ class MockModel(EnergyBasedModel):
         return [p for _, p in self.named_parameters()]
 
     def sample_fantasy_particles(
-        self, num_samples: int, num_steps: int
+        self, num_samples: int, _num_steps: int
     ) -> torch.Tensor:
         """Generate random fantasy particles."""
         return torch.randn(num_samples, 20)
@@ -80,14 +80,14 @@ class MockModel(EnergyBasedModel):
         self,
         x: torch.Tensor,
         *,
-        beta: float | None = None,
-        return_parts: bool = False,
+        _beta: float | None = None,
+        _return_parts: bool = False,
     ) -> torch.Tensor:
         """Return zero energy for all inputs."""
         return torch.zeros(x.shape[0])
 
     def free_energy(
-        self, v: torch.Tensor, *, beta: float | None = None
+        self, v: torch.Tensor, *, _beta: float | None = None
     ) -> torch.Tensor:
         """Return zero free energy for all inputs."""
         return torch.zeros(v.shape[0])
@@ -162,7 +162,7 @@ class TestCallbackList:
         # Callback with only some methods
         class PartialCallback:
             def on_epoch_start(
-                self, trainer: MockTrainer, model: MockModel
+                self, _trainer: MockTrainer, _model: MockModel
             ) -> None:
                 self.called = True
 
@@ -329,7 +329,7 @@ class TestMetricsCallback:
         assert save_path.exists()
 
         # Load and verify
-        with open(save_path) as f:
+        with save_path.open() as f:
             data = json.load(f)
 
         assert "train" in data
@@ -592,7 +592,7 @@ class TestLearningRateSchedulerCallback:
     def test_initialization(self) -> None:
         """Test LR scheduler callback initialization."""
 
-        def schedule_fn(epoch: int, step: int) -> float:
+        def schedule_fn(epoch: int, _step: int) -> float:
             return 0.1 * (0.9**epoch)
 
         callback = LearningRateSchedulerCallback(
@@ -605,7 +605,7 @@ class TestLearningRateSchedulerCallback:
     def test_epoch_update(self) -> None:
         """Test LR update at epoch start."""
 
-        def schedule_fn(epoch: int, step: int) -> float:
+        def schedule_fn(epoch: int, _step: int) -> float:
             return 0.1 * (0.5**epoch)
 
         callback = LearningRateSchedulerCallback(
@@ -632,8 +632,8 @@ class TestLearningRateSchedulerCallback:
     def test_step_update(self) -> None:
         """Test LR update at batch start."""
 
-        def schedule_fn(epoch: int, step: int) -> float:
-            return 0.1 / (1 + 0.01 * step)
+        def schedule_fn(_epoch: int, _step: int) -> float:
+            return 0.1 / (1 + 0.01 * _step)
 
         callback = LearningRateSchedulerCallback(
             schedule_fn=schedule_fn, update_every="step"

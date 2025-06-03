@@ -165,7 +165,7 @@ def create_model(
 
 
 def create_sampler(
-    args: argparse.Namespace, model: EnergyBasedModel
+    args: argparse.Namespace, _model: EnergyBasedModel
 ) -> ebm.GradientEstimator:
     """Create gradient estimator based on arguments."""
     if args.sampler == "cd":
@@ -202,7 +202,7 @@ def main() -> None:
     # Set device
     ebm.set_device(args.device)
     device = ebm.get_device()
-    logger.info(f"Using device: {device}")
+    logger.info("Using device", device=device)
 
     # Load data
     logger.info("Loading MNIST dataset...")
@@ -229,7 +229,7 @@ def main() -> None:
     model.init_from_data(train_loader)
 
     # Create sampler
-    logger.info(f"Creating {args.sampler} sampler...")
+    logger.info("Creating sampler", sampler=args.sampler)
     gradient_estimator = create_sampler(args, model)
 
     # Training configuration
@@ -290,7 +290,7 @@ def main() -> None:
     # Save final model
     final_checkpoint = output_dir / "final_model.pt"
     model.save_checkpoint(final_checkpoint)
-    logger.info(f"Saved final model to {final_checkpoint}")
+    logger.info("Saved final model", path=final_checkpoint)
 
     # Plot training curves
     logger.info("Plotting training curves...")
@@ -306,7 +306,9 @@ def main() -> None:
     test_batch = next(iter(test_loader))[:100].to(device)
     recon_errors = evaluator.reconstruction_error(test_batch, num_steps=10)
     logger.info(
-        f"Reconstruction error: {recon_errors.mean():.4f} ± {recon_errors.std():.4f}"
+        "Reconstruction error",
+        mean=float(recon_errors.mean()),
+        std=float(recon_errors.std()),
     )
 
     # Energy gap
@@ -344,14 +346,16 @@ def main() -> None:
         ais_estimator = AISEstimator(model, num_temps=10000, num_chains=100)
         log_z, diagnostics = ais_estimator.estimate(return_diagnostics=True)
         logger.info(
-            f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}",
+            "Log partition function",
+            log_Z=float(log_z),
+            log_Z_std=float(diagnostics["log_Z_std"]),
             ESS=diagnostics["effective_sample_size"],
         )
 
         # Save diagnostics
         import json
 
-        with open(output_dir / "ais_diagnostics.json", "w") as f:
+        with (output_dir / "ais_diagnostics.json").open("w") as f:
             json.dump(
                 {
                     k: v

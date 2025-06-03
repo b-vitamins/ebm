@@ -13,8 +13,8 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
-from ebm.core.logging import LoggerMixin
-from ebm.core.types import ChainState
+from ebm.core.logging_utils import LoggerMixin
+from ebm.core.types_ import ChainState
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 
@@ -61,7 +61,7 @@ class Sampler(nn.Module, LoggerMixin, ABC):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Generate samples from the model.
 
@@ -152,7 +152,7 @@ class GibbsSampler(Sampler):
         *,
         beta: Tensor | None = None,
         return_all: bool = False,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Generate samples using Gibbs sampling.
 
@@ -278,7 +278,7 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
 
     @abstractmethod
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients for model parameters.
 

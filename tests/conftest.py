@@ -42,6 +42,7 @@ def pytest_configure(config: Config) -> None:
 
 def pytest_collection_modifyitems(config: Config, items: list) -> None:
     """Modify test collection to add markers based on test location."""
+    _ = config
     for item in items:
         # Add markers based on test file location
         if "performance" in str(item.fspath):

@@ -47,7 +47,7 @@ class MeanFieldSampler(Sampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Run mean-field approximation.
 
@@ -149,7 +149,7 @@ class TAPSampler(Sampler):
         init_state: Tensor,
         num_steps: int | None = None,
         return_magnetizations: bool = False,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor | tuple[Tensor, Tensor, Tensor]:
         """Run TAP approximation.
 
@@ -275,7 +275,7 @@ class TAPGradientEstimator(GradientEstimator):
         super().__init__(sampler)
 
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using TAP.
 
@@ -351,7 +351,7 @@ class BeliefPropagationSampler(Sampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int | None = None,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Run belief propagation.
 

@@ -158,11 +158,7 @@ def visualize_filters(
 
     # Try to make square filters
     side = int(np.sqrt(filter_size))
-    if side * side == filter_size:
-        img_shape = (side, side)
-    else:
-        # Fallback to vector visualization
-        img_shape = (1, filter_size)
+    img_shape = (side, side) if side * side == filter_size else (1, filter_size)
 
     # Reshape weights
     weight_imgs = weights.reshape(num_filters, *img_shape)

@@ -183,12 +183,14 @@ class TestVisualizeFilters:
         # Check that functions were called
         mock_tight_layout.assert_called_once()
         mock_colorbar.assert_called_once()
+        mock_savefig.assert_called_once()
 
         plt.close(fig)
 
     @patch("matplotlib.pyplot.savefig")
     def test_non_square_filters(self, mock_savefig: MagicMock) -> None:
         """Test visualizing non-square filters."""
+        _ = mock_savefig
         # 10 filters of size 30 (not square)
         weights = torch.randn(10, 30)
 
@@ -196,6 +198,7 @@ class TestVisualizeFilters:
 
         # Should fall back to vector visualization
         assert isinstance(fig, Figure)
+        mock_savefig.assert_called_once()
 
         plt.close(fig)
 

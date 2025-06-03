@@ -32,7 +32,7 @@ except ImportError:
 
 
 def add_timestamp(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
+    _logger: WrappedLogger, _method_name: str, event_dict: EventDict
 ) -> EventDict:
     """Add timestamp to log entries."""
     event_dict["timestamp"] = time.time()
@@ -40,7 +40,7 @@ def add_timestamp(
 
 
 def add_logger_name(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
+    _logger: WrappedLogger, _method_name: str, event_dict: EventDict
 ) -> EventDict:
     """Add logger name to log entries."""
     if logger_name := event_dict.get("logger_name"):
@@ -139,7 +139,7 @@ class MetricProcessor:
     """Processor that extracts and formats metrics from log events."""
 
     def __call__(
-        self, logger: WrappedLogger, method_name: str, event_dict: EventDict
+        self, _logger: WrappedLogger, _method_name: str, event_dict: EventDict
     ) -> EventDict:
         """Extract metrics from event dict."""
         metrics = {}
@@ -251,27 +251,29 @@ def log_function_call(
 
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            logger.debug(f"Calling {func.__name__}", args=args, kwargs=kwargs)
+            logger.debug("Calling %s", func.__name__, args=args, kwargs=kwargs)
             start_time = time.perf_counter()
 
             try:
                 result = func(*args, **kwargs)
+            except Exception as exc:
+                duration = time.perf_counter() - start_time
+                logger.exception(
+                    "Failed %s",
+                    func.__name__,
+                    duration=duration,
+                    error=str(exc),
+                )
+                raise
+            else:
                 duration = time.perf_counter() - start_time
                 logger.debug(
-                    f"Completed {func.__name__}",
+                    "Completed %s",
+                    func.__name__,
                     duration=duration,
                     result_type=type(result).__name__,
                 )
                 return result
-            except Exception as e:
-                duration = time.perf_counter() - start_time
-                logger.error(
-                    f"Failed {func.__name__}",
-                    duration=duration,
-                    error=str(e),
-                    exc_info=True,
-                )
-                raise
 
         return cast(Callable[P, R], wrapper)
 

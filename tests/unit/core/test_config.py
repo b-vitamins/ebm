@@ -111,7 +111,7 @@ class TestModelConfig:
         assert config.device in ["cpu", "cuda"]
 
         # Invalid device
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid device"):
             ModelConfig(device="invalid")
 
     def test_dtype_validation(self) -> None:
@@ -123,7 +123,7 @@ class TestModelConfig:
             assert config.dtype == dtype
 
         # Invalid dtype
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid dtype"):
             ModelConfig(dtype="int32")
 
     def test_torch_device_property(self) -> None:
@@ -156,17 +156,21 @@ class TestOptimizerConfig:
             config = OptimizerConfig(name=name)
             assert config.name == name
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unknown optimizer"):
             OptimizerConfig(name="invalid_optimizer")
 
     def test_parameter_validation(self) -> None:
         """Test parameter validation."""
         # Learning rate must be positive
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than 0"
+        ):
             OptimizerConfig(lr=-0.01)
 
         # Weight decay must be non-negative
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than or equal to 0"
+        ):
             OptimizerConfig(weight_decay=-0.001)
 
         # Valid parameters
@@ -190,11 +194,15 @@ class TestTrainingConfig:
     def test_validation_constraints(self) -> None:
         """Test validation of training parameters."""
         # Epochs must be positive
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than 0"
+        ):
             TrainingConfig(epochs=0)
 
         # Batch size must be positive
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than 0"
+        ):
             TrainingConfig(batch_size=-1)
 
         # Valid config
@@ -230,10 +238,14 @@ class TestRBMConfig:
         assert config.hidden_units == 500
 
         # Invalid dimensions
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than 0"
+        ):
             RBMConfig(visible_units=0, hidden_units=100)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="ensure this value is greater than 0"
+        ):
             RBMConfig(visible_units=100, hidden_units=-1)
 
     def test_init_method_validation(self) -> None:
@@ -255,7 +267,7 @@ class TestRBMConfig:
             )
             assert config.weight_init == method
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Unknown init method"):
             RBMConfig(
                 visible_units=100, hidden_units=50, weight_init="invalid_method"
             )
@@ -273,7 +285,7 @@ class TestRBMConfig:
         assert config.l1_weight == 0.0001
 
         # Must be non-negative
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="greater than or equal"):
             RBMConfig(visible_units=100, hidden_units=50, l2_weight=-0.001)
 
 
@@ -291,7 +303,7 @@ class TestGaussianRBMConfig:
         assert config.learn_sigma is True
 
         # Sigma must be positive
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="greater than 0"):
             GaussianRBMConfig(visible_units=100, hidden_units=50, sigma=-1.0)
 
     def test_inheritance(self) -> None:

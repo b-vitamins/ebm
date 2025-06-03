@@ -15,7 +15,7 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
-from ebm.core.types import InitStrategy
+from ebm.core.types_ import InitStrategy
 
 
 class InitMethod(str, Enum):

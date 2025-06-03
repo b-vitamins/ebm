@@ -33,8 +33,8 @@ class MockModel(EnergyBasedModel):
         self,
         x: torch.Tensor,
         *,
-        beta: float | None = None,
-        return_parts: bool = False,
+        _beta: float | None = None,
+        _return_parts: bool = False,
     ) -> torch.Tensor:
         """Compute a simple quadratic energy."""
         return torch.sum(x**2, dim=-1)
@@ -388,7 +388,7 @@ class TestTrainer:
         # Mock early stopping trigger
         trainer.callbacks.should_stop = False
 
-        def stop_after_3_epochs(*args: Any, **kwargs: Any) -> None:
+        def stop_after_3_epochs(*_args: Any, **_kwargs: Any) -> None:
             if trainer.current_epoch >= 2:
                 trainer.callbacks._should_stop = True
 

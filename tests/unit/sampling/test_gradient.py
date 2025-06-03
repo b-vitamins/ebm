@@ -90,8 +90,8 @@ class MockLatentModel(LatentVariableModel):
         self,
         x: torch.Tensor,
         *,
-        beta: torch.Tensor | None = None,
-        return_parts: bool = False,
+        _beta: torch.Tensor | None = None,
+        _return_parts: bool = False,
     ) -> torch.Tensor:
         """Return constant energy (not used in CD)."""
         # Not used in CD

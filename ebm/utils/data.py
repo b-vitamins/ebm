@@ -15,7 +15,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import datasets, transforms
 
-from ebm.core.logging import logger
+from ebm.core.logging_utils import logger
 from ebm.models.base import EnergyBasedModel
 
 

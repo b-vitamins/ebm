@@ -57,7 +57,7 @@ def mock_gradient_estimator() -> type[GradientEstimator]:
             self.last_negative_samples = None
 
         def estimate_gradient(
-            self, model: EnergyBasedModel, data: torch.Tensor, **kwargs: Any
+            self, model: EnergyBasedModel, data: torch.Tensor, **_kwargs: Any
         ) -> dict[str, torch.Tensor]:
             """Return mock gradients."""
             self.call_count += 1
@@ -76,9 +76,9 @@ def mock_gradient_estimator() -> type[GradientEstimator]:
 
         def compute_metrics(
             self,
-            model: EnergyBasedModel,
-            data: torch.Tensor,
-            samples: torch.Tensor,
+            _model: EnergyBasedModel,
+            _data: torch.Tensor,
+            _samples: torch.Tensor,
         ) -> dict[str, float]:
             """Return mock metrics."""
             return {
@@ -101,21 +101,21 @@ def mock_callback() -> type[Callback]:
             self.epoch_metrics = []
             self.should_stop = False
 
-        def on_train_begin(self, trainer: Trainer) -> None:
+        def on_train_begin(self, _trainer: Trainer) -> None:
             self.events.append("train_begin")
 
-        def on_train_end(self, trainer: Trainer) -> None:
+        def on_train_end(self, _trainer: Trainer) -> None:
             self.events.append("train_end")
 
         def on_epoch_start(
-            self, trainer: Trainer, model: EnergyBasedModel
+            self, trainer: Trainer, _model: EnergyBasedModel
         ) -> None:
             self.events.append(f"epoch_start_{trainer.current_epoch}")
 
         def on_epoch_end(
             self,
             trainer: Trainer,
-            model: EnergyBasedModel,
+            _model: EnergyBasedModel,
             metrics: dict[str, float],
         ) -> None:
             self.events.append(f"epoch_end_{trainer.current_epoch}")
@@ -126,12 +126,15 @@ def mock_callback() -> type[Callback]:
                 trainer.callbacks.stop_training()
 
         def on_batch_start(
-            self, trainer: Trainer, model: EnergyBasedModel, batch: torch.Tensor
+            self,
+            _trainer: Trainer,
+            _model: EnergyBasedModel,
+            _batch: torch.Tensor,
         ) -> None:
             self.events.append("batch_start")
 
         def on_batch_end(
-            self, trainer: Trainer, model: EnergyBasedModel, loss: float
+            self, _trainer: Trainer, _model: EnergyBasedModel, _loss: float
         ) -> None:
             self.events.append("batch_end")
 
@@ -151,10 +154,10 @@ def mock_sampler() -> type[Sampler]:
 
         def sample(
             self,
-            model: EnergyBasedModel,
+            _model: EnergyBasedModel,
             init_state: torch.Tensor,
-            num_steps: int = 1,
-            **kwargs: Any,
+            _num_steps: int = 1,
+            **_kwargs: Any,
         ) -> torch.Tensor:
             """Return mock samples."""
             self.sample_count += 1
@@ -239,7 +242,7 @@ def mock_scheduler() -> Callable[[Optimizer], object]:
         scheduler.optimizer = optimizer
         scheduler.step_count = 0
 
-        def step(metric: float | None = None) -> None:
+        def step(_metric: float | None = None) -> None:
             scheduler.step_count += 1
             # Simulate learning rate decay
             for group in optimizer.param_groups:
