@@ -259,7 +259,6 @@ class TAPSampler(Sampler):
         return v_sample
 
 
-@register_sampler("tap_gradient", aliases=["tap_cd"])
 class TAPGradientEstimator(GradientEstimator):
     """Gradient estimation using TAP approximation."""
 

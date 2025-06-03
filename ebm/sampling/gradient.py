@@ -11,14 +11,12 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
-from ebm.core.registry import register_sampler
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 from ebm.utils.tensor import batch_outer_product
 
 from .base import GibbsSampler, GradientEstimator
 
 
-@register_sampler("cd", aliases=["contrastive_divergence"])
 class ContrastiveDivergence(GradientEstimator):
     """Contrastive Divergence (CD-k) gradient estimator.
 
@@ -187,7 +185,6 @@ class CDSampler(GibbsSampler):
             self.persistent_chains = None
 
 
-@register_sampler("pcd", aliases=["persistent_cd"])
 class PersistentContrastiveDivergence(ContrastiveDivergence):
     """Persistent Contrastive Divergence (PCD) gradient estimator.
 
@@ -205,7 +202,6 @@ class PersistentContrastiveDivergence(ContrastiveDivergence):
         super().__init__(k=k, persistent=True, num_chains=num_chains)
 
 
-@register_sampler("fast_pcd", aliases=["fpcd"])
 class FastPersistentCD(PersistentContrastiveDivergence):
     """Fast Persistent Contrastive Divergence with momentum.
 
@@ -282,7 +278,6 @@ class FastPersistentCD(PersistentContrastiveDivergence):
         return gradients
 
 
-@register_sampler("cd_with_decay")
 class CDWithDecay(ContrastiveDivergence):
     """CD with decaying number of steps during training.
 

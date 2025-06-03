@@ -264,7 +264,6 @@ class ParallelTempering(AnnealedSampler):
         self.log_debug(f"Adapted temperatures, swap rates: {rates}")
 
 
-@register_sampler("pt_gradient", aliases=["ptcd"])
 class PTGradientEstimator(GradientEstimator):
     """Gradient estimator using Parallel Tempering."""
 

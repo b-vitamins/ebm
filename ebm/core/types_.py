@@ -7,7 +7,9 @@ than traditional ABCs.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import (
+    TYPE_CHECKING,
     Any,
     Protocol,
     TypeAlias,
@@ -18,7 +20,8 @@ from typing import (
 import torch
 from torch import Tensor
 
-from ebm.training.trainer import Trainer
+if TYPE_CHECKING:
+    from ebm.training.trainer import Trainer
 
 # Type aliases for common patterns
 TensorLike: TypeAlias = Tensor | list[float] | float
@@ -232,9 +235,9 @@ class Transform(Protocol):
 
 
 # Specialized type hints for common patterns
-EnergyFunction = TypeVar("EnergyFunction", bound=callable)
-ActivationFunction: TypeAlias = callable[[Tensor], Tensor]
-InitStrategy: TypeAlias = str | float | Tensor | callable
+EnergyFunction = TypeVar("EnergyFunction", bound=Callable[..., Any])
+ActivationFunction: TypeAlias = Callable[[Tensor], Tensor]
+InitStrategy: TypeAlias = str | float | Tensor | Callable[..., Any]
 
 
 # Constants for common initialization strategies

@@ -8,6 +8,7 @@ __version__ = "0.1.0"
 __author__ = "EBM Contributors"
 __license__ = "MIT"
 
+import builtins
 from typing import Any
 
 # Core functionality
@@ -38,6 +39,7 @@ from .models.rbm import (
     SparseBernoulliRBM,
     WhitenedGaussianRBM,
 )
+from .models.rbm.base import RBMAISAdapter
 
 # Samplers
 from .sampling.base import GradientEstimator, Sampler
@@ -74,6 +76,8 @@ from .utils.visualization import (
     visualize_filters,
     visualize_samples,
 )
+
+builtins.RBMAISAdapter = RBMAISAdapter
 
 
 # Convenience functions
