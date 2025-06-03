@@ -18,7 +18,7 @@ from ..models.base import EnergyBasedModel, LatentVariableModel
 from .base import GradientEstimator, Sampler
 
 
-@register_sampler('mean_field', aliases=['mf', 'naive_mf'])
+@register_sampler("mean_field", aliases=["mf", "naive_mf"])
 class MeanFieldSampler(Sampler):
     """Naive mean-field approximation sampler.
 
@@ -26,12 +26,7 @@ class MeanFieldSampler(Sampler):
     we iteratively update the mean activations of each layer.
     """
 
-    def __init__(
-        self,
-        num_iter: int = 10,
-        damping: float = 0.0,
-        tol: float = 1e-4
-    ):
+    def __init__(self, num_iter: int = 10, damping: float = 0.0, tol: float = 1e-4):
         """Initialize mean-field sampler.
 
         Args:
@@ -49,7 +44,7 @@ class MeanFieldSampler(Sampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Run mean-field approximation.
 
@@ -91,7 +86,7 @@ class MeanFieldSampler(Sampler):
 
             # Check convergence
             if (m_v - m_v_old).abs().max() < self.tol:
-                self.log_debug(f"Mean-field converged at iteration {i+1}")
+                self.log_debug(f"Mean-field converged at iteration {i + 1}")
                 break
 
         self.state.num_steps += i + 1
@@ -100,7 +95,7 @@ class MeanFieldSampler(Sampler):
         return (m_v > 0.5).to(m_v.dtype)
 
 
-@register_sampler('tap', aliases=['thouless_anderson_palmer'])
+@register_sampler("tap", aliases=["thouless_anderson_palmer"])
 class TAPSampler(Sampler):
     """Thouless-Anderson-Palmer mean-field approximation.
 
@@ -114,8 +109,8 @@ class TAPSampler(Sampler):
         num_iter: int = 20,
         damping: float = 0.5,
         tol: float = 1e-3,
-        order: str = 'tap2',
-        adaptive_damping: bool = True
+        order: str = "tap2",
+        adaptive_damping: bool = True,
     ):
         """Initialize TAP sampler.
 
@@ -134,15 +129,15 @@ class TAPSampler(Sampler):
         self.adaptive_damping = adaptive_damping
 
         # Cache for weight powers
-        self.register_buffer('W2', None)
-        self.register_buffer('W3', None)
+        self.register_buffer("W2", None)
+        self.register_buffer("W3", None)
 
     def _cache_weight_powers(self, model: LatentVariableModel) -> None:
         """Cache powers of weight matrix for efficiency."""
         if self.W2 is None or self.W2.shape != model.W.shape:
-            self.W2 = model.W ** 2
-            if self.order == 'tap3':
-                self.W3 = model.W ** 3
+            self.W2 = model.W**2
+            if self.order == "tap3":
+                self.W3 = model.W**3
 
     def sample(
         self,
@@ -150,8 +145,8 @@ class TAPSampler(Sampler):
         init_state: Tensor,
         num_steps: int | None = None,
         return_magnetizations: bool = False,
-        **kwargs: Any
-    ) -> Union[Tensor, tuple[Tensor, Tensor, Tensor]]:
+        **kwargs: Any,
+    ) -> Tensor | tuple[Tensor, Tensor, Tensor]:
         """Run TAP approximation.
 
         Args:
@@ -176,7 +171,7 @@ class TAPSampler(Sampler):
 
         # Adaptive damping state
         damping = self.damping
-        prev_error = float('inf')
+        prev_error = float("inf")
 
         # TAP iterations
         for i in range(num_iter):
@@ -186,22 +181,18 @@ class TAPSampler(Sampler):
             # TAP equations for visible units
             field_v = F.linear(m_h, model.W.t(), model.vbias)
 
-            if self.order != 'naive':
+            if self.order != "naive":
                 # Second-order TAP correction
-                correction_v = F.linear(
-                    m_h * (1 - m_h),
-                    self.W2.t()
-                ) * (0.5 - m_v)
+                correction_v = F.linear(m_h * (1 - m_h), self.W2.t()) * (0.5 - m_v)
                 field_v += correction_v
 
-                if self.order == 'tap3':
+                if self.order == "tap3":
                     # Third-order correction
                     h2_var = m_h * (1 - m_h)
                     v2_var = m_v * (1 - m_v)
-                    correction3_v = F.linear(
-                        h2_var * (1 - 2 * m_h),
-                        self.W3.t()
-                    ) * (1/3 - 2 * v2_var)
+                    correction3_v = F.linear(h2_var * (1 - 2 * m_h), self.W3.t()) * (
+                        1 / 3 - 2 * v2_var
+                    )
                     field_v += correction3_v
 
             m_v_new = torch.sigmoid(field_v)
@@ -209,22 +200,18 @@ class TAPSampler(Sampler):
             # TAP equations for hidden units
             field_h = F.linear(m_v, model.W, model.hbias)
 
-            if self.order != 'naive':
+            if self.order != "naive":
                 # Second-order TAP correction
-                correction_h = F.linear(
-                    m_v * (1 - m_v),
-                    self.W2
-                ) * (0.5 - m_h)
+                correction_h = F.linear(m_v * (1 - m_v), self.W2) * (0.5 - m_h)
                 field_h += correction_h
 
-                if self.order == 'tap3':
+                if self.order == "tap3":
                     # Third-order correction
                     v2_var = m_v * (1 - m_v)
                     h2_var = m_h * (1 - m_h)
-                    correction3_h = F.linear(
-                        v2_var * (1 - 2 * m_v),
-                        self.W3
-                    ) * (1/3 - 2 * h2_var)
+                    correction3_h = F.linear(v2_var * (1 - 2 * m_v), self.W3) * (
+                        1 / 3 - 2 * h2_var
+                    )
                     field_h += correction3_h
 
             m_h_new = torch.sigmoid(field_h)
@@ -235,12 +222,11 @@ class TAPSampler(Sampler):
 
             # Check convergence
             error = torch.max(
-                (m_v - m_v_old).abs().max(),
-                (m_h - m_h_old).abs().max()
+                (m_v - m_v_old).abs().max(), (m_h - m_h_old).abs().max()
             ).item()
 
             if error < self.tol:
-                self.log_debug(f"TAP converged at iteration {i+1}")
+                self.log_debug(f"TAP converged at iteration {i + 1}")
                 break
 
             # Adaptive damping
@@ -264,16 +250,11 @@ class TAPSampler(Sampler):
         return v_sample
 
 
-@register_sampler('tap_gradient', aliases=['tap_cd'])
+@register_sampler("tap_gradient", aliases=["tap_cd"])
 class TAPGradientEstimator(GradientEstimator):
     """Gradient estimation using TAP approximation."""
 
-    def __init__(
-        self,
-        num_iter: int = 20,
-        damping: float = 0.5,
-        order: str = 'tap2'
-    ):
+    def __init__(self, num_iter: int = 20, damping: float = 0.5, order: str = "tap2"):
         """Initialize TAP gradient estimator.
 
         Args:
@@ -281,18 +262,11 @@ class TAPGradientEstimator(GradientEstimator):
             damping: Damping factor
             order: TAP order
         """
-        sampler = TAPSampler(
-            num_iter=num_iter,
-            damping=damping,
-            order=order
-        )
+        sampler = TAPSampler(num_iter=num_iter, damping=damping, order=order)
         super().__init__(sampler)
 
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using TAP.
 
@@ -327,19 +301,19 @@ class TAPGradientEstimator(GradientEstimator):
         # Weight gradient
         pos_corr = batch_outer_product(m_h_data, m_v_data).mean(dim=0)
         neg_corr = batch_outer_product(m_h_model, m_v_model).mean(dim=0)
-        gradients['W'] = pos_corr - neg_corr
+        gradients["W"] = pos_corr - neg_corr
 
         # Bias gradients
-        if hasattr(model, 'vbias') and model.vbias.requires_grad:
-            gradients['vbias'] = m_v_data.mean(dim=0) - m_v_model.mean(dim=0)
+        if hasattr(model, "vbias") and model.vbias.requires_grad:
+            gradients["vbias"] = m_v_data.mean(dim=0) - m_v_model.mean(dim=0)
 
-        if hasattr(model, 'hbias') and model.hbias.requires_grad:
-            gradients['hbias'] = m_h_data.mean(dim=0) - m_h_model.mean(dim=0)
+        if hasattr(model, "hbias") and model.hbias.requires_grad:
+            gradients["hbias"] = m_h_data.mean(dim=0) - m_h_model.mean(dim=0)
 
         return gradients
 
 
-@register_sampler('belief_propagation', aliases=['bp'])
+@register_sampler("belief_propagation", aliases=["bp"])
 class BeliefPropagationSampler(Sampler):
     """Belief Propagation for tree-structured or loopy graphs.
 
@@ -347,12 +321,7 @@ class BeliefPropagationSampler(Sampler):
     matrix has special structure.
     """
 
-    def __init__(
-        self,
-        num_iter: int = 50,
-        damping: float = 0.5,
-        tol: float = 1e-4
-    ):
+    def __init__(self, num_iter: int = 50, damping: float = 0.5, tol: float = 1e-4):
         """Initialize BP sampler.
 
         Args:
@@ -370,7 +339,7 @@ class BeliefPropagationSampler(Sampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Run belief propagation.
 
@@ -396,13 +365,11 @@ class BeliefPropagationSampler(Sampler):
         # Initialize messages (log-space for stability)
         # Messages from visible to hidden
         msg_v_to_h = torch.zeros(
-            batch_size, model.num_visible, model.num_hidden,
-            device=init_state.device
+            batch_size, model.num_visible, model.num_hidden, device=init_state.device
         )
         # Messages from hidden to visible
         msg_h_to_v = torch.zeros(
-            batch_size, model.num_hidden, model.num_visible,
-            device=init_state.device
+            batch_size, model.num_hidden, model.num_visible, device=init_state.device
         )
 
         # BP iterations
@@ -429,7 +396,7 @@ class BeliefPropagationSampler(Sampler):
 
             # Check convergence
             if (msg_v_to_h - old_msg_v_to_h).abs().max() < self.tol:
-                self.log_debug(f"BP converged at iteration {i+1}")
+                self.log_debug(f"BP converged at iteration {i + 1}")
                 break
 
         # Compute marginals

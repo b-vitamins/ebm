@@ -17,7 +17,7 @@ from ..utils.tensor import log_sum_exp
 from .base import AnnealedSampler, GradientEstimator
 
 
-@register_sampler('parallel_tempering', aliases=['pt', 'replica_exchange'])
+@register_sampler("parallel_tempering", aliases=["pt", "replica_exchange"])
 class ParallelTempering(AnnealedSampler):
     """Parallel Tempering (Replica Exchange) sampler.
 
@@ -32,7 +32,7 @@ class ParallelTempering(AnnealedSampler):
         max_beta: float = 1.0,
         swap_every: int = 1,
         num_chains: int | None = None,
-        adaptive: bool = False
+        adaptive: bool = False,
     ):
         """Initialize Parallel Tempering sampler.
 
@@ -48,27 +48,24 @@ class ParallelTempering(AnnealedSampler):
             name="ParallelTempering",
             num_temps=num_temps,
             min_beta=min_beta,
-            max_beta=max_beta
+            max_beta=max_beta,
         )
         self.swap_every = swap_every
         self.num_chains = num_chains
         self.adaptive = adaptive
 
         # Initialize swap statistics
-        self.register_buffer('swap_attempts', torch.zeros(num_temps - 1))
-        self.register_buffer('swap_accepts', torch.zeros(num_temps - 1))
+        self.register_buffer("swap_attempts", torch.zeros(num_temps - 1))
+        self.register_buffer("swap_accepts", torch.zeros(num_temps - 1))
 
         # Chains: (num_chains, num_temps, *state_shape)
-        self.register_buffer('chains', None)
+        self.register_buffer("chains", None)
 
         # Track which chain is at which temperature
-        self.register_buffer('chain_temps', None)
+        self.register_buffer("chain_temps", None)
 
     def init_chains(
-        self,
-        model: LatentVariableModel,
-        batch_size: int,
-        state_shape: tuple[int, ...]
+        self, model: LatentVariableModel, batch_size: int, state_shape: tuple[int, ...]
     ) -> None:
         """Initialize chains at all temperatures.
 
@@ -83,18 +80,19 @@ class ParallelTempering(AnnealedSampler):
 
         # Initialize visible states randomly
         v_init = torch.rand(
-            num_chains, self.num_temps, *state_shape,
-            device=device, dtype=dtype
+            num_chains, self.num_temps, *state_shape, device=device, dtype=dtype
         )
 
         # For binary units, make them actually binary
-        if hasattr(model, '_sample_from_prob'):
+        if hasattr(model, "_sample_from_prob"):
             v_init = (v_init > 0.5).to(dtype)
 
         self.chains = v_init
-        self.chain_temps = torch.arange(
-            self.num_temps, device=device
-        ).unsqueeze(0).expand(num_chains, -1)
+        self.chain_temps = (
+            torch.arange(self.num_temps, device=device)
+            .unsqueeze(0)
+            .expand(num_chains, -1)
+        )
 
         # Run a few Gibbs steps at each temperature to equilibrate
         with torch.no_grad():
@@ -113,7 +111,7 @@ class ParallelTempering(AnnealedSampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Run parallel tempering sampling.
 
@@ -131,11 +129,7 @@ class ParallelTempering(AnnealedSampler):
 
         # Initialize chains if needed
         if self.chains is None:
-            self.init_chains(
-                model,
-                init_state.shape[0],
-                init_state.shape[1:]
-            )
+            self.init_chains(model, init_state.shape[0], init_state.shape[1:])
 
         # Run PT steps
         for step in range(num_steps):
@@ -150,8 +144,8 @@ class ParallelTempering(AnnealedSampler):
 
         # Return samples from target temperature (beta=1)
         # Find which chains are at target temp
-        target_idx = (self.chain_temps == self.num_temps - 1)
-        return self.chains[target_idx][:init_state.shape[0]]
+        target_idx = self.chain_temps == self.num_temps - 1
+        return self.chains[target_idx][: init_state.shape[0]]
 
     def _gibbs_step_all_temps(self, model: LatentVariableModel) -> None:
         """Run one Gibbs step at all temperatures in parallel."""
@@ -249,12 +243,12 @@ class ParallelTempering(AnnealedSampler):
 
                 # Adjust beta while maintaining order
                 if i > 0:
-                    min_beta = self.betas[i-1] * 1.01
+                    min_beta = self.betas[i - 1] * 1.01
                 else:
                     min_beta = self.min_beta
 
                 if i < self.num_temps - 2:
-                    max_beta = self.betas[i+2] * 0.99
+                    max_beta = self.betas[i + 2] * 0.99
                 else:
                     max_beta = self.max_beta
 
@@ -264,16 +258,12 @@ class ParallelTempering(AnnealedSampler):
         self.log_debug(f"Adapted temperatures, swap rates: {rates}")
 
 
-@register_sampler('pt_gradient', aliases=['ptcd'])
+@register_sampler("pt_gradient", aliases=["ptcd"])
 class PTGradientEstimator(GradientEstimator):
     """Gradient estimator using Parallel Tempering."""
 
     def __init__(
-        self,
-        num_temps: int = 10,
-        k: int = 1,
-        swap_every: int = 1,
-        **pt_kwargs: Any
+        self, num_temps: int = 10, k: int = 1, swap_every: int = 1, **pt_kwargs: Any
     ):
         """Initialize PT gradient estimator.
 
@@ -284,18 +274,13 @@ class PTGradientEstimator(GradientEstimator):
             **pt_kwargs: Additional PT arguments
         """
         sampler = ParallelTempering(
-            num_temps=num_temps,
-            swap_every=swap_every,
-            **pt_kwargs
+            num_temps=num_temps, swap_every=swap_every, **pt_kwargs
         )
         super().__init__(sampler)
         self.k = k
 
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using PT samples.
 
@@ -323,18 +308,18 @@ class PTGradientEstimator(GradientEstimator):
         gradients = {}
         pos_stats = batch_outer_product(h_data, data).mean(dim=0)
         neg_stats = batch_outer_product(h_model, v_model).mean(dim=0)
-        gradients['W'] = pos_stats - neg_stats
+        gradients["W"] = pos_stats - neg_stats
 
-        if hasattr(model, 'vbias') and model.vbias.requires_grad:
-            gradients['vbias'] = data.mean(dim=0) - v_model.mean(dim=0)
+        if hasattr(model, "vbias") and model.vbias.requires_grad:
+            gradients["vbias"] = data.mean(dim=0) - v_model.mean(dim=0)
 
-        if hasattr(model, 'hbias') and model.hbias.requires_grad:
-            gradients['hbias'] = h_data.mean(dim=0) - h_model.mean(dim=0)
+        if hasattr(model, "hbias") and model.hbias.requires_grad:
+            gradients["hbias"] = h_data.mean(dim=0) - h_model.mean(dim=0)
 
         return gradients
 
 
-@register_sampler('ais', aliases=['annealed_importance_sampling'])
+@register_sampler("ais", aliases=["annealed_importance_sampling"])
 class AnnealedImportanceSampling(AnnealedSampler):
     """Annealed Importance Sampling for partition function estimation.
 
@@ -342,12 +327,7 @@ class AnnealedImportanceSampling(AnnealedSampler):
     using a sequence of intermediate distributions.
     """
 
-    def __init__(
-        self,
-        num_temps: int = 1000,
-        num_chains: int = 100,
-        k: int = 1
-    ):
+    def __init__(self, num_temps: int = 1000, num_chains: int = 100, k: int = 1):
         """Initialize AIS.
 
         Args:
@@ -355,21 +335,13 @@ class AnnealedImportanceSampling(AnnealedSampler):
             num_chains: Number of independent AIS runs
             k: Gibbs steps at each temperature
         """
-        super().__init__(
-            name="AIS",
-            num_temps=num_temps,
-            min_beta=0.0,
-            max_beta=1.0
-        )
+        super().__init__(name="AIS", num_temps=num_temps, min_beta=0.0, max_beta=1.0)
         self.num_chains = num_chains
         self.k = k
 
     def estimate_log_partition(
-        self,
-        model: LatentVariableModel,
-        base_log_z: float,
-        return_bounds: bool = False
-    ) -> Union[float, tuple[float, float, float]]:
+        self, model: LatentVariableModel, base_log_z: float, return_bounds: bool = False
+    ) -> float | tuple[float, float, float]:
         """Estimate log partition function.
 
         Args:
@@ -384,9 +356,7 @@ class AnnealedImportanceSampling(AnnealedSampler):
 
         # Initialize at base distribution (beta=0)
         # For RBMs, this is typically independent Bernoulli units
-        h_init = torch.rand(
-            self.num_chains, model.num_hidden, device=device
-        ).round()
+        h_init = torch.rand(self.num_chains, model.num_hidden, device=device).round()
 
         # Sample initial visible units from base distribution
         v = model.sample_visible(h_init, beta=0.0)
@@ -400,7 +370,7 @@ class AnnealedImportanceSampling(AnnealedSampler):
 
             # Add contribution to importance weight
             if i > 0:
-                prev_beta = self.betas[i-1]
+                prev_beta = self.betas[i - 1]
                 log_w += (prev_beta - beta) * model.free_energy(v)
 
             # Run k Gibbs steps at current temperature
@@ -412,7 +382,9 @@ class AnnealedImportanceSampling(AnnealedSampler):
         log_w += self.betas[-1] * model.free_energy(v)
 
         # Compute estimate
-        log_z_estimate = base_log_z + log_sum_exp(log_w) - torch.log(torch.tensor(self.num_chains))
+        log_z_estimate = (
+            base_log_z + log_sum_exp(log_w) - torch.log(torch.tensor(self.num_chains))
+        )
 
         if return_bounds:
             # Compute confidence bounds using empirical variance
@@ -420,7 +392,7 @@ class AnnealedImportanceSampling(AnnealedSampler):
             weights = weights / weights.sum()
 
             # Effective sample size
-            ess = 1.0 / (weights ** 2).sum()
+            ess = 1.0 / (weights**2).sum()
 
             # Standard error
             se = torch.sqrt(weights.var() / ess)

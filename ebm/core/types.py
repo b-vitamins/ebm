@@ -12,7 +12,6 @@ from typing import (
     Protocol,
     TypeAlias,
     TypeVar,
-    Union,
     runtime_checkable,
 )
 
@@ -26,10 +25,10 @@ DType: TypeAlias = torch.dtype | None
 Shape: TypeAlias = torch.Size | tuple[int, ...] | list[int]
 
 # Type variables for generics
-T = TypeVar('T')
-ModelT = TypeVar('ModelT', bound='EnergyModel')
-SamplerT = TypeVar('SamplerT', bound='Sampler')
-ConfigT = TypeVar('ConfigT', bound='Config')
+T = TypeVar("T")
+ModelT = TypeVar("ModelT", bound="EnergyModel")
+SamplerT = TypeVar("SamplerT", bound="Sampler")
+ConfigT = TypeVar("ConfigT", bound="Config")
 
 
 @runtime_checkable
@@ -97,11 +96,7 @@ class LatentModel(EnergyModel, Protocol):
     """Protocol for models with explicit latent variables (e.g., RBMs)."""
 
     def sample_hidden(
-        self,
-        visible: Tensor,
-        *,
-        beta: Tensor | None = None,
-        return_prob: bool = False
+        self, visible: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units given visible units.
 
@@ -116,11 +111,7 @@ class LatentModel(EnergyModel, Protocol):
         ...
 
     def sample_visible(
-        self,
-        hidden: Tensor,
-        *,
-        beta: Tensor | None = None,
-        return_prob: bool = False
+        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units given hidden units.
 
@@ -140,11 +131,7 @@ class Sampler(Protocol):
     """Protocol for sampling algorithms."""
 
     def sample(
-        self,
-        model: EnergyModel,
-        init_state: Tensor,
-        num_steps: int = 1,
-        **kwargs: Any
+        self, model: EnergyModel, init_state: Tensor, num_steps: int = 1, **kwargs: Any
     ) -> Tensor:
         """Generate samples from the model.
 
@@ -169,10 +156,7 @@ class GradientEstimator(Protocol):
     """Protocol for gradient estimation methods (e.g., CD, PCD)."""
 
     def estimate_gradient(
-        self,
-        model: EnergyModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients for model parameters.
 
@@ -195,7 +179,9 @@ class Callback(Protocol):
         """Called at the start of each epoch."""
         ...
 
-    def on_epoch_end(self, trainer: Any, model: EnergyModel, metrics: dict[str, float]) -> None:
+    def on_epoch_end(
+        self, trainer: Any, model: EnergyModel, metrics: dict[str, float]
+    ) -> None:
         """Called at the end of each epoch."""
         ...
 
@@ -222,13 +208,15 @@ class Transform(Protocol):
 
 
 # Specialized type hints for common patterns
-EnergyFunction = TypeVar('EnergyFunction', bound=callable)
+EnergyFunction = TypeVar("EnergyFunction", bound=callable)
 ActivationFunction: TypeAlias = callable[[Tensor], Tensor]
 InitStrategy: TypeAlias = str | float | Tensor | callable
+
 
 # Constants for common initialization strategies
 class InitMethod:
     """Namespace for initialization method names."""
+
     XAVIER_UNIFORM = "xavier_uniform"
     XAVIER_NORMAL = "xavier_normal"
     KAIMING_UNIFORM = "kaiming_uniform"
@@ -241,4 +229,4 @@ class InitMethod:
 
 # Sampling-related types
 SamplingMetadata = dict[str, Any]
-ChainState = Union[Tensor, tuple[Tensor, ...]]
+ChainState = Tensor | tuple[Tensor, ...]

@@ -8,6 +8,7 @@ crucial for computing exact likelihoods.
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -47,10 +48,7 @@ class AISEstimator(PartitionFunctionEstimator):
     """
 
     def __init__(
-        self,
-        model: EnergyBasedModel,
-        num_temps: int = 10000,
-        num_chains: int = 100
+        self, model: EnergyBasedModel, num_temps: int = 10000, num_chains: int = 100
     ):
         """Initialize AIS estimator.
 
@@ -70,7 +68,7 @@ class AISEstimator(PartitionFunctionEstimator):
         self,
         base_log_z: float | None = None,
         return_diagnostics: bool = False,
-        show_progress: bool = True
+        show_progress: bool = True,
     ) -> float | tuple[float, dict[str, Any]]:
         """Estimate log partition function using AIS.
 
@@ -89,7 +87,7 @@ class AISEstimator(PartitionFunctionEstimator):
 
         # Get base partition function
         if base_log_z is None:
-            if hasattr(self.model, 'ais_adapter'):
+            if hasattr(self.model, "ais_adapter"):
                 adapter = self.model.ais_adapter()
                 base_log_z = adapter.base_log_partition()
             else:
@@ -99,18 +97,22 @@ class AISEstimator(PartitionFunctionEstimator):
         self.log_debug(f"Base log Z: {base_log_z:.2f}")
 
         # Initialize chains at base distribution
-        if hasattr(self.model, 'num_hidden'):
+        if hasattr(self.model, "num_hidden"):
             # For RBMs
             h_init = torch.randint(
-                2, (self.num_chains, self.model.num_hidden),
-                device=device, dtype=self.model.dtype
+                2,
+                (self.num_chains, self.model.num_hidden),
+                device=device,
+                dtype=self.model.dtype,
             )
             v = self.model.sample_visible(h_init, beta=torch.tensor(0.0))
         else:
             # Generic initialization
             v = torch.rand(
-                self.num_chains, self.model.num_visible,
-                device=device, dtype=self.model.dtype
+                self.num_chains,
+                self.model.num_visible,
+                device=device,
+                dtype=self.model.dtype,
             ).round()
 
         # Run AIS
@@ -122,7 +124,7 @@ class AISEstimator(PartitionFunctionEstimator):
         for i, beta in enumerate(pbar):
             # Update importance weights
             if i > 0:
-                prev_beta = self.betas[i-1]
+                prev_beta = self.betas[i - 1]
                 delta_beta = beta - prev_beta
 
                 # Compute energy difference
@@ -138,9 +140,13 @@ class AISEstimator(PartitionFunctionEstimator):
 
             # Track intermediate estimates
             if i % 100 == 0:
-                log_Z_est = base_log_z + torch.logsumexp(log_weights, 0) - math.log(self.num_chains)
+                log_Z_est = (
+                    base_log_z
+                    + torch.logsumexp(log_weights, 0)
+                    - math.log(self.num_chains)
+                )
                 log_Z_k.append(log_Z_est.item())
-                pbar.set_postfix({'log_Z': f"{log_Z_est.item():.2f}"})
+                pbar.set_postfix({"log_Z": f"{log_Z_est.item():.2f}"})
 
         # Final estimate
         log_Z = base_log_z + torch.logsumexp(log_weights, 0) - math.log(self.num_chains)
@@ -152,25 +158,25 @@ class AISEstimator(PartitionFunctionEstimator):
             weights = weights / weights.sum()
 
             # Effective sample size
-            ess = 1.0 / (weights ** 2).sum().item()
+            ess = 1.0 / (weights**2).sum().item()
 
             # Standard error estimate
             se = torch.sqrt(weights.var() / ess).item()
 
             diagnostics = {
-                'log_Z': log_Z,
-                'log_Z_std': se,
-                'log_Z_trajectory': log_Z_k,
-                'effective_sample_size': ess,
-                'log_weights': log_weights.cpu().numpy(),
-                'final_weights': weights.cpu().numpy(),
+                "log_Z": log_Z,
+                "log_Z_std": se,
+                "log_Z_trajectory": log_Z_k,
+                "effective_sample_size": ess,
+                "log_weights": log_weights.cpu().numpy(),
+                "final_weights": weights.cpu().numpy(),
             }
 
             self.log_info(
                 "AIS completed",
                 log_Z=f"{log_Z:.2f}",
                 std_error=f"{se:.3f}",
-                ESS=f"{ess:.1f}"
+                ESS=f"{ess:.1f}",
             )
 
             return log_Z, diagnostics
@@ -189,7 +195,7 @@ class BridgeSampling(PartitionFunctionEstimator):
         self,
         model1: EnergyBasedModel,
         model2: EnergyBasedModel,
-        num_samples: int = 10000
+        num_samples: int = 10000,
     ):
         """Initialize bridge sampling estimator.
 
@@ -202,11 +208,7 @@ class BridgeSampling(PartitionFunctionEstimator):
         self.model2 = model2
         self.num_samples = num_samples
 
-    def estimate(
-        self,
-        tol: float = 1e-6,
-        max_iter: int = 1000
-    ) -> tuple[float, float]:
+    def estimate(self, tol: float = 1e-6, max_iter: int = 1000) -> tuple[float, float]:
         """Estimate log ratio of partition functions.
 
         Args:
@@ -258,16 +260,11 @@ class BridgeSampling(PartitionFunctionEstimator):
 
         return log_r.item(), se
 
-    def _generate_samples(
-        self,
-        model: EnergyBasedModel,
-        num_samples: int
-    ) -> Tensor:
+    def _generate_samples(self, model: EnergyBasedModel, num_samples: int) -> Tensor:
         """Generate samples from a model."""
-        if hasattr(model, 'sample_fantasy_particles'):
+        if hasattr(model, "sample_fantasy_particles"):
             return model.sample_fantasy_particles(
-                num_samples=num_samples,
-                num_steps=10000
+                num_samples=num_samples, num_steps=10000
             )
         else:
             raise NotImplementedError("Model must implement sample_fantasy_particles")
@@ -283,8 +280,8 @@ class SimpleIS(PartitionFunctionEstimator):
     def __init__(
         self,
         model: EnergyBasedModel,
-        proposal: str = 'uniform',
-        num_samples: int = 10000
+        proposal: str = "uniform",
+        num_samples: int = 10000,
     ):
         """Initialize simple IS estimator.
 
@@ -298,8 +295,7 @@ class SimpleIS(PartitionFunctionEstimator):
         self.num_samples = num_samples
 
     def estimate(
-        self,
-        data_loader: torch.utils.data.DataLoader | None = None
+        self, data_loader: torch.utils.data.DataLoader | None = None
     ) -> tuple[float, float]:
         """Estimate log partition function.
 
@@ -311,15 +307,14 @@ class SimpleIS(PartitionFunctionEstimator):
         """
         device = self.model.device
 
-        if self.proposal == 'uniform':
+        if self.proposal == "uniform":
             # Uniform proposal
             samples = torch.rand(
-                self.num_samples, self.model.num_visible,
-                device=device
+                self.num_samples, self.model.num_visible, device=device
             ).round()
             log_q = -self.model.num_visible * math.log(2)  # log(1/2^d)
 
-        elif self.proposal == 'data' and data_loader is not None:
+        elif self.proposal == "data" and data_loader is not None:
             # Use data distribution as proposal
             samples = []
             for batch in data_loader:
@@ -329,13 +324,13 @@ class SimpleIS(PartitionFunctionEstimator):
                 if len(samples) * batch.shape[0] >= self.num_samples:
                     break
 
-            samples = torch.cat(samples, 0)[:self.num_samples].to(device)
+            samples = torch.cat(samples, 0)[: self.num_samples].to(device)
 
             # Estimate data entropy (rough approximation)
-            data_mean = samples.mean(0).clamp(1e-6, 1-1e-6)
+            data_mean = samples.mean(0).clamp(1e-6, 1 - 1e-6)
             entropy = -(
-                data_mean * torch.log(data_mean) +
-                (1 - data_mean) * torch.log(1 - data_mean)
+                data_mean * torch.log(data_mean)
+                + (1 - data_mean) * torch.log(1 - data_mean)
             ).sum()
             log_q = -entropy
 
@@ -353,7 +348,7 @@ class SimpleIS(PartitionFunctionEstimator):
         # Estimate standard error
         weights = torch.exp(log_weights - log_weights.max())
         weights = weights / weights.sum()
-        ess = 1.0 / (weights ** 2).sum()
+        ess = 1.0 / (weights**2).sum()
         se = torch.sqrt(weights.var() / ess).item()
 
         return log_Z.item(), se
@@ -365,11 +360,7 @@ class RatioEstimator(PartitionFunctionEstimator):
     This is useful for comparing models or computing Bayes factors.
     """
 
-    def __init__(
-        self,
-        models: list[EnergyBasedModel],
-        method: str = 'bridge'
-    ):
+    def __init__(self, models: list[EnergyBasedModel], method: str = "bridge"):
         """Initialize ratio estimator.
 
         Args:
@@ -381,9 +372,7 @@ class RatioEstimator(PartitionFunctionEstimator):
         self.method = method
 
     def estimate_all_ratios(
-        self,
-        reference_idx: int = 0,
-        **kwargs
+        self, reference_idx: int = 0, **kwargs
     ) -> dict[tuple[int, int], tuple[float, float]]:
         """Estimate all pairwise log ratios.
 
@@ -403,11 +392,8 @@ class RatioEstimator(PartitionFunctionEstimator):
                 ratios[(i, i)] = (0.0, 0.0)
                 continue
 
-            if self.method == 'bridge':
-                estimator = BridgeSampling(
-                    self.models[reference_idx],
-                    self.models[i]
-                )
+            if self.method == "bridge":
+                estimator = BridgeSampling(self.models[reference_idx], self.models[i])
                 log_ratio, se = estimator.estimate(**kwargs)
                 ratios[(i, reference_idx)] = (-log_ratio, se)
                 ratios[(reference_idx, i)] = (log_ratio, se)
@@ -420,6 +406,6 @@ class RatioEstimator(PartitionFunctionEstimator):
                     if (i, reference_idx) in ratios and (reference_idx, j) in ratios:
                         log_ir, se_ir = ratios[(i, reference_idx)]
                         log_rj, se_rj = ratios[(reference_idx, j)]
-                        ratios[(i, j)] = (log_ir + log_rj, (se_ir**2 + se_rj**2)**0.5)
+                        ratios[(i, j)] = (log_ir + log_rj, (se_ir**2 + se_rj**2) ** 0.5)
 
         return ratios

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import time
-from abc import ABC
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +20,7 @@ from ..core.logging import logger
 from ..models.base import EnergyBasedModel
 
 
-class Callback(ABC):
+class Callback:
     """Abstract base class for training callbacks."""
 
     def on_train_begin(self, trainer: Any) -> None:
@@ -37,29 +36,18 @@ class Callback(ABC):
         pass
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Called at the end of each epoch."""
         pass
 
     def on_batch_start(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        batch: Tensor
+        self, trainer: Any, model: EnergyBasedModel, batch: Tensor
     ) -> None:
         """Called before processing each batch."""
         pass
 
-    def on_batch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        loss: float
-    ) -> None:
+    def on_batch_end(self, trainer: Any, model: EnergyBasedModel, loss: float) -> None:
         """Called after processing each batch."""
         pass
 
@@ -68,10 +56,7 @@ class Callback(ABC):
         pass
 
     def on_validation_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Called after validation."""
         pass
@@ -100,10 +85,12 @@ class CallbackList:
 
     def __getattr__(self, name: str):
         """Delegate method calls to all callbacks."""
+
         def method(*args, **kwargs):
             for callback in self.callbacks:
                 if hasattr(callback, name):
                     getattr(callback, name)(*args, **kwargs)
+
         return method
 
 
@@ -114,7 +101,7 @@ class LoggingCallback(Callback):
         self,
         log_every: int = 100,
         log_gradients: bool = False,
-        log_weights: bool = False
+        log_weights: bool = False,
     ):
         """Initialize logging callback.
 
@@ -134,14 +121,11 @@ class LoggingCallback(Callback):
         self.epoch_start_time = time.time()
         logger.info(
             f"Starting epoch {trainer.current_epoch}",
-            lr=trainer.optimizer.param_groups[0]['lr']
+            lr=trainer.optimizer.param_groups[0]["lr"],
         )
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Log epoch end."""
         epoch_time = time.time() - self.epoch_start_time
@@ -152,44 +136,39 @@ class LoggingCallback(Callback):
         logger.info(
             f"Epoch {trainer.current_epoch} completed",
             metrics=metric_str,
-            epoch_time=f"{epoch_time:.1f}s"
+            epoch_time=f"{epoch_time:.1f}s",
         )
 
-    def on_batch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        loss: float
-    ) -> None:
+    def on_batch_end(self, trainer: Any, model: EnergyBasedModel, loss: float) -> None:
         """Log batch statistics."""
         self.step_count += 1
 
         if self.step_count % self.log_every == 0:
             log_dict = {
-                'step': trainer.global_step,
-                'loss': loss,
+                "step": trainer.global_step,
+                "loss": loss,
             }
 
             if self.log_gradients:
                 # Log gradient statistics
                 grad_norms = []
-                for name, param in model.named_parameters():
+                for _, param in model.named_parameters():
                     if param.grad is not None:
                         grad_norms.append(param.grad.norm().item())
 
                 if grad_norms:
-                    log_dict['grad_norm_mean'] = np.mean(grad_norms)
-                    log_dict['grad_norm_max'] = np.max(grad_norms)
+                    log_dict["grad_norm_mean"] = np.mean(grad_norms)
+                    log_dict["grad_norm_max"] = np.max(grad_norms)
 
             if self.log_weights:
                 # Log weight statistics
                 weight_norms = []
                 for name, param in model.named_parameters():
-                    if 'weight' in name:
+                    if "weight" in name:
                         weight_norms.append(param.norm().item())
 
                 if weight_norms:
-                    log_dict['weight_norm_mean'] = np.mean(weight_norms)
+                    log_dict["weight_norm_mean"] = np.mean(weight_norms)
 
             logger.debug("Training step", **log_dict)
 
@@ -208,28 +187,22 @@ class MetricsCallback(Callback):
         self.val_metrics = []
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Store training metrics."""
-        metrics['epoch'] = trainer.current_epoch
-        metrics['timestamp'] = time.time()
+        metrics["epoch"] = trainer.current_epoch
+        metrics["timestamp"] = time.time()
         self.train_metrics.append(metrics)
 
         if self.save_path:
             self._save_metrics()
 
     def on_validation_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Store validation metrics."""
-        metrics['epoch'] = trainer.current_epoch
-        metrics['timestamp'] = time.time()
+        metrics["epoch"] = trainer.current_epoch
+        metrics["timestamp"] = time.time()
         self.val_metrics.append(metrics)
 
         if self.save_path:
@@ -237,12 +210,9 @@ class MetricsCallback(Callback):
 
     def _save_metrics(self) -> None:
         """Save metrics to file."""
-        data = {
-            'train': self.train_metrics,
-            'val': self.val_metrics
-        }
+        data = {"train": self.train_metrics, "val": self.val_metrics}
 
-        with open(self.save_path, 'w') as f:
+        with open(self.save_path, "w") as f:
             json.dump(data, f, indent=2)
 
 
@@ -254,8 +224,8 @@ class CheckpointCallback(Callback):
         checkpoint_dir: Path,
         save_every: int = 10,
         save_best: bool = True,
-        monitor: str = 'val_loss',
-        mode: str = 'min'
+        monitor: str = "val_loss",
+        mode: str = "min",
     ):
         """Initialize checkpoint callback.
 
@@ -274,13 +244,10 @@ class CheckpointCallback(Callback):
         self.monitor = monitor
         self.mode = mode
 
-        self.best_value = float('inf') if mode == 'min' else float('-inf')
+        self.best_value = float("inf") if mode == "min" else float("-inf")
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Save checkpoint if needed."""
         epoch = trainer.current_epoch
@@ -294,9 +261,8 @@ class CheckpointCallback(Callback):
         if self.save_best and self.monitor in metrics:
             current_value = metrics[self.monitor]
 
-            is_better = (
-                (self.mode == 'min' and current_value < self.best_value) or
-                (self.mode == 'max' and current_value > self.best_value)
+            is_better = (self.mode == "min" and current_value < self.best_value) or (
+                self.mode == "max" and current_value > self.best_value
             )
 
             if is_better:
@@ -304,9 +270,7 @@ class CheckpointCallback(Callback):
                 path = self.checkpoint_dir / "best_model.pt"
                 trainer.save_checkpoint(path)
                 logger.info(
-                    "Saved best model",
-                    metric=self.monitor,
-                    value=current_value
+                    "Saved best model", metric=self.monitor, value=current_value
                 )
 
 
@@ -317,8 +281,8 @@ class EarlyStoppingCallback(Callback):
         self,
         patience: int = 10,
         min_delta: float = 1e-4,
-        monitor: str = 'val_loss',
-        mode: str = 'min'
+        monitor: str = "val_loss",
+        mode: str = "min",
     ):
         """Initialize early stopping callback.
 
@@ -333,7 +297,7 @@ class EarlyStoppingCallback(Callback):
         self.monitor = monitor
         self.mode = mode
 
-        self.best_value = float('inf') if mode == 'min' else float('-inf')
+        self.best_value = float("inf") if mode == "min" else float("-inf")
         self.patience_counter = 0
         self.trainer = None
 
@@ -342,10 +306,7 @@ class EarlyStoppingCallback(Callback):
         self.trainer = trainer
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Check for improvement."""
         if self.monitor not in metrics:
@@ -353,7 +314,7 @@ class EarlyStoppingCallback(Callback):
 
         current_value = metrics[self.monitor]
 
-        if self.mode == 'min':
+        if self.mode == "min":
             improved = current_value < (self.best_value - self.min_delta)
         else:
             improved = current_value > (self.best_value + self.min_delta)
@@ -369,7 +330,7 @@ class EarlyStoppingCallback(Callback):
                 "Early stopping triggered",
                 monitor=self.monitor,
                 patience=self.patience,
-                best_value=self.best_value
+                best_value=self.best_value,
             )
             trainer.callbacks.stop_training()
 
@@ -381,7 +342,7 @@ class VisualizationCallback(Callback):
         self,
         visualize_every: int = 10,
         num_samples: int = 64,
-        save_dir: Path | None = None
+        save_dir: Path | None = None,
     ):
         """Initialize visualization callback.
 
@@ -398,10 +359,7 @@ class VisualizationCallback(Callback):
             self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def on_epoch_end(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        metrics: dict[str, float]
+        self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Generate and save visualizations."""
         if trainer.current_epoch % self.visualize_every != 0:
@@ -412,10 +370,9 @@ class VisualizationCallback(Callback):
 
         with torch.no_grad():
             # Generate samples
-            if hasattr(model, 'sample_fantasy_particles'):
+            if hasattr(model, "sample_fantasy_particles"):
                 samples = model.sample_fantasy_particles(
-                    num_samples=self.num_samples,
-                    num_steps=1000
+                    num_samples=self.num_samples, num_steps=1000
                 )
 
                 if self.save_dir:
@@ -423,7 +380,7 @@ class VisualizationCallback(Callback):
                     visualize_samples(samples, save_path=path)
 
             # Visualize filters for RBMs
-            if hasattr(model, 'W'):
+            if hasattr(model, "W"):
                 if self.save_dir:
                     path = self.save_dir / f"filters_epoch_{trainer.current_epoch}.png"
                     visualize_filters(model.W, save_path=path)
@@ -432,11 +389,7 @@ class VisualizationCallback(Callback):
 class LearningRateSchedulerCallback(Callback):
     """Callback for custom learning rate scheduling."""
 
-    def __init__(
-        self,
-        schedule_fn: callable,
-        update_every: str = 'epoch'
-    ):
+    def __init__(self, schedule_fn: callable, update_every: str = "epoch"):
         """Initialize LR scheduler callback.
 
         Args:
@@ -448,36 +401,28 @@ class LearningRateSchedulerCallback(Callback):
 
     def on_epoch_start(self, trainer: Any, model: EnergyBasedModel) -> None:
         """Update learning rate at epoch start."""
-        if self.update_every == 'epoch':
+        if self.update_every == "epoch":
             lr = self.schedule_fn(trainer.current_epoch, trainer.global_step)
             self._update_lr(trainer, lr)
 
     def on_batch_start(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        batch: Tensor
+        self, trainer: Any, model: EnergyBasedModel, batch: Tensor
     ) -> None:
         """Update learning rate at batch start."""
-        if self.update_every == 'step':
+        if self.update_every == "step":
             lr = self.schedule_fn(trainer.current_epoch, trainer.global_step)
             self._update_lr(trainer, lr)
 
     def _update_lr(self, trainer: Any, lr: float) -> None:
         """Update optimizer learning rate."""
         for param_group in trainer.optimizer.param_groups:
-            param_group['lr'] = lr
+            param_group["lr"] = lr
 
 
 class WarmupCallback(Callback):
     """Callback for learning rate warmup."""
 
-    def __init__(
-        self,
-        warmup_steps: int,
-        start_lr: float = 1e-6,
-        end_lr: float = 1e-3
-    ):
+    def __init__(self, warmup_steps: int, start_lr: float = 1e-6, end_lr: float = 1e-3):
         """Initialize warmup callback.
 
         Args:
@@ -490,10 +435,7 @@ class WarmupCallback(Callback):
         self.end_lr = end_lr
 
     def on_batch_start(
-        self,
-        trainer: Any,
-        model: EnergyBasedModel,
-        batch: Tensor
+        self, trainer: Any, model: EnergyBasedModel, batch: Tensor
     ) -> None:
         """Update learning rate during warmup."""
         if trainer.global_step < self.warmup_steps:
@@ -502,4 +444,4 @@ class WarmupCallback(Callback):
             lr = self.start_lr + progress * (self.end_lr - self.start_lr)
 
             for param_group in trainer.optimizer.param_groups:
-                param_group['lr'] = lr
+                param_group["lr"] = lr

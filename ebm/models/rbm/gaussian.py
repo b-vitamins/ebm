@@ -15,10 +15,11 @@ from torch import Tensor
 
 from ...core.config import GaussianRBMConfig
 from ...core.registry import register_model
+from ...utils.tensor import shape_for_broadcast
 from .base import RBMBase
 
 
-@register_model('gaussian_rbm', aliases=['grbm', 'gbrbm'])
+@register_model("gaussian_rbm", aliases=["grbm", "gbrbm"])
 class GaussianBernoulliRBM(RBMBase):
     """Gaussian-Bernoulli Restricted Boltzmann Machine.
 
@@ -53,10 +54,10 @@ class GaussianBernoulliRBM(RBMBase):
             )
         else:
             # Fixed variance
-            sigma = getattr(self.config, 'sigma', 1.0)
+            sigma = getattr(self.config, "sigma", 1.0)
             self.register_buffer(
-                'log_sigma',
-                torch.full((self.num_visible,), math.log(sigma), dtype=self.dtype)
+                "log_sigma",
+                torch.full((self.num_visible,), math.log(sigma), dtype=self.dtype),
             )
 
     @property
@@ -86,11 +87,7 @@ class GaussianBernoulliRBM(RBMBase):
         return torch.bernoulli(prob)
 
     def sample_visible(
-        self,
-        hidden: Tensor,
-        *,
-        beta: Tensor | None = None,
-        return_prob: bool = False
+        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units from Gaussian distribution.
 
@@ -130,7 +127,7 @@ class GaussianBernoulliRBM(RBMBase):
         hidden: Tensor,
         *,
         beta: Tensor | None = None,
-        return_parts: bool = False
+        return_parts: bool = False,
     ) -> Tensor | dict[str, Tensor]:
         """Compute joint energy with Gaussian visible units.
 
@@ -160,20 +157,20 @@ class GaussianBernoulliRBM(RBMBase):
         h_linear = (hidden * self.hbias).sum(dim=-1)
 
         # Interaction term
-        interaction = torch.einsum('...v,...h->...',
-                                   F.linear(v_normalized, self.W.t()),
-                                   hidden)
+        interaction = torch.einsum(
+            "...v,...h->...", F.linear(v_normalized, self.W.t()), hidden
+        )
 
         if return_parts:
             parts = {
-                'visible_quadratic': v_quad,
-                'hidden_linear': -h_linear,
-                'interaction': -interaction,
+                "visible_quadratic": v_quad,
+                "hidden_linear": -h_linear,
+                "interaction": -interaction,
             }
             if beta is not None:
                 beta = shape_for_broadcast(beta, visible.shape[:-1])
                 parts = {k: beta * v for k, v in parts.items()}
-            parts['total'] = sum(parts.values())
+            parts["total"] = sum(parts.values())
             return parts
 
         # Total energy
@@ -185,12 +182,7 @@ class GaussianBernoulliRBM(RBMBase):
 
         return energy
 
-    def free_energy(
-        self,
-        v: Tensor,
-        *,
-        beta: Tensor | None = None
-    ) -> Tensor:
+    def free_energy(self, v: Tensor, *, beta: Tensor | None = None) -> Tensor:
         """Compute free energy for Gaussian visible units.
 
         Free energy: F(v) = sum_i (v_i - a_i)^2 / (2*sigma_i^2)
@@ -222,11 +214,7 @@ class GaussianBernoulliRBM(RBMBase):
 
         return v_term - h_term
 
-    def score_matching_loss(
-        self,
-        v: Tensor,
-        noise_std: float = 0.01
-    ) -> Tensor:
+    def score_matching_loss(self, v: Tensor, noise_std: float = 0.01) -> Tensor:
         """Compute denoising score matching loss.
 
         This provides an alternative training objective that doesn't
@@ -250,12 +238,10 @@ class GaussianBernoulliRBM(RBMBase):
         energy = self.free_energy(v_noisy)
 
         # Get score (gradient of log probability)
-        score = torch.autograd.grad(
-            energy.sum(), v_noisy, create_graph=True
-        )[0]
+        score = torch.autograd.grad(energy.sum(), v_noisy, create_graph=True)[0]
 
         # Denoising score matching loss
-        target = -noise / (noise_std ** 2)
+        target = -noise / (noise_std**2)
         loss = 0.5 * ((score - target) ** 2).sum(dim=-1).mean()
 
         return loss
@@ -267,7 +253,7 @@ class GaussianBernoulliRBM(RBMBase):
         *,
         init_from_data: Tensor | None = None,
         beta: Tensor | None = None,
-        return_chain: bool = False
+        return_chain: bool = False,
     ) -> Tensor | tuple[Tensor, list[Tensor]]:
         """Generate samples using Gibbs sampling.
 
@@ -287,8 +273,7 @@ class GaussianBernoulliRBM(RBMBase):
         else:
             # Initialize from prior (Gaussian with learned mean/variance)
             v = self.vbias + self.sigma * torch.randn(
-                num_samples, self.num_visible,
-                device=self.device, dtype=self.dtype
+                num_samples, self.num_visible, device=self.device, dtype=self.dtype
             )
 
         chain = [v.clone()] if return_chain else None
@@ -309,7 +294,7 @@ class GaussianBernoulliRBM(RBMBase):
         return v
 
 
-@register_model('gaussian_rbm_whitened', aliases=['grbm_w'])
+@register_model("gaussian_rbm_whitened", aliases=["grbm_w"])
 class WhitenedGaussianRBM(GaussianBernoulliRBM):
     """Gaussian RBM with data whitening preprocessing.
 
@@ -326,8 +311,8 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
         super().__init__(config)
 
         # Whitening parameters
-        self.register_buffer('whitening_mean', None)
-        self.register_buffer('whitening_std', None)
+        self.register_buffer("whitening_mean", None)
+        self.register_buffer("whitening_std", None)
         self.fitted = False
 
     def fit_whitening(self, data_loader: torch.utils.data.DataLoader) -> None:
@@ -348,12 +333,12 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
                 batch = self.to_device(batch)
 
                 sum_x += batch.sum(dim=0)
-                sum_x_sq += (batch ** 2).sum(dim=0)
+                sum_x_sq += (batch**2).sum(dim=0)
                 count += batch.shape[0]
 
         # Compute mean and std
         mean = sum_x / count
-        var = (sum_x_sq / count) - (mean ** 2)
+        var = (sum_x_sq / count) - (mean**2)
         std = torch.sqrt(var + 1e-8)
 
         # Store whitening parameters
@@ -409,7 +394,7 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
         init_from_data: Tensor | None = None,
         beta: Tensor | None = None,
         return_chain: bool = False,
-        unwhiten_output: bool = True
+        unwhiten_output: bool = True,
     ) -> Tensor | tuple[Tensor, list[Tensor]]:
         """Generate samples with optional unwhitening.
 
@@ -425,10 +410,11 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
             Samples in original scale (if unwhiten_output=True)
         """
         result = super().sample_fantasy_particles(
-            num_samples, num_steps,
+            num_samples,
+            num_steps,
             init_from_data=init_from_data,
             beta=beta,
-            return_chain=return_chain
+            return_chain=return_chain,
         )
 
         if not unwhiten_output:

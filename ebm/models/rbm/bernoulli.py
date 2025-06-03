@@ -7,15 +7,17 @@ and their variants, including centered RBMs.
 from __future__ import annotations
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
 from ...core.config import RBMConfig
 from ...core.registry import register_model
+from ...utils.tensor import shape_for_broadcast
 from .base import RBMBase
 
 
-@register_model('bernoulli_rbm', aliases=['brbm', 'rbm'])
+@register_model("bernoulli_rbm", aliases=["brbm", "rbm"])
 class BernoulliRBM(RBMBase):
     """Bernoulli-Bernoulli Restricted Boltzmann Machine.
 
@@ -36,11 +38,7 @@ class BernoulliRBM(RBMBase):
         return torch.bernoulli(prob)
 
     def log_probability_ratio(
-        self,
-        v1: Tensor,
-        v2: Tensor,
-        *,
-        beta: Tensor | None = None
+        self, v1: Tensor, v2: Tensor, *, beta: Tensor | None = None
     ) -> Tensor:
         """Compute log probability ratio log(p(v1)/p(v2)).
 
@@ -64,10 +62,7 @@ class BernoulliRBM(RBMBase):
         return f2 - f1  # log(p(v1)/p(v2)) = F(v2) - F(v1)
 
     def score_function(
-        self,
-        v: Tensor,
-        *,
-        beta: Tensor | None = None
+        self, v: Tensor, *, beta: Tensor | None = None
     ) -> dict[str, Tensor]:
         """Compute score function (gradient of log probability).
 
@@ -88,27 +83,25 @@ class BernoulliRBM(RBMBase):
         f = self.free_energy(v, beta=beta)
 
         # Get gradients w.r.t. visible units
-        score_v = torch.autograd.grad(
-            f.sum(), v, create_graph=True, retain_graph=True
-        )[0]
+        score_v = torch.autograd.grad(f.sum(), v, create_graph=True, retain_graph=True)[
+            0
+        ]
 
         # Get gradients w.r.t. parameters
-        params = {'W': self.W, 'vbias': self.vbias, 'hbias': self.hbias}
+        params = {"W": self.W, "vbias": self.vbias, "hbias": self.hbias}
         scores = {}
 
         for name, param in params.items():
             if param.requires_grad:
-                grad = torch.autograd.grad(
-                    f.sum(), param, retain_graph=True
-                )[0]
+                grad = torch.autograd.grad(f.sum(), param, retain_graph=True)[0]
                 scores[name] = -grad  # Negative because we want grad of log p
 
-        scores['visible'] = -score_v
+        scores["visible"] = -score_v
 
         return scores
 
 
-@register_model('centered_rbm', aliases=['crbm'])
+@register_model("centered_rbm", aliases=["crbm"])
 class CenteredBernoulliRBM(BernoulliRBM):
     """Centered Bernoulli RBM with offset parameters.
 
@@ -131,12 +124,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
         super()._build_model()
 
         # Offset parameters
-        self.v_offset = nn.Parameter(
-            torch.zeros(self.num_visible, dtype=self.dtype)
-        )
-        self.h_offset = nn.Parameter(
-            torch.zeros(self.num_hidden, dtype=self.dtype)
-        )
+        self.v_offset = nn.Parameter(torch.zeros(self.num_visible, dtype=self.dtype))
+        self.h_offset = nn.Parameter(torch.zeros(self.num_hidden, dtype=self.dtype))
 
     def _initialize_parameters(self) -> None:
         """Initialize parameters including offsets."""
@@ -147,11 +136,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
         nn.init.constant_(self.h_offset, 0.5)
 
     def sample_hidden(
-        self,
-        visible: Tensor,
-        *,
-        beta: Tensor | None = None,
-        return_prob: bool = False
+        self, visible: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units with centering.
 
@@ -187,11 +172,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
         return h_sample
 
     def sample_visible(
-        self,
-        hidden: Tensor,
-        *,
-        beta: Tensor | None = None,
-        return_prob: bool = False
+        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units with centering.
 
@@ -232,7 +213,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
         hidden: Tensor,
         *,
         beta: Tensor | None = None,
-        return_parts: bool = False
+        return_parts: bool = False,
     ) -> Tensor | dict[str, Tensor]:
         """Compute joint energy with centering.
 
@@ -255,20 +236,22 @@ class CenteredBernoulliRBM(BernoulliRBM):
         h_centered = hidden - self.h_offset
 
         # Compute energy components
-        interaction = torch.einsum('...h,...v->...', h_centered, F.linear(v_centered, self.W))
-        v_bias_term = torch.einsum('...v,v->...', visible, self.vbias)
-        h_bias_term = torch.einsum('...h,h->...', hidden, self.hbias)
+        interaction = torch.einsum(
+            "...h,...v->...", h_centered, F.linear(v_centered, self.W)
+        )
+        v_bias_term = torch.einsum("...v,v->...", visible, self.vbias)
+        h_bias_term = torch.einsum("...h,h->...", hidden, self.hbias)
 
         if return_parts:
             parts = {
-                'interaction': -interaction,
-                'visible_bias': -v_bias_term,
-                'hidden_bias': -h_bias_term,
+                "interaction": -interaction,
+                "visible_bias": -v_bias_term,
+                "hidden_bias": -h_bias_term,
             }
             if beta is not None:
                 beta = shape_for_broadcast(beta, visible.shape[:-1])
                 parts = {k: beta * v for k, v in parts.items()}
-            parts['total'] = sum(parts.values())
+            parts["total"] = sum(parts.values())
             return parts
 
         # Total energy
@@ -280,12 +263,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         return energy
 
-    def free_energy(
-        self,
-        v: Tensor,
-        *,
-        beta: Tensor | None = None
-    ) -> Tensor:
+    def free_energy(self, v: Tensor, *, beta: Tensor | None = None) -> Tensor:
         """Compute free energy with centering.
 
         Args:
@@ -305,9 +283,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
         if beta is not None:
             beta = shape_for_broadcast(beta, pre_h.shape[:-1])
             pre_h = beta * pre_h
-            v_bias_term = beta * torch.einsum('...v,v->...', v, self.vbias)
+            v_bias_term = beta * torch.einsum("...v,v->...", v, self.vbias)
         else:
-            v_bias_term = torch.einsum('...v,v->...', v, self.vbias)
+            v_bias_term = torch.einsum("...v,v->...", v, self.vbias)
 
         # Free energy computation
         hidden_term = F.softplus(pre_h).sum(dim=-1)
@@ -316,10 +294,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
         return free_energy
 
     def update_offsets(
-        self,
-        v_mean: Tensor,
-        h_mean: Tensor,
-        momentum: float = 0.9
+        self, v_mean: Tensor, h_mean: Tensor, momentum: float = 0.9
     ) -> None:
         """Update offset parameters using exponential moving average.
 
@@ -332,8 +307,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
             momentum: Momentum for moving average
         """
         with torch.no_grad():
-            self.v_offset.mul_(momentum).add_(v_mean, alpha=1-momentum)
-            self.h_offset.mul_(momentum).add_(h_mean, alpha=1-momentum)
+            self.v_offset.mul_(momentum).add_(v_mean, alpha=1 - momentum)
+            self.h_offset.mul_(momentum).add_(h_mean, alpha=1 - momentum)
 
     def init_from_data(self, data_loader: torch.utils.data.DataLoader) -> None:
         """Initialize parameters from data statistics.
@@ -362,7 +337,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
             self.vbias.add_(F.linear(self.h_offset, self.W))
 
 
-@register_model('sparse_rbm', aliases=['srbm'])
+@register_model("sparse_rbm", aliases=["srbm"])
 class SparseBernoulliRBM(BernoulliRBM):
     """Sparse Bernoulli RBM with sparsity constraints.
 
@@ -379,14 +354,14 @@ class SparseBernoulliRBM(BernoulliRBM):
         super().__init__(config)
 
         # Sparsity parameters
-        self.sparsity_target = getattr(config, 'sparsity_target', 0.1)
-        self.sparsity_weight = getattr(config, 'sparsity_weight', 0.01)
-        self.sparsity_damping = getattr(config, 'sparsity_damping', 0.9)
+        self.sparsity_target = getattr(config, "sparsity_target", 0.1)
+        self.sparsity_weight = getattr(config, "sparsity_weight", 0.01)
+        self.sparsity_damping = getattr(config, "sparsity_damping", 0.9)
 
         # Running average of hidden activations
         self.register_buffer(
-            'hidden_mean',
-            torch.ones(self.num_hidden, dtype=self.dtype) * self.sparsity_target
+            "hidden_mean",
+            torch.ones(self.num_hidden, dtype=self.dtype) * self.sparsity_target,
         )
 
     def sparsity_penalty(self, h_prob: Tensor) -> Tensor:
@@ -402,7 +377,7 @@ class SparseBernoulliRBM(BernoulliRBM):
         batch_mean = h_prob.mean(dim=0)
         with torch.no_grad():
             self.hidden_mean.mul_(self.sparsity_damping).add_(
-                batch_mean, alpha=1-self.sparsity_damping
+                batch_mean, alpha=1 - self.sparsity_damping
             )
 
         # KL divergence between target and actual sparsity
@@ -421,7 +396,7 @@ class SparseBernoulliRBM(BernoulliRBM):
         k: int = 10,
         *,
         beta: Tensor | None = None,
-        return_prob: bool = False
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units with top-k sparsity constraint.
 
@@ -436,13 +411,9 @@ class SparseBernoulliRBM(BernoulliRBM):
         """
         # Get probabilities
         if return_prob:
-            h_sample, h_prob = self.sample_hidden(
-                visible, beta=beta, return_prob=True
-            )
+            h_sample, h_prob = self.sample_hidden(visible, beta=beta, return_prob=True)
         else:
-            h_prob = self.sample_hidden(
-                visible, beta=beta, return_prob=True
-            )[1]
+            h_prob = self.sample_hidden(visible, beta=beta, return_prob=True)[1]
 
         # Apply top-k sparsity
         topk_values, topk_indices = torch.topk(h_prob, k, dim=-1)
