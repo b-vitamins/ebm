@@ -1,5 +1,7 @@
 """Dataset fixtures for testing."""
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 import torch
@@ -7,7 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 @pytest.fixture
-def synthetic_binary_data():
+def synthetic_binary_data() -> dict[str, object]:
     """Provide synthetic binary data for testing."""
     n_samples = 1000
     n_features = 100
@@ -34,7 +36,7 @@ def synthetic_binary_data():
 
 
 @pytest.fixture
-def synthetic_continuous_data():
+def synthetic_continuous_data() -> dict[str, object]:
     """Provide synthetic continuous data for testing."""
     n_samples = 1000
     n_features = 50
@@ -73,7 +75,7 @@ def synthetic_continuous_data():
 
 
 @pytest.fixture
-def mini_mnist_dataset():
+def mini_mnist_dataset() -> dict[str, object]:
     """Provide a mini MNIST-like dataset for testing."""
     n_samples = 500
     image_size = 28
@@ -130,7 +132,7 @@ def mini_mnist_dataset():
 
 
 @pytest.fixture
-def make_structured_data():
+def make_structured_data() -> Callable[[int, int, str, float], TensorDataset]:
     """Create structured test data."""
 
     def _make_structured_data(
@@ -138,7 +140,7 @@ def make_structured_data():
         n_features: int = 50,
         structure_type: str = "bars",
         noise_level: float = 0.1,
-    ):
+    ) -> TensorDataset:
         """Create structured data with specific patterns."""
         torch.manual_seed(42)
 
@@ -195,15 +197,15 @@ def make_structured_data():
 
 
 @pytest.fixture
-def make_data_loader():
+def make_data_loader() -> Callable[[TensorDataset, int, bool, int], DataLoader]:
     """Create simple data loaders."""
 
     def _make_data_loader(
-        dataset,
+        dataset: TensorDataset,
         batch_size: int = 32,
         shuffle: bool = True,
         num_workers: int = 0,
-    ):
+    ) -> DataLoader:
         """Create a data loader from a dataset."""
         return DataLoader(
             dataset,
@@ -217,10 +219,10 @@ def make_data_loader():
 
 
 @pytest.fixture
-def data_statistics():
+def data_statistics() -> Callable[[torch.Tensor], dict[str, object]]:
     """Fixture providing data statistics computation."""
 
-    def _compute_statistics(data: torch.Tensor):
+    def _compute_statistics(data: torch.Tensor) -> dict[str, object]:
         """Compute comprehensive statistics for data."""
         return {
             "mean": data.mean().item(),

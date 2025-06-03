@@ -16,7 +16,7 @@ from ebm.core.config import (
 
 
 @pytest.fixture
-def default_rbm_config():
+def default_rbm_config() -> RBMConfig:
     """Provide a default RBM configuration for testing."""
     return RBMConfig(
         visible_units=784,
@@ -31,7 +31,7 @@ def default_rbm_config():
 
 
 @pytest.fixture
-def small_rbm_config():
+def small_rbm_config() -> RBMConfig:
     """Provide a small RBM configuration for fast testing."""
     return RBMConfig(
         visible_units=20,
@@ -47,7 +47,7 @@ def small_rbm_config():
 
 
 @pytest.fixture
-def gaussian_rbm_config():
+def gaussian_rbm_config() -> GaussianRBMConfig:
     """Provide a Gaussian RBM configuration."""
     return GaussianRBMConfig(
         visible_units=100,
@@ -63,7 +63,7 @@ def gaussian_rbm_config():
 
 
 @pytest.fixture
-def training_config(tmp_path: Path):
+def training_config(tmp_path: Path) -> TrainingConfig:
     """Provide a training configuration."""
     return TrainingConfig(
         epochs=10,
@@ -87,7 +87,7 @@ def training_config(tmp_path: Path):
 
 
 @pytest.fixture
-def sampler_configs():
+def sampler_configs() -> dict[str, object]:
     """Provide various sampler configurations."""
     return {
         "gibbs": GibbsConfig(num_steps=10, block_gibbs=True),
@@ -100,7 +100,7 @@ def sampler_configs():
 
 
 @pytest.fixture
-def config_variations():
+def config_variations() -> list[dict[str, object]]:
     """Provide various configuration variations for parametrized testing."""
     return [
         # Different initialization strategies
@@ -121,7 +121,7 @@ def config_variations():
 
 
 @pytest.fixture
-def invalid_configs():
+def invalid_configs() -> list[dict[str, object]]:
     """Provide invalid configurations for error testing."""
     return [
         # Invalid dimensions

@@ -9,7 +9,7 @@ This module provides:
 
 import os
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +17,7 @@ import pytest
 import torch
 from _pytest.config import Config
 from _pytest.python import Metafunc
+from pytest_benchmark.fixture import BenchmarkFixture
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -112,7 +113,9 @@ def temp_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def assert_tensors_equal():
+def assert_tensors_equal() -> Callable[
+    [torch.Tensor, torch.Tensor, float, float, str], None
+]:
     """Fixture providing tensor comparison utility."""
 
     def _assert_tensors_equal(
@@ -148,7 +151,9 @@ def assert_tensors_equal():
 
 
 @pytest.fixture
-def assert_gradients_valid():
+def assert_gradients_valid() -> Callable[
+    [torch.nn.Module, bool, bool, float | None], None
+]:
     """Fixture providing gradient validation utility."""
 
     def _assert_gradients_valid(
@@ -182,11 +187,15 @@ def assert_gradients_valid():
 
 
 @pytest.fixture
-def benchmark_wrapper(benchmark):
+def benchmark_wrapper(
+    benchmark: BenchmarkFixture,
+) -> Callable[[Callable[..., object], object], object]:
     """Enhanced benchmark fixture with automatic GPU synchronization."""
 
-    def _benchmark(func, *args, **kwargs):
-        def wrapped():
+    def _benchmark(
+        func: Callable[..., object], *args: object, **kwargs: object
+    ) -> object:
+        def wrapped() -> object:
             result = func(*args, **kwargs)
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
@@ -222,7 +231,9 @@ def pytest_generate_tests(metafunc: Metafunc) -> None:
 
 # Test data generation utilities
 @pytest.fixture
-def make_random_tensor():
+def make_random_tensor() -> Callable[
+    [tuple, torch.dtype, torch.device | None, float, float, bool], torch.Tensor
+]:
     """Create random tensors for testing."""
 
     def _make_random_tensor(
@@ -274,6 +285,6 @@ class PerformanceMonitor:
 
 
 @pytest.fixture
-def performance_monitor():
+def performance_monitor() -> PerformanceMonitor:
     """Provide a performance monitoring utility."""
     return PerformanceMonitor()
