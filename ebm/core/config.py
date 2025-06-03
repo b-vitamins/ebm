@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 import torch
 from pydantic import BaseModel, Field, validator
@@ -32,7 +32,7 @@ class BaseConfig(BaseModel, ABC):
         frozen = True  # Make configs immutable
         use_enum_values = True
         arbitrary_types_allowed = True
-        json_encoders = {
+        json_encoders: ClassVar[dict[type[Any], Any]] = {
             torch.dtype: lambda v: str(v).replace("torch.", ""),
             torch.device: str,
             Path: str,
@@ -111,7 +111,7 @@ class ModelConfig(BaseConfig):
     )
 
     @validator("device")
-    def validate_device(self, v: str | None) -> str | None:
+    def validate_device(cls, v: str | None) -> str | None:  # noqa: N805
         """Validate and normalize device string."""
         if v is None or v == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
@@ -120,7 +120,7 @@ class ModelConfig(BaseConfig):
         return v
 
     @validator("dtype")
-    def validate_dtype(self, v: str) -> str:
+    def validate_dtype(cls, v: str) -> str:  # noqa: N805
         """Validate data type string."""
         valid_dtypes = {
             "float32",
@@ -187,7 +187,7 @@ class OptimizerConfig(BaseConfig):
     )
 
     @validator("name")
-    def validate_optimizer(self, v: str) -> str:
+    def validate_optimizer(cls, v: str) -> str:  # noqa: N805
         """Validate optimizer name."""
         valid = {"adam", "adamw", "sgd", "rmsprop", "lbfgs"}
         if v.lower() not in valid:
@@ -287,7 +287,7 @@ class ParallelTemperingConfig(SamplerConfig):
     swap_every: int = Field(1, description="Swap frequency", gt=0)
 
     @validator("min_beta")
-    def validate_beta_range(self, v: float, values: dict[str, Any]) -> float:
+    def validate_beta_range(cls, v: float, values: dict[str, Any]) -> float:  # noqa: N805
         """Ensure min_beta < max_beta."""
         if "max_beta" in values and v >= values["max_beta"]:
             raise ValueError("min_beta must be less than max_beta")
@@ -316,7 +316,7 @@ class RBMConfig(ModelConfig):
     l1_weight: float = Field(0.0, description="L1 weight regularization", ge=0)
 
     @validator("weight_init")
-    def validate_init_method(self, v: str) -> str:
+    def validate_init_method(cls, v: str) -> str:  # noqa: N805
         """Validate initialization method."""
         valid_methods = {
             "xavier_uniform",
