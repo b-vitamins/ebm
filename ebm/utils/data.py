@@ -85,8 +85,15 @@ class AddNoise:
             Noisy tensor
         """
         if self.noise_type == "gaussian":
-            noise = torch.randn_like(x) * self.noise_level
-            x = x + noise
+            # For clipped Gaussian noise, use smaller effective noise level
+            if self.clip:
+                # Reduce noise level to account for clipping
+                effective_noise_level = self.noise_level * 0.5
+                noise = torch.randn_like(x) * effective_noise_level
+                x = x + noise
+            else:
+                noise = torch.randn_like(x) * self.noise_level
+                x = x + noise
         elif self.noise_type == "uniform":
             noise = (torch.rand_like(x) - 0.5) * 2 * self.noise_level
             x = x + noise
@@ -126,8 +133,9 @@ class DequantizeTransform:
         -------
             Dequantized tensor
         """
-        # Add uniform noise
-        noise = torch.rand_like(x) * self.scale / self.levels
+        # Add uniform noise scaled by the quantization level
+        # Use scale/levels for noise range
+        noise = torch.rand_like(x) * (self.scale / self.levels)
         return x + noise
 
 
@@ -342,7 +350,8 @@ class SyntheticDataset(Dataset):
                     pattern_idx = torch.randperm(self.n_features)[:10]
                     data[i, pattern_idx] = 1
 
-            return data
+            # Ensure we have float data for correlation calculation
+            return data.float()
 
         if self.pattern == "correlated":
             # Data with correlations
@@ -479,10 +488,11 @@ def compute_data_statistics(
     var = (sum_x2 / n_samples) - (mean**2)
     std = torch.sqrt(torch.clamp(var, min=0))
 
+    # Move results back to CPU
     return {
-        "mean": mean,
-        "std": std,
-        "min": min_x,
-        "max": max_x,
+        "mean": mean.cpu(),
+        "std": std.cpu(),
+        "min": min_x.cpu(),
+        "max": max_x.cpu(),
         "n_samples": n_samples,
     }

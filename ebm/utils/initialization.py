@@ -18,6 +18,7 @@ from torch import Tensor, nn
 from ebm.core.types_ import InitStrategy
 
 MATRIX_DIM = 2
+MATRIX_DIM_THRESHOLD = 2  # Constant for magic value
 
 
 class InitMethod(str, Enum):
@@ -114,11 +115,7 @@ class Initializer:
             InitMethod.ORTHOGONAL: lambda t: nn.init.orthogonal_(
                 t, gain=self.kwargs.get("gain", 1.0)
             ),
-            InitMethod.SPARSE: lambda t: nn.init.sparse_(
-                t,
-                sparsity=self.kwargs.get("sparsity", 0.1),
-                std=self.kwargs.get("std", 0.01),
-            ),
+            InitMethod.SPARSE: self._sparse_init,
             InitMethod.EYE: self._eye_init,
             InitMethod.DIRAC: lambda t: nn.init.dirac_(
                 t, groups=self.kwargs.get("groups", 1)
@@ -128,6 +125,36 @@ class Initializer:
         if method in mapping:
             return mapping[method]
         raise ValueError(f"Unknown initialization method: {method}")
+
+    def _sparse_init(self, tensor: Tensor) -> None:
+        """Initialize tensor with sparse values."""
+        sparsity = self.kwargs.get("sparsity", 0.1)
+        std = self.kwargs.get("std", 0.01)
+
+        # Initialize to zeros
+        with torch.no_grad():
+            tensor.zero_()
+
+            # Calculate number of non-zero elements per column
+            if tensor.dim() >= MATRIX_DIM_THRESHOLD:
+                num_columns = tensor.shape[1]
+                num_nonzero_per_col = max(1, int(sparsity * tensor.shape[0]))
+
+                # For each column, randomly select elements to be non-zero
+                for col in range(num_columns):
+                    # Get indices for this column
+                    indices = torch.randperm(tensor.shape[0])[
+                        :num_nonzero_per_col
+                    ]
+                    # Set these elements to random normal values
+                    tensor[indices, col] = (
+                        torch.randn(num_nonzero_per_col) * std
+                    )
+            else:
+                # For 1D tensors, just set some elements to be non-zero
+                num_nonzero = max(1, int(sparsity * tensor.numel()))
+                indices = torch.randperm(tensor.numel())[:num_nonzero]
+                tensor.view(-1)[indices] = torch.randn(num_nonzero) * std
 
     def _resolve_init_fn(self) -> Callable[[Tensor], None]:
         """Resolve initialization method to a callable."""
@@ -150,7 +177,7 @@ class Initializer:
 
         # Handle constant initialization
         if isinstance(self.method, int | float):
-            return lambda t: nn.init.constant_(t, self.method)
+            return lambda t: nn.init.constant_(t, float(self.method))
 
         # Handle string methods
         if isinstance(self.method, str):
@@ -288,6 +315,7 @@ def calculate_gain(nonlinearity: str, param: float | None = None) -> float:
     if nonlinearity == "relu":
         return math.sqrt(2.0)
     if nonlinearity == "leaky_relu":
+        # Correct calculation for leaky ReLU gain
         negative_slope = 0.01 if param is None else param
         return math.sqrt(2.0 / (1 + negative_slope**2))
     if nonlinearity == "selu":

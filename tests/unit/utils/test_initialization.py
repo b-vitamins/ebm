@@ -351,12 +351,13 @@ class TestUtilityFunctions:
         # ReLU
         assert calculate_gain("relu") == pytest.approx(math.sqrt(2.0))
 
-        # Leaky ReLU
-        assert calculate_gain("leaky_relu") == pytest.approx(
-            math.sqrt(2.0 / 1.01)
-        )
+        # Leaky ReLU - using correct formula
+        expected_default = math.sqrt(2.0 / (1 + 0.01**2))
+        assert calculate_gain("leaky_relu") == pytest.approx(expected_default)
+
+        expected_custom = math.sqrt(2.0 / (1 + 0.2**2))
         assert calculate_gain("leaky_relu", 0.2) == pytest.approx(
-            math.sqrt(2.0 / 1.04)
+            expected_custom
         )
 
         # SELU
@@ -477,7 +478,8 @@ class TestEdgeCases:
         tensor = torch.tensor(0.0)
 
         init(tensor)
-        assert tensor.item() == 3.14
+        # Use approx for float comparison
+        assert tensor.item() == pytest.approx(3.14)
 
     def test_very_large_tensor(self) -> None:
         """Test initialization of very large tensors."""

@@ -54,6 +54,8 @@ def _to_numpy(images: Tensor | np.ndarray) -> np.ndarray:
 
 
 def _normalize(images: np.ndarray, scale_each: bool) -> np.ndarray:
+    # Make a copy to avoid modifying the input
+    images = images.copy()
     if scale_each:
         for i in range(images.shape[0]):
             img_min, img_max = images[i].min(), images[i].max()
@@ -66,37 +68,15 @@ def _normalize(images: np.ndarray, scale_each: bool) -> np.ndarray:
     return images
 
 
-def _pad(
-    images: np.ndarray, nrows: int, ncols: int, padding: int, pad_value: float
-) -> np.ndarray:
-    n, c, h, w = images.shape
-    n_pad = nrows * ncols - n
-    if n_pad > 0:
-        padding_shape = (n_pad, c, h, w)
-        padding_images = np.full(padding_shape, pad_value, dtype=images.dtype)
-        images = np.concatenate([images, padding_images], axis=0)
-    if padding > 0:
-        pad_h = h + 2 * padding
-        pad_w = w + 2 * padding
-        padded = np.full(
-            (nrows * ncols, c, pad_h, pad_w), pad_value, dtype=images.dtype
-        )
-        padded[:, :, padding:-padding, padding:-padding] = images
-        images = padded
-        h, w = pad_h, pad_w
-    return images.reshape(nrows, ncols, c, h, w)
-
-
-def tile_images(
+def _process_images(
     images: Tensor | np.ndarray,
-    nrows: int | None = None,
-    ncols: int | None = None,
-    padding: int = 2,
-    pad_value: float = 0.0,
-    scale_each: bool = False,
-    normalize: bool = True,
-) -> np.ndarray:
-    """Tile images into a grid."""
+    normalize: bool,
+    scale_each: bool,
+) -> tuple[np.ndarray, tuple[int, ...]]:
+    """Process images for tiling.
+
+    Returns processed images array and original shape info.
+    """
     images_np = _to_numpy(images)
 
     if images_np.ndim == IMAGE_NDIM_3:
@@ -108,6 +88,76 @@ def tile_images(
     else:
         raise ValueError(f"Expected 3D or 4D array, got {images_np.ndim}D")
 
+    # Handle empty images
+    if n == 0:
+        return np.array([]), (0, c, h, w)
+
+    if normalize:
+        images_np = _normalize(images_np, scale_each)
+
+    return images_np, (n, c, h, w)
+
+
+def _add_padding(
+    images_np: np.ndarray,
+    padding: int,
+    pad_value: float,
+    shape_info: tuple[int, ...],
+) -> np.ndarray:
+    """Add padding to images."""
+    if padding <= 0:
+        return images_np
+
+    n, c, h, w = shape_info
+    nrows_ncols = images_np.shape[0]
+
+    # Pad each image
+    padded_images = []
+    for idx in range(nrows_ncols):
+        img = images_np[idx]  # shape (c, h, w)
+        # Add padding on all sides
+        padded_img = np.pad(
+            img,
+            ((0, 0), (padding, padding), (padding, padding)),
+            mode="constant",
+            constant_values=pad_value,
+        )
+        padded_images.append(padded_img)
+
+    return np.stack(padded_images)
+
+
+def tile_images(
+    images: Tensor | np.ndarray,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    padding: int = 0,
+    pad_value: float = 0.0,
+    scale_each: bool = False,
+    normalize: bool = True,
+) -> np.ndarray:
+    """Tile images into a grid.
+
+    Args:
+        images: Input images
+        nrows: Number of rows in grid
+        ncols: Number of columns in grid
+        padding: Padding around each image (applied to all sides)
+        pad_value: Value to use for padding
+        scale_each: Whether to normalize each image independently
+        normalize: Whether to normalize images
+
+    Returns
+    -------
+        Tiled image array
+    """
+    # Process images
+    images_np, (n, c, h, w) = _process_images(images, normalize, scale_each)
+
+    if n == 0:
+        return images_np
+
+    # Calculate grid dimensions
     if nrows is None and ncols is None:
         nrows = int(np.ceil(np.sqrt(n)))
         ncols = int(np.ceil(n / nrows))
@@ -116,15 +166,30 @@ def tile_images(
     elif ncols is None:
         ncols = int(np.ceil(n / nrows))
 
-    if normalize:
-        images_np = _normalize(images_np, scale_each)
+    # Pad with extra images if needed
+    n_pad = nrows * ncols - n
+    if n_pad > 0:
+        padding_shape = (n_pad, c, h, w)
+        padding_images = np.full(
+            padding_shape, pad_value, dtype=images_np.dtype
+        )
+        images_np = np.concatenate([images_np, padding_images], axis=0)
 
-    images_np = _pad(images_np, nrows, ncols, padding, pad_value)
+    # Add padding around each image
+    if padding > 0:
+        images_np = _add_padding(
+            images_np, padding, pad_value, (nrows * ncols, c, h, w)
+        )
+        h += 2 * padding
+        w += 2 * padding
 
+    # Reshape to grid
+    images_np = images_np.reshape(nrows, ncols, c, h, w)
+
+    # Transpose to (nrows, h, ncols, w, c)
     images_np = images_np.transpose(0, 3, 1, 4, 2)
-    images_np = images_np.reshape(
-        nrows * h + 2 * padding, ncols * w + 2 * padding, c
-    )
+    # Reshape to final grid
+    images_np = images_np.reshape(nrows * h, ncols * w, c)
 
     if c == 1:
         images_np = images_np.squeeze(-1)
@@ -164,8 +229,16 @@ def visualize_filters(
     # Reshape weights
     weight_imgs = weights.reshape(num_filters, *img_shape)
 
-    # Tile images
-    tiled = tile_images(weight_imgs, normalize=True, scale_each=True, **kwargs)
+    # Set defaults for tile_images if not specified in kwargs
+    tile_kwargs = kwargs.copy()
+    if "padding" not in tile_kwargs:
+        tile_kwargs["padding"] = 2
+    if "normalize" not in tile_kwargs:
+        tile_kwargs["normalize"] = True
+    if "scale_each" not in tile_kwargs:
+        tile_kwargs["scale_each"] = True
+
+    tiled = tile_images(weight_imgs, **tile_kwargs)
 
     # Create figure
     if figsize is None:
@@ -181,7 +254,7 @@ def visualize_filters(
 
     plt.tight_layout()
 
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
@@ -222,6 +295,10 @@ def visualize_samples(
             # Keep as vectors
             samples = samples.reshape(n, 1, d)
 
+    # Set default padding if not specified
+    if "padding" not in kwargs:
+        kwargs["padding"] = 2
+
     # Tile samples
     tiled = tile_images(samples, nrows=nrows, ncols=ncols, **kwargs)
 
@@ -239,7 +316,7 @@ def visualize_samples(
 
     plt.tight_layout()
 
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
@@ -324,7 +401,7 @@ def plot_training_curves(  # noqa: C901
 
     plt.tight_layout()
 
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
@@ -386,7 +463,7 @@ def plot_energy_histogram(
 
     plt.tight_layout()
 
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
@@ -421,8 +498,8 @@ def plot_reconstruction_comparison(
         [original[:n_examples], reconstructed[:n_examples]], dim=1
     ).reshape(2 * n_examples, *original.shape[1:])
 
-    # Create tiled image
-    tiled = tile_images(combined, nrows=2, ncols=n_examples)
+    # Create tiled image with padding
+    tiled = tile_images(combined, nrows=2, ncols=n_examples, padding=2)
 
     if figsize is None:
         figsize = (2 * n_examples, 4)
@@ -440,7 +517,7 @@ def plot_reconstruction_comparison(
 
     plt.tight_layout()
 
-    if save_path:
+    if save_path is not None:
         plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
@@ -489,7 +566,7 @@ def create_animation(
         fig, update, frames=len(frames_np), interval=1000 / fps, blit=True
     )
 
-    if save_path:
+    if save_path is not None:
         if save_path.suffix == ".gif":
             anim.save(save_path, writer="pillow", fps=fps)
         else:

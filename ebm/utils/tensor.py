@@ -44,7 +44,13 @@ def ensure_tensor(
     elif isinstance(x, int | float):
         tensor = torch.tensor([x])
     else:
-        tensor = torch.as_tensor(x)
+        # Handle numpy arrays properly
+        import numpy as np
+
+        if isinstance(x, np.ndarray):
+            tensor = torch.from_numpy(x).float()  # Default to float for numpy
+        else:
+            tensor = torch.as_tensor(x)
 
     # Then move to correct dtype/device
     if dtype is not None or device is not None:
@@ -64,7 +70,9 @@ def safe_log(x: Tensor, eps: float = 1e-10) -> Tensor:
     -------
         log(x + eps)
     """
-    return torch.log(x + eps)
+    # Ensure x is at least eps (handles negative values)
+    x_safe = torch.maximum(x, torch.tensor(eps, device=x.device, dtype=x.dtype))
+    return torch.log(x_safe)
 
 
 def safe_sqrt(x: Tensor, eps: float = 1e-10) -> Tensor:
@@ -78,7 +86,9 @@ def safe_sqrt(x: Tensor, eps: float = 1e-10) -> Tensor:
     -------
         sqrt(x + eps)
     """
-    return torch.sqrt(x + eps)
+    # Ensure x is at least eps (handles negative values)
+    x_safe = torch.maximum(x, torch.tensor(eps, device=x.device, dtype=x.dtype))
+    return torch.sqrt(x_safe)
 
 
 def log_sum_exp(
@@ -95,6 +105,9 @@ def log_sum_exp(
     -------
         Log sum exp result
     """
+    if dim is None:
+        # Reduce over all dimensions
+        return torch.logsumexp(x.flatten(), dim=0, keepdim=keepdim)
     return torch.logsumexp(x, dim=dim, keepdim=keepdim)
 
 
@@ -176,12 +189,13 @@ def shape_for_broadcast(
 
     if dim is not None:
         # Preserve specified dimension
-        new_shape[dim] = tensor.shape[0]
+        if dim < len(new_shape) and tensor.shape[0] <= target_shape[dim]:
+            new_shape[dim] = tensor.shape[0]
     else:
         # Try to match dimensions from the end
         offset = len(target_shape) - tensor.dim()
         for i, size in enumerate(tensor.shape):
-            if offset + i >= 0:
+            if offset + i >= 0 and offset + i < len(target_shape):
                 new_shape[offset + i] = size
 
     return tensor.reshape(new_shape)
@@ -259,13 +273,13 @@ def create_padding_mask(
 
 @overload
 def split_tensor(
-    tensor: Tensor, split_size: int, dim: int = 0
+    tensor: Tensor, split_size_or_sizes: int, dim: int = 0
 ) -> list[Tensor]: ...
 
 
 @overload
 def split_tensor(
-    tensor: Tensor, split_sizes: Sequence[int], dim: int = 0
+    tensor: Tensor, split_size_or_sizes: Sequence[int], dim: int = 0
 ) -> list[Tensor]: ...
 
 
@@ -284,10 +298,8 @@ def split_tensor(
         List of tensor chunks
     """
     if isinstance(split_size_or_sizes, int):
-        return torch.chunk(
-            tensor, tensor.shape[dim] // split_size_or_sizes, dim=dim
-        )
-    return torch.split(tensor, split_size_or_sizes, dim=dim)
+        return list(torch.split(tensor, split_size_or_sizes, dim=dim))
+    return list(torch.split(tensor, split_size_or_sizes, dim=dim))
 
 
 def concat_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
@@ -338,16 +350,16 @@ class TensorStatistics:
         Args:
             tensor: New tensor to include in statistics
         """
-        tensor = tensor.detach()
+        tensor = tensor.detach().float()  # Ensure float for stable computation
 
         if self.count == 0:
-            self.sum = tensor.sum()
-            self.sum_sq = (tensor**2).sum()
+            self.sum = tensor.sum().double()
+            self.sum_sq = (tensor.double() ** 2).sum()
             self.min = tensor.min()
             self.max = tensor.max()
         else:
-            self.sum += tensor.sum()
-            self.sum_sq += (tensor**2).sum()
+            self.sum = self.sum + tensor.sum().double()
+            self.sum_sq = self.sum_sq + (tensor.double() ** 2).sum()
             self.min = torch.minimum(self.min, tensor.min())
             self.max = torch.maximum(self.max, tensor.max())
 
@@ -358,7 +370,7 @@ class TensorStatistics:
         """Get mean value."""
         if self.count == 0:
             return None
-        return (self.sum / self.count).item()
+        return float(self.sum / self.count)
 
     @property
     def std(self) -> float | None:
@@ -367,7 +379,9 @@ class TensorStatistics:
             return None
         mean = self.sum / self.count
         variance = (self.sum_sq / self.count) - (mean**2)
-        return variance.sqrt().item()
+        # Ensure non-negative variance due to numerical errors
+        variance = max(0.0, float(variance))
+        return variance**0.5
 
     @property
     def min_value(self) -> float | None:

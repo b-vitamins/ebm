@@ -382,7 +382,9 @@ class TestEdgeCases:
         """Test invalid CUDA device index."""
         # Use an index that's guaranteed to be out of range
         invalid_index = torch.cuda.device_count() + 10
-        with pytest.raises(RuntimeError, match="CUDA device index out of range"):
+        with pytest.raises(
+            RuntimeError, match="CUDA device index out of range"
+        ):
             DeviceManager(f"cuda:{invalid_index}")
 
     def test_device_switching(self) -> None:
