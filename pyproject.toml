@@ -92,6 +92,7 @@ select = [
     "N",
     "D",
     "C90",
+    "ANN",
 ]
 ignore = [
     "E203",
