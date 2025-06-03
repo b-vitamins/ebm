@@ -18,7 +18,7 @@ if version_file.exists():
     with open(version_file) as f:
         for line in f:
             if line.startswith("__version__"):
-                version = line.split("=")[1].strip().strip('"\'')
+                version = line.split("=")[1].strip().strip("\"'")
                 break
 
 setup(

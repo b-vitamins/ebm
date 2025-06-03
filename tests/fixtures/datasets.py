@@ -17,9 +17,9 @@ def synthetic_binary_data():
 
     # Generate correlated binary data
     n_factors = 10
-    W = torch.randn(n_factors, n_features) * 0.5
+    weight_matrix = torch.randn(n_factors, n_features) * 0.5
     factors = torch.randn(n_samples, n_factors)
-    logits = factors @ W
+    logits = factors @ weight_matrix
     data = torch.bernoulli(torch.sigmoid(logits))
 
     dataset = TensorDataset(data)
@@ -29,7 +29,7 @@ def synthetic_binary_data():
         "dataset": dataset,
         "n_samples": n_samples,
         "n_features": n_features,
-        "sparsity": data.mean().item()
+        "sparsity": data.mean().item(),
     }
 
 
@@ -68,7 +68,7 @@ def synthetic_continuous_data():
         "n_samples": n_samples,
         "n_features": n_features,
         "mean": data.mean(dim=0),
-        "std": data.std(dim=0)
+        "std": data.std(dim=0),
     }
 
 
@@ -93,17 +93,19 @@ def mini_mnist_dataset():
 
         if pattern_type == 0:  # Vertical line
             col = torch.randint(5, 23, (1,)).item()
-            img[:, col:col+3] = 1
+            img[:, col : col + 3] = 1
         elif pattern_type == 1:  # Horizontal line
             row = torch.randint(5, 23, (1,)).item()
-            img[row:row+3, :] = 1
+            img[row : row + 3, :] = 1
         elif pattern_type == 2:  # Square
             r, c = torch.randint(5, 20, (2,))
-            img[r:r+8, c:c+8] = 1
+            img[r : r + 8, c : c + 8] = 1
         elif pattern_type == 3:  # Circle (approximation)
             center = torch.tensor([14, 14])
-            y, x = torch.meshgrid(torch.arange(28), torch.arange(28), indexing='ij')
-            dist = ((x - center[0])**2 + (y - center[1])**2).sqrt()
+            y, x = torch.meshgrid(
+                torch.arange(28), torch.arange(28), indexing="ij"
+            )
+            dist = ((x - center[0]) ** 2 + (y - center[1]) ** 2).sqrt()
             img[dist < 8] = 1
         else:  # Random patterns
             img = torch.rand(image_size, image_size)
@@ -123,18 +125,19 @@ def mini_mnist_dataset():
         "dataset": dataset,
         "n_samples": n_samples,
         "n_features": n_features,
-        "image_size": image_size
+        "image_size": image_size,
     }
 
 
 @pytest.fixture
 def make_structured_data():
-    """Factory fixture for creating structured test data."""
+    """Create structured test data."""
+
     def _make_structured_data(
         n_samples: int = 100,
         n_features: int = 50,
         structure_type: str = "bars",
-        noise_level: float = 0.1
+        noise_level: float = 0.1,
     ):
         """Create structured data with specific patterns."""
         torch.manual_seed(42)
@@ -147,7 +150,7 @@ def make_structured_data():
             for i in range(n_samples):
                 if i % 2 == 0:  # Horizontal bar
                     pos = torch.randint(0, n_features - bar_width, (1,)).item()
-                    data[i, pos:pos+bar_width] = 1
+                    data[i, pos : pos + bar_width] = 1
                 else:  # Vertical bar pattern (if 2D interpretation)
                     # Assuming square layout
                     side = int(np.sqrt(n_features))
@@ -193,12 +196,13 @@ def make_structured_data():
 
 @pytest.fixture
 def make_data_loader():
-    """Factory fixture for creating data loaders."""
+    """Create simple data loaders."""
+
     def _make_data_loader(
         dataset,
         batch_size: int = 32,
         shuffle: bool = True,
-        num_workers: int = 0
+        num_workers: int = 0,
     ):
         """Create a data loader from a dataset."""
         return DataLoader(
@@ -206,7 +210,7 @@ def make_data_loader():
             batch_size=batch_size,
             shuffle=shuffle,
             num_workers=num_workers,
-            drop_last=False
+            drop_last=False,
         )
 
     return _make_data_loader
@@ -215,6 +219,7 @@ def make_data_loader():
 @pytest.fixture
 def data_statistics():
     """Fixture providing data statistics computation."""
+
     def _compute_statistics(data: torch.Tensor):
         """Compute comprehensive statistics for data."""
         return {
@@ -227,7 +232,9 @@ def data_statistics():
             "feature_stds": data.std(dim=0),
             "sample_means": data.mean(dim=1),
             "sample_stds": data.std(dim=1),
-            "correlation_matrix": torch.corrcoef(data.T) if data.shape[1] < 100 else None
+            "correlation_matrix": torch.corrcoef(data.T)
+            if data.shape[1] < 100
+            else None,
         }
 
     return _compute_statistics

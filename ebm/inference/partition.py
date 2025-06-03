@@ -48,7 +48,10 @@ class AISEstimator(PartitionFunctionEstimator):
     """
 
     def __init__(
-        self, model: EnergyBasedModel, num_temps: int = 10000, num_chains: int = 100
+        self,
+        model: EnergyBasedModel,
+        num_temps: int = 10000,
+        num_chains: int = 100,
     ):
         """Initialize AIS estimator.
 
@@ -118,7 +121,7 @@ class AISEstimator(PartitionFunctionEstimator):
 
         # Run AIS
         log_weights = torch.zeros(self.num_chains, device=device)
-        log_Z_k = []  # Track evolution of estimate
+        log_z_k = []  # Track evolution of estimate
 
         pbar = tqdm(self.betas, desc="AIS", disable=not show_progress)
 
@@ -141,17 +144,21 @@ class AISEstimator(PartitionFunctionEstimator):
 
             # Track intermediate estimates
             if i % 100 == 0:
-                log_Z_est = (
+                log_z_est = (
                     base_log_z
                     + torch.logsumexp(log_weights, 0)
                     - math.log(self.num_chains)
                 )
-                log_Z_k.append(log_Z_est.item())
-                pbar.set_postfix({"log_Z": f"{log_Z_est.item():.2f}"})
+                log_z_k.append(log_z_est.item())
+                pbar.set_postfix({"log_Z": f"{log_z_est.item():.2f}"})
 
         # Final estimate
-        log_Z = base_log_z + torch.logsumexp(log_weights, 0) - math.log(self.num_chains)
-        log_Z = log_Z.item()
+        log_z = (
+            base_log_z
+            + torch.logsumexp(log_weights, 0)
+            - math.log(self.num_chains)
+        )
+        log_z = log_z.item()
 
         if return_diagnostics:
             # Compute diagnostics
@@ -165,9 +172,9 @@ class AISEstimator(PartitionFunctionEstimator):
             se = torch.sqrt(weights.var() / ess).item()
 
             diagnostics = {
-                "log_Z": log_Z,
+                "log_Z": log_z,
                 "log_Z_std": se,
-                "log_Z_trajectory": log_Z_k,
+                "log_Z_trajectory": log_z_k,
                 "effective_sample_size": ess,
                 "log_weights": log_weights.cpu().numpy(),
                 "final_weights": weights.cpu().numpy(),
@@ -175,14 +182,14 @@ class AISEstimator(PartitionFunctionEstimator):
 
             self.log_info(
                 "AIS completed",
-                log_Z=f"{log_Z:.2f}",
+                log_Z=f"{log_z:.2f}",
                 std_error=f"{se:.3f}",
                 ESS=f"{ess:.1f}",
             )
 
-            return log_Z, diagnostics
+            return log_z, diagnostics
 
-        return log_Z
+        return log_z
 
 
 class BridgeSampling(PartitionFunctionEstimator):
@@ -209,7 +216,9 @@ class BridgeSampling(PartitionFunctionEstimator):
         self.model2 = model2
         self.num_samples = num_samples
 
-    def estimate(self, tol: float = 1e-6, max_iter: int = 1000) -> tuple[float, float]:
+    def estimate(
+        self, tol: float = 1e-6, max_iter: int = 1000
+    ) -> tuple[float, float]:
         """Estimate log ratio of partition functions.
 
         Args:
@@ -262,13 +271,17 @@ class BridgeSampling(PartitionFunctionEstimator):
 
         return log_r.item(), se
 
-    def _generate_samples(self, model: EnergyBasedModel, num_samples: int) -> Tensor:
+    def _generate_samples(
+        self, model: EnergyBasedModel, num_samples: int
+    ) -> Tensor:
         """Generate samples from a model."""
         if hasattr(model, "sample_fantasy_particles"):
             return model.sample_fantasy_particles(
                 num_samples=num_samples, num_steps=10000
             )
-        raise NotImplementedError("Model must implement sample_fantasy_particles")
+        raise NotImplementedError(
+            "Model must implement sample_fantasy_particles"
+        )
 
 
 class SimpleIS(PartitionFunctionEstimator):
@@ -345,7 +358,7 @@ class SimpleIS(PartitionFunctionEstimator):
             log_weights = log_p_unnorm - log_q
 
         # Estimate partition function
-        log_Z = torch.logsumexp(log_weights, 0) - math.log(self.num_samples)
+        log_z = torch.logsumexp(log_weights, 0) - math.log(self.num_samples)
 
         # Estimate standard error
         weights = torch.exp(log_weights - log_weights.max())
@@ -353,7 +366,7 @@ class SimpleIS(PartitionFunctionEstimator):
         ess = 1.0 / (weights**2).sum()
         se = torch.sqrt(weights.var() / ess).item()
 
-        return log_Z.item(), se
+        return log_z.item(), se
 
 
 class RatioEstimator(PartitionFunctionEstimator):
@@ -396,7 +409,9 @@ class RatioEstimator(PartitionFunctionEstimator):
                 continue
 
             if self.method == "bridge":
-                estimator = BridgeSampling(self.models[reference_idx], self.models[i])
+                estimator = BridgeSampling(
+                    self.models[reference_idx], self.models[i]
+                )
                 log_ratio, se = estimator.estimate(**kwargs)
                 ratios[(i, reference_idx)] = (-log_ratio, se)
                 ratios[(reference_idx, i)] = (log_ratio, se)
@@ -406,9 +421,15 @@ class RatioEstimator(PartitionFunctionEstimator):
             for j in range(n_models):
                 if (i, j) not in ratios and i != j:
                     # Use path through reference
-                    if (i, reference_idx) in ratios and (reference_idx, j) in ratios:
+                    if (i, reference_idx) in ratios and (
+                        reference_idx,
+                        j,
+                    ) in ratios:
                         log_ir, se_ir = ratios[(i, reference_idx)]
                         log_rj, se_rj = ratios[(reference_idx, j)]
-                        ratios[(i, j)] = (log_ir + log_rj, (se_ir**2 + se_rj**2) ** 0.5)
+                        ratios[(i, j)] = (
+                            log_ir + log_rj,
+                            (se_ir**2 + se_rj**2) ** 0.5,
+                        )
 
         return ratios

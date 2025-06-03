@@ -31,18 +31,12 @@ def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
         "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
     )
-    config.addinivalue_line(
-        "markers", "gpu: marks tests that require GPU"
-    )
-    config.addinivalue_line(
-        "markers", "integration: marks integration tests"
-    )
+    config.addinivalue_line("markers", "gpu: marks tests that require GPU")
+    config.addinivalue_line("markers", "integration: marks integration tests")
     config.addinivalue_line(
         "markers", "benchmark: marks performance benchmark tests"
     )
-    config.addinivalue_line(
-        "markers", "property: marks property-based tests"
-    )
+    config.addinivalue_line("markers", "property: marks property-based tests")
 
 
 def pytest_collection_modifyitems(config: Config, items: list) -> None:
@@ -120,17 +114,24 @@ def temp_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def assert_tensors_equal():
     """Fixture providing tensor comparison utility."""
+
     def _assert_tensors_equal(
         actual: torch.Tensor,
         expected: torch.Tensor,
         rtol: float = 1e-5,
         atol: float = 1e-8,
-        msg: str = ""
+        msg: str = "",
     ) -> None:
         """Assert that two tensors are equal within tolerance."""
-        assert actual.shape == expected.shape, f"Shape mismatch: {actual.shape} vs {expected.shape}"
-        assert actual.dtype == expected.dtype, f"Dtype mismatch: {actual.dtype} vs {expected.dtype}"
-        assert actual.device.type == expected.device.type, f"Device mismatch: {actual.device} vs {expected.device}"
+        assert actual.shape == expected.shape, (
+            f"Shape mismatch: {actual.shape} vs {expected.shape}"
+        )
+        assert actual.dtype == expected.dtype, (
+            f"Dtype mismatch: {actual.dtype} vs {expected.dtype}"
+        )
+        assert actual.device.type == expected.device.type, (
+            f"Device mismatch: {actual.device} vs {expected.device}"
+        )
 
         if actual.dtype in (torch.float16, torch.float32, torch.float64):
             assert torch.allclose(actual, expected, rtol=rtol, atol=atol), (
@@ -139,7 +140,9 @@ def assert_tensors_equal():
                 f"Mean diff: {(actual - expected).abs().mean():.6e}"
             )
         else:
-            assert torch.equal(actual, expected), f"Tensor values not equal. {msg}"
+            assert torch.equal(actual, expected), (
+                f"Tensor values not equal. {msg}"
+            )
 
     return _assert_tensors_equal
 
@@ -147,11 +150,12 @@ def assert_tensors_equal():
 @pytest.fixture
 def assert_gradients_valid():
     """Fixture providing gradient validation utility."""
+
     def _assert_gradients_valid(
         model: torch.nn.Module,
         check_nan: bool = True,
         check_inf: bool = True,
-        max_norm: float | None = None
+        max_norm: float | None = None,
     ) -> None:
         """Assert that model gradients are valid."""
         for name, param in model.named_parameters():
@@ -159,10 +163,14 @@ def assert_gradients_valid():
                 grad = param.grad
 
                 if check_nan:
-                    assert not torch.isnan(grad).any(), f"NaN gradient in {name}"
+                    assert not torch.isnan(grad).any(), (
+                        f"NaN gradient in {name}"
+                    )
 
                 if check_inf:
-                    assert not torch.isinf(grad).any(), f"Inf gradient in {name}"
+                    assert not torch.isinf(grad).any(), (
+                        f"Inf gradient in {name}"
+                    )
 
                 if max_norm is not None:
                     grad_norm = grad.norm().item()
@@ -176,6 +184,7 @@ def assert_gradients_valid():
 @pytest.fixture
 def benchmark_wrapper(benchmark):
     """Enhanced benchmark fixture with automatic GPU synchronization."""
+
     def _benchmark(func, *args, **kwargs):
         def wrapped():
             result = func(*args, **kwargs)
@@ -214,16 +223,19 @@ def pytest_generate_tests(metafunc: Metafunc) -> None:
 # Test data generation utilities
 @pytest.fixture
 def make_random_tensor():
-    """Factory fixture for creating random tensors."""
+    """Create random tensors for testing."""
+
     def _make_random_tensor(
         shape: tuple,
         dtype: torch.dtype = torch.float32,
-        device: torch.device = torch.device("cpu"),
+        device: torch.device | None = None,
         low: float = 0.0,
         high: float = 1.0,
-        binary: bool = False
+        binary: bool = False,
     ) -> torch.Tensor:
         """Create a random tensor with specified properties."""
+        if device is None:
+            device = torch.device("cpu")
         if binary:
             tensor = torch.rand(shape, dtype=dtype, device=device)
             return (tensor > 0.5).to(dtype)
@@ -257,7 +269,7 @@ class PerformanceMonitor:
             "std": np.std(values),
             "min": np.min(values),
             "max": np.max(values),
-            "count": len(values)
+            "count": len(values),
         }
 
 

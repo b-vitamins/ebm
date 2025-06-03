@@ -61,7 +61,7 @@ class Sampler(nn.Module, LoggerMixin, ABC):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Generate samples from the model.
 
@@ -94,19 +94,15 @@ class Sampler(nn.Module, LoggerMixin, ABC):
             Dictionary of diagnostic metrics
         """
         return {
-            'num_steps': self.num_steps_taken,
-            'has_chains': self.state.chains is not None,
+            "num_steps": self.num_steps_taken,
+            "has_chains": self.state.chains is not None,
         }
 
 
 class GibbsSampler(Sampler):
     """Base class for Gibbs sampling algorithms."""
 
-    def __init__(
-        self,
-        name: str | None = None,
-        block_gibbs: bool = True
-    ):
+    def __init__(self, name: str | None = None, block_gibbs: bool = True):
         """Initialize Gibbs sampler.
 
         Args:
@@ -122,7 +118,7 @@ class GibbsSampler(Sampler):
         visible: Tensor,
         *,
         beta: Tensor | None = None,
-        start_from: str = 'visible'
+        start_from: str = "visible",
     ) -> tuple[Tensor, Tensor]:
         """Perform one Gibbs sampling step.
 
@@ -136,7 +132,7 @@ class GibbsSampler(Sampler):
         -------
             New (visible, hidden) states
         """
-        if start_from == 'visible':
+        if start_from == "visible":
             # v -> h -> v
             hidden = model.sample_hidden(visible, beta=beta)
             visible = model.sample_visible(hidden, beta=beta)
@@ -156,7 +152,7 @@ class GibbsSampler(Sampler):
         *,
         beta: Tensor | None = None,
         return_all: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Generate samples using Gibbs sampling.
 
@@ -195,11 +191,7 @@ class GibbsSampler(Sampler):
 class MCMCSampler(Sampler):
     """Base class for Markov Chain Monte Carlo samplers."""
 
-    def __init__(
-        self,
-        name: str | None = None,
-        num_chains: int | None = None
-    ):
+    def __init__(self, name: str | None = None, num_chains: int | None = None):
         """Initialize MCMC sampler.
 
         Args:
@@ -211,10 +203,7 @@ class MCMCSampler(Sampler):
 
     @abstractmethod
     def transition_kernel(
-        self,
-        model: EnergyBasedModel,
-        state: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, state: Tensor, **kwargs: Any
     ) -> tuple[Tensor, dict[str, Any]]:
         """Apply one transition of the Markov chain.
 
@@ -237,7 +226,7 @@ class MCMCSampler(Sampler):
         thin: int = 1,
         burn_in: int = 0,
         return_all: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Generate samples using MCMC.
 
@@ -289,10 +278,7 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
 
     @abstractmethod
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients for model parameters.
 
@@ -307,10 +293,7 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
         """
 
     def compute_metrics(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        samples: Tensor
+        self, model: EnergyBasedModel, data: Tensor, samples: Tensor
     ) -> dict[str, float]:
         """Compute training metrics.
 
@@ -336,10 +319,10 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
                 recon_error = 0.0
 
         return {
-            'data_energy': float(data_energy),
-            'sample_energy': float(sample_energy),
-            'energy_gap': float(sample_energy - data_energy),
-            'reconstruction_error': float(recon_error),
+            "data_energy": float(data_energy),
+            "sample_energy": float(sample_energy),
+            "energy_gap": float(sample_energy - data_energy),
+            "reconstruction_error": float(recon_error),
         }
 
 
@@ -351,7 +334,7 @@ class AnnealedSampler(Sampler):
         name: str | None = None,
         num_temps: int = 10,
         min_beta: float = 0.01,
-        max_beta: float = 1.0
+        max_beta: float = 1.0,
     ):
         """Initialize annealed sampler.
 
@@ -375,9 +358,9 @@ class AnnealedSampler(Sampler):
         log_betas = torch.linspace(
             torch.log(torch.tensor(self.min_beta)),
             torch.log(torch.tensor(self.max_beta)),
-            self.num_temps
+            self.num_temps,
         )
-        self.register_buffer('betas', torch.exp(log_betas))
+        self.register_buffer("betas", torch.exp(log_betas))
 
     @property
     def temperatures(self) -> Tensor:

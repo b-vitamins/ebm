@@ -26,6 +26,7 @@ class MockLatentModel(LatentVariableModel):
         self.hbias = nn.Parameter(torch.zeros(n_hidden))
 
     def sample_hidden(self, visible, *, beta=None, return_prob=False):
+        """Sample hidden layer from visible units."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
             if beta.dim() == 0:
@@ -40,6 +41,7 @@ class MockLatentModel(LatentVariableModel):
         return sample_h
 
     def sample_visible(self, hidden, *, beta=None, return_prob=False):
+        """Sample visible layer from hidden units."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
             if beta.dim() == 0:
@@ -54,6 +56,7 @@ class MockLatentModel(LatentVariableModel):
         return sample_v
 
     def free_energy(self, v, *, beta=None):
+        """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
             if beta.dim() == 0:
@@ -68,10 +71,11 @@ class MockLatentModel(LatentVariableModel):
         return -v_term - h_term
 
     def energy(self, x, *, beta=None, return_parts=False):
-        v = x[..., :self.num_visible]
-        h = x[..., self.num_visible:]
+        """Compute energy for joint configuration."""
+        v = x[..., : self.num_visible]
+        h = x[..., self.num_visible :]
 
-        interaction = -torch.einsum('...i,...j,ji->...', h, v, self.W)
+        interaction = -torch.einsum("...i,...j,ji->...", h, v, self.W)
         v_term = -(v @ self.vbias)
         h_term = -(h @ self.hbias)
 
@@ -85,16 +89,18 @@ class MockLatentModel(LatentVariableModel):
                 "interaction": interaction,
                 "visible": v_term,
                 "hidden": h_term,
-                "total": energy
+                "total": energy,
             }
         return energy
 
     @property
     def device(self):
+        """Return the tensor device."""
         return self.W.device
 
     @property
     def dtype(self):
+        """Return the tensor dtype."""
         return self.W.dtype
 
 
@@ -109,7 +115,7 @@ class TestParallelTempering:
             max_beta=1.0,
             swap_every=2,
             num_chains=10,
-            adaptive=True
+            adaptive=True,
         )
 
         assert pt.num_temps == 5
@@ -139,7 +145,11 @@ class TestParallelTempering:
         pt.init_chains(model, batch_size=10, state_shape=(8,))
 
         assert pt.chains is not None
-        assert pt.chains.shape == (5, 3, 8)  # num_chains x num_temps x visible_size
+        assert pt.chains.shape == (
+            5,
+            3,
+            8,
+        )  # num_chains x num_temps x visible_size
         assert pt.chain_temps.shape == (5, 3)
 
         # Check temperature assignments
@@ -184,7 +194,9 @@ class TestParallelTempering:
         # Mock energy calculations to force acceptance
         def mock_free_energy(v):
             # Make energy of state 1.0 lower than state 0.0
-            return torch.where(v.mean() > 0.5, torch.tensor(-10.0), torch.tensor(0.0))
+            return torch.where(
+                v.mean() > 0.5, torch.tensor(-10.0), torch.tensor(0.0)
+            )
 
         model.free_energy = mock_free_energy
 
@@ -200,11 +212,7 @@ class TestParallelTempering:
     def test_sampling(self) -> None:
         """Test full PT sampling."""
         pt = ParallelTempering(
-            num_temps=3,
-            min_beta=0.5,
-            max_beta=1.0,
-            swap_every=2,
-            num_chains=4
+            num_temps=3, min_beta=0.5, max_beta=1.0, swap_every=2, num_chains=4
         )
         model = MockLatentModel()
 
@@ -225,8 +233,8 @@ class TestParallelTempering:
         pt = ParallelTempering(num_temps=4)
 
         # Set some swap statistics
-        pt.swap_attempts = torch.tensor([100., 100., 100.])
-        pt.swap_accepts = torch.tensor([30., 45., 20.])
+        pt.swap_attempts = torch.tensor([100.0, 100.0, 100.0])
+        pt.swap_accepts = torch.tensor([30.0, 45.0, 20.0])
 
         rates = pt.swap_rates
 
@@ -235,15 +243,12 @@ class TestParallelTempering:
     def test_adaptive_temperatures(self) -> None:
         """Test adaptive temperature adjustment."""
         pt = ParallelTempering(
-            num_temps=3,
-            min_beta=0.1,
-            max_beta=1.0,
-            adaptive=True
+            num_temps=3, min_beta=0.1, max_beta=1.0, adaptive=True
         )
 
         # Set swap rates
-        pt.swap_attempts = torch.tensor([100., 100.])
-        pt.swap_accepts = torch.tensor([10., 80.])  # Too low and too high
+        pt.swap_attempts = torch.tensor([100.0, 100.0])
+        pt.swap_accepts = torch.tensor([10.0, 80.0])  # Too low and too high
 
         # Store original betas
         pt.betas.clone()
@@ -262,7 +267,9 @@ class TestParallelTempering:
         model = Mock(spec=EnergyBasedModel)
         init_state = torch.rand(5, 10)
 
-        with pytest.raises(TypeError, match="PT requires a LatentVariableModel"):
+        with pytest.raises(
+            TypeError, match="PT requires a LatentVariableModel"
+        ):
             pt.sample(model, init_state)
 
     def test_registry_registration(self) -> None:
@@ -280,11 +287,7 @@ class TestPTGradientEstimator:
 
     def test_initialization(self) -> None:
         """Test PT gradient estimator initialization."""
-        pt_grad = PTGradientEstimator(
-            num_temps=5,
-            k=1,
-            swap_every=2
-        )
+        pt_grad = PTGradientEstimator(num_temps=5, k=1, swap_every=2)
 
         assert isinstance(pt_grad.sampler, ParallelTempering)
         assert pt_grad.k == 1
@@ -313,7 +316,10 @@ class TestPTGradientEstimator:
         model = Mock(spec=EnergyBasedModel)
         data = torch.rand(5, 10)
 
-        with pytest.raises(TypeError, match="PT gradient estimation requires LatentVariableModel"):
+        with pytest.raises(
+            TypeError,
+            match="PT gradient estimation requires LatentVariableModel",
+        ):
             pt_grad.estimate_gradient(model, data)
 
 
@@ -322,11 +328,7 @@ class TestAnnealedImportanceSampling:
 
     def test_initialization(self) -> None:
         """Test AIS initialization."""
-        ais = AnnealedImportanceSampling(
-            num_temps=100,
-            num_chains=50,
-            k=1
-        )
+        ais = AnnealedImportanceSampling(num_temps=100, num_chains=50, k=1)
 
         assert ais.num_temps == 100
         assert ais.num_chains == 50
@@ -341,11 +343,7 @@ class TestAnnealedImportanceSampling:
 
     def test_log_partition_estimation(self) -> None:
         """Test partition function estimation."""
-        ais = AnnealedImportanceSampling(
-            num_temps=10,
-            num_chains=20,
-            k=1
-        )
+        ais = AnnealedImportanceSampling(num_temps=10, num_chains=20, k=1)
 
         model = MockLatentModel(n_visible=3, n_hidden=2)
 
@@ -364,11 +362,7 @@ class TestAnnealedImportanceSampling:
 
     def test_log_partition_with_bounds(self) -> None:
         """Test partition function estimation with confidence bounds."""
-        ais = AnnealedImportanceSampling(
-            num_temps=50,
-            num_chains=100,
-            k=1
-        )
+        ais = AnnealedImportanceSampling(num_temps=50, num_chains=100, k=1)
 
         model = MockLatentModel(n_visible=5, n_hidden=3)
         base_log_z = (model.num_visible + model.num_hidden) * np.log(2)
@@ -390,11 +384,7 @@ class TestAnnealedImportanceSampling:
 
     def test_importance_weights(self) -> None:
         """Test importance weight computation."""
-        ais = AnnealedImportanceSampling(
-            num_temps=5,
-            num_chains=10,
-            k=1
-        )
+        ais = AnnealedImportanceSampling(num_temps=5, num_chains=10, k=1)
 
         model = MockLatentModel(n_visible=4, n_hidden=2)
 
@@ -412,7 +402,7 @@ class TestAnnealedImportanceSampling:
             beta = ais.betas[i]
 
             if i > 0:
-                prev_beta = ais.betas[i-1]
+                prev_beta = ais.betas[i - 1]
                 # Weights should increase
                 log_w.clone()
                 log_w += (prev_beta - beta) * model.free_energy(v)
@@ -428,11 +418,7 @@ class TestAnnealedImportanceSampling:
 
     def test_effective_sample_size(self) -> None:
         """Test ESS calculation in AIS."""
-        ais = AnnealedImportanceSampling(
-            num_temps=20,
-            num_chains=50,
-            k=1
-        )
+        ais = AnnealedImportanceSampling(num_temps=20, num_chains=50, k=1)
 
         model = MockLatentModel()
         base_log_z = model.num_visible * np.log(2)
@@ -468,7 +454,7 @@ class TestEdgeCases:
         pt = ParallelTempering(
             num_temps=3,
             min_beta=0.001,  # Very high temperature
-            max_beta=100.0   # Very low temperature
+            max_beta=100.0,  # Very low temperature
         )
         model = MockLatentModel()
 

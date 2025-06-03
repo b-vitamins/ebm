@@ -142,7 +142,9 @@ class TestInitializer:
     def test_kaiming_initialization(self) -> None:
         """Test Kaiming/He initialization."""
         # Kaiming uniform
-        init = Initializer("kaiming_uniform", a=0, mode='fan_in', nonlinearity='relu')
+        init = Initializer(
+            "kaiming_uniform", a=0, mode="fan_in", nonlinearity="relu"
+        )
         tensor = torch.zeros(50, 100)
         init(tensor)
 
@@ -154,7 +156,9 @@ class TestInitializer:
         assert tensor.max() <= expected_bound * 1.01
 
         # Kaiming normal
-        init = Initializer("kaiming_normal", a=0.1, mode='fan_out', nonlinearity='leaky_relu')
+        init = Initializer(
+            "kaiming_normal", a=0.1, mode="fan_out", nonlinearity="leaky_relu"
+        )
         tensor = torch.zeros(200, 100)
         init(tensor)
 
@@ -207,7 +211,9 @@ class TestInitializer:
         # Check sparsity
         num_nonzero = (tensor != 0).sum().item()
         expected_nonzero = 0.1 * 100  # sparsity * num_columns
-        assert abs(num_nonzero / 100 - expected_nonzero) < 5  # Allow some variance
+        assert (
+            abs(num_nonzero / 100 - expected_nonzero) < 5
+        )  # Allow some variance
 
         # Check that non-zero values have correct std
         nonzero_values = tensor[tensor != 0]
@@ -261,7 +267,9 @@ class TestInitializer:
         with pytest.raises(ValueError, match="Unknown initialization method"):
             Initializer("invalid_method")
 
-        with pytest.raises(TypeError, match="Invalid initialization method type"):
+        with pytest.raises(
+            TypeError, match="Invalid initialization method type"
+        ):
             Initializer([1, 2, 3])  # Invalid type
 
     def test_shape_mismatch(self) -> None:
@@ -282,7 +290,7 @@ class TestInitializer:
             shape=(10, 20),
             dtype=torch.float32,
             device="cpu",
-            requires_grad=True
+            requires_grad=True,
         )
 
         assert isinstance(param, nn.Parameter)
@@ -298,9 +306,7 @@ class TestInitializer:
         init = Initializer("ones")
 
         buffer = init.create_buffer(
-            shape=(5, 5),
-            dtype=torch.float64,
-            device="cpu"
+            shape=(5, 5), dtype=torch.float64, device="cpu"
         )
 
         assert isinstance(buffer, torch.Tensor)
@@ -335,29 +341,34 @@ class TestUtilityFunctions:
     def test_calculate_gain(self) -> None:
         """Test gain calculation for different nonlinearities."""
         # Linear functions
-        assert calculate_gain('linear') == 1
-        assert calculate_gain('conv2d') == 1
-        assert calculate_gain('sigmoid') == 1
+        assert calculate_gain("linear") == 1
+        assert calculate_gain("conv2d") == 1
+        assert calculate_gain("sigmoid") == 1
 
         # Tanh
-        assert calculate_gain('tanh') == pytest.approx(5.0 / 3)
+        assert calculate_gain("tanh") == pytest.approx(5.0 / 3)
 
         # ReLU
-        assert calculate_gain('relu') == pytest.approx(math.sqrt(2.0))
+        assert calculate_gain("relu") == pytest.approx(math.sqrt(2.0))
 
         # Leaky ReLU
-        assert calculate_gain('leaky_relu') == pytest.approx(math.sqrt(2.0 / 1.01))
-        assert calculate_gain('leaky_relu', 0.2) == pytest.approx(math.sqrt(2.0 / 1.04))
+        assert calculate_gain("leaky_relu") == pytest.approx(
+            math.sqrt(2.0 / 1.01)
+        )
+        assert calculate_gain("leaky_relu", 0.2) == pytest.approx(
+            math.sqrt(2.0 / 1.04)
+        )
 
         # SELU
-        assert calculate_gain('selu') == pytest.approx(0.75)
+        assert calculate_gain("selu") == pytest.approx(0.75)
 
         # Unknown nonlinearity
         with pytest.raises(ValueError, match="Unsupported nonlinearity"):
-            calculate_gain('unknown')
+            calculate_gain("unknown")
 
     def test_initialize_module(self) -> None:
         """Test module initialization."""
+
         # Create a simple module
         class TestModule(nn.Module):
             def __init__(self) -> None:
@@ -371,9 +382,7 @@ class TestUtilityFunctions:
 
         # Initialize with specific strategies
         initialize_module(
-            module,
-            weight_init="xavier_uniform",
-            bias_init="zeros"
+            module, weight_init="xavier_uniform", bias_init="zeros"
         )
 
         # Check biases are zero
@@ -406,10 +415,10 @@ class TestUtilityFunctions:
         assert init.kwargs["gain"] == 2.0
 
         # Kaiming init
-        init = kaiming_init(uniform=False, a=0.1, mode='fan_out')
+        init = kaiming_init(uniform=False, a=0.1, mode="fan_out")
         assert isinstance(init, Initializer)
         assert init.kwargs["a"] == 0.1
-        assert init.kwargs["mode"] == 'fan_out'
+        assert init.kwargs["mode"] == "fan_out"
 
     def test_init_from_data_statistics(self) -> None:
         """Test initialization from data statistics."""
@@ -418,9 +427,7 @@ class TestUtilityFunctions:
         data_std = torch.tensor([0.1, 0.2, 0.15])
 
         init_fn = init_from_data_statistics(
-            data_mean=data_mean,
-            data_std=data_std,
-            scale=1.0
+            data_mean=data_mean, data_std=data_std, scale=1.0
         )
 
         # Test on matching size tensor (for bias)
@@ -438,8 +445,7 @@ class TestUtilityFunctions:
 
         # Test with scale
         init_fn_scaled = init_from_data_statistics(
-            data_mean=data_mean,
-            scale=0.5
+            data_mean=data_mean, scale=0.5
         )
 
         bias_scaled = torch.zeros(3)
@@ -485,7 +491,9 @@ class TestEdgeCases:
         assert abs(tensor.mean().item()) < 0.001
         assert abs(tensor.std().item() - 0.01) < 0.001
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_cuda_initialization(self) -> None:
         """Test initialization on CUDA tensors."""
         init = Initializer("xavier_normal")

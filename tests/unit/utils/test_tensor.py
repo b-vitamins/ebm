@@ -113,8 +113,7 @@ class TestBasicUtilities:
         assert torch.allclose(result, expected)
 
         # 2D case with dimension
-        x = torch.tensor([[1.0, 2.0, 3.0],
-                          [4.0, 5.0, 6.0]])
+        x = torch.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
 
         # Sum over dim 1
         result = log_sum_exp(x, dim=1)
@@ -140,10 +139,8 @@ class TestBatchOperations:
 
     def test_batch_outer_product(self) -> None:
         """Test batch outer product."""
-        a = torch.tensor([[1.0, 2.0],
-                          [3.0, 4.0]])
-        b = torch.tensor([[5.0, 6.0, 7.0],
-                          [8.0, 9.0, 10.0]])
+        a = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+        b = torch.tensor([[5.0, 6.0, 7.0], [8.0, 9.0, 10.0]])
 
         result = batch_outer_product(a, b)
 
@@ -166,69 +163,66 @@ class TestBatchOperations:
     def test_batch_quadratic_form(self) -> None:
         """Test batch quadratic form computation."""
         # Single matrix for all batches
-        x = torch.tensor([[1.0, 2.0],
-                          [3.0, 4.0]])
-        A = torch.tensor([[2.0, 1.0],
-                          [1.0, 3.0]])
+        x = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+        matrix = torch.tensor([[2.0, 1.0], [1.0, 3.0]])
 
-        result = batch_quadratic_form(x, A)
+        result = batch_quadratic_form(x, matrix)
 
         assert result.shape == (2,)
 
         # Check manually: x^T A x
-        expected_0 = x[0] @ A @ x[0]
-        expected_1 = x[1] @ A @ x[1]
+        expected_0 = x[0] @ matrix @ x[0]
+        expected_1 = x[1] @ matrix @ x[1]
         assert torch.allclose(result, torch.tensor([expected_0, expected_1]))
 
         # Different matrix for each batch
         x = torch.randn(5, 3)
-        A = torch.randn(5, 3, 3)
+        matrix = torch.randn(5, 3, 3)
 
-        result = batch_quadratic_form(x, A)
+        result = batch_quadratic_form(x, matrix)
         assert result.shape == (5,)
 
         # Check one example
-        expected_0 = x[0] @ A[0] @ x[0]
+        expected_0 = x[0] @ matrix[0] @ x[0]
         assert torch.allclose(result[0], expected_0)
 
     def test_batch_mv(self) -> None:
         """Test batched matrix-vector multiplication."""
         # 2D matrix, 1D vector
-        A = torch.tensor([[1.0, 2.0],
-                          [3.0, 4.0]])
+        matrix = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
         x = torch.tensor([5.0, 6.0])
 
-        result = batch_mv(A, x)
-        expected = torch.mv(A, x)
+        result = batch_mv(matrix, x)
+        expected = torch.mv(matrix, x)
         assert torch.allclose(result, expected)
 
         # 2D matrix, 2D vector (batched)
-        A = torch.randn(3, 4)
+        matrix = torch.randn(3, 4)
         x = torch.randn(5, 4)
 
-        result = batch_mv(A, x)
+        result = batch_mv(matrix, x)
         assert result.shape == (5, 3)
 
         # Check one example
-        expected_0 = A @ x[0]
+        expected_0 = matrix @ x[0]
         assert torch.allclose(result[0], expected_0)
 
         # 3D matrix, 1D vector
-        A = torch.randn(5, 3, 4)
+        matrix = torch.randn(5, 3, 4)
         x = torch.randn(4)
 
-        result = batch_mv(A, x)
+        result = batch_mv(matrix, x)
         assert result.shape == (5, 3)
 
         # 3D matrix, 2D vector (full batch)
-        A = torch.randn(5, 3, 4)
+        matrix = torch.randn(5, 3, 4)
         x = torch.randn(5, 4)
 
-        result = batch_mv(A, x)
+        result = batch_mv(matrix, x)
         assert result.shape == (5, 3)
 
         # Check one example
-        expected_0 = A[0] @ x[0]
+        expected_0 = matrix[0] @ x[0]
         assert torch.allclose(result[0], expected_0)
 
 
@@ -294,9 +288,13 @@ class TestMasking:
     def test_masked_fill_inf(self) -> None:
         """Test filling masked positions."""
         tensor = torch.randn(3, 4)
-        mask = torch.tensor([[True, False, False, True],
-                             [False, True, False, False],
-                             [True, True, False, False]])
+        mask = torch.tensor(
+            [
+                [True, False, False, True],
+                [False, True, False, False],
+                [True, True, False, False],
+            ]
+        )
 
         result = masked_fill_inf(tensor, mask)
 
@@ -320,12 +318,14 @@ class TestMasking:
         """Test causal mask creation."""
         # Small mask
         mask = create_causal_mask(4)
-        expected = torch.tensor([
-            [True, False, False, False],
-            [True, True, False, False],
-            [True, True, True, False],
-            [True, True, True, True]
-        ])
+        expected = torch.tensor(
+            [
+                [True, False, False, False],
+                [True, True, False, False],
+                [True, True, True, False],
+                [True, True, True, True],
+            ]
+        )
         assert torch.equal(mask, expected)
 
         # Check device
@@ -340,11 +340,13 @@ class TestMasking:
         lengths = torch.tensor([3, 2, 4])
         mask = create_padding_mask(lengths, max_length=5)
 
-        expected = torch.tensor([
-            [True, True, True, False, False],
-            [True, True, False, False, False],
-            [True, True, True, True, False]
-        ])
+        expected = torch.tensor(
+            [
+                [True, True, True, False, False],
+                [True, True, False, False, False],
+                [True, True, True, True, False],
+            ]
+        )
         assert torch.equal(mask, expected)
 
         # Auto max length
@@ -537,7 +539,7 @@ class TestEdgeCases:
 
         result = log_sum_exp(empty, dim=0)
         assert result.shape == (5,)
-        assert torch.all(result == float('-inf'))
+        assert torch.all(result == float("-inf"))
 
         # Empty batch operations
         a_empty = torch.empty(0, 3)
@@ -575,7 +577,9 @@ class TestEdgeCases:
         assert abs(stats.mean) < 0.1  # Should be close to 0 for randn
         assert 0.9 < stats.std < 1.1  # Should be close to 1 for randn
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_device_consistency(self) -> None:
         """Test operations maintain device consistency."""
         # Create CUDA tensors

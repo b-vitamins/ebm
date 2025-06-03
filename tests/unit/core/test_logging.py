@@ -55,14 +55,11 @@ class TestLogConfig:
         assert isinstance(config.file, Path)
         assert config.file == Path("logs/test.log")
 
-    @patch('structlog.configure')
+    @patch("structlog.configure")
     def test_setup(self, mock_configure) -> None:
         """Test logger setup."""
         config = LogConfig(
-            level="INFO",
-            console=True,
-            structured=False,
-            metrics=True
+            level="INFO", console=True, structured=False, metrics=True
         )
 
         logger = config.setup()
@@ -79,6 +76,7 @@ class TestLoggerMixin:
 
     def test_logger_property(self) -> None:
         """Test logger property creation."""
+
         class TestClass(LoggerMixin):
             pass
 
@@ -94,6 +92,7 @@ class TestLoggerMixin:
 
     def test_log_methods(self) -> None:
         """Test convenience log methods."""
+
         class TestClass(LoggerMixin):
             pass
 
@@ -130,7 +129,7 @@ class TestMetricProcessor:
             "accuracy": 0.95,
             "learning_rate": 0.001,
             "batch_size": 32,
-            "grad_norm": 1.23
+            "grad_norm": 1.23,
         }
 
         result = processor(None, None, event_dict.copy())
@@ -150,7 +149,7 @@ class TestMetricProcessor:
             "epoch": 10,
             "step": 1000,
             "iteration": 500,
-            "batch": 32
+            "batch": 32,
         }
 
         result = processor(None, None, event_dict)
@@ -167,7 +166,7 @@ class TestMetricProcessor:
             "event": "Test",
             "loss": 0.123,
             "model_name": "RBM",  # String, not metric
-            "error_details": {"type": "ValueError"}  # Dict, not metric
+            "error_details": {"type": "ValueError"},  # Dict, not metric
         }
 
         result = processor(None, None, event_dict)
@@ -186,7 +185,7 @@ class TestProcessorFunctions:
         event_dict = {"event": "test"}
 
         # Mock time
-        with patch('time.time', return_value=1234567890.123):
+        with patch("time.time", return_value=1234567890.123):
             result = add_timestamp(None, None, event_dict)
 
         assert "timestamp" in result
@@ -194,10 +193,7 @@ class TestProcessorFunctions:
 
     def test_add_logger_name(self) -> None:
         """Test logger name processor."""
-        event_dict = {
-            "event": "test",
-            "logger_name": "ebm.models.rbm"
-        }
+        event_dict = {"event": "test", "logger_name": "ebm.models.rbm"}
 
         result = add_logger_name(None, None, event_dict)
 
@@ -211,8 +207,8 @@ class TestContextManagers:
 
     def test_log_context(self) -> None:
         """Test log context manager."""
-        with patch('structlog.contextvars.bind_contextvars') as mock_bind:
-            with patch('structlog.contextvars.clear_contextvars') as mock_clear:
+        with patch("structlog.contextvars.bind_contextvars") as mock_bind:
+            with patch("structlog.contextvars.clear_contextvars") as mock_clear:
                 with log_context(epoch=1, phase="training"):
                     mock_bind.assert_called_once_with(epoch=1, phase="training")
 
@@ -223,30 +219,27 @@ class TestContextManagers:
         """Test duration logging context manager."""
         mock_logger = MagicMock()
 
-        with patch('time.perf_counter', side_effect=[1.0, 3.5]):
+        with patch("time.perf_counter", side_effect=[1.0, 3.5]):
             with log_duration(mock_logger, "Operation", extra="data"):
                 # Simulate some work
                 pass
 
         mock_logger.info.assert_called_once_with(
-            "Operation",
-            duration=2.5,
-            extra="data"
+            "Operation", duration=2.5, extra="data"
         )
 
     def test_log_duration_with_exception(self) -> Never:
         """Test duration logging with exception."""
         mock_logger = MagicMock()
 
-        with patch('time.perf_counter', side_effect=[1.0, 2.0]):
+        with patch("time.perf_counter", side_effect=[1.0, 2.0]):
             with pytest.raises(ValueError):
                 with log_duration(mock_logger, "Failing operation"):
                     raise ValueError("Test error")
 
         # Should still log duration
         mock_logger.info.assert_called_once_with(
-            "Failing operation",
-            duration=1.0
+            "Failing operation", duration=1.0
         )
 
 
@@ -261,7 +254,7 @@ class TestFunctionDecorator:
         def test_func(a: int, b: int = 2) -> int:
             return a + b
 
-        with patch('time.perf_counter', side_effect=[1.0, 1.1]):
+        with patch("time.perf_counter", side_effect=[1.0, 1.1]):
             result = test_func(1, b=3)
 
         assert result == 4
@@ -288,7 +281,7 @@ class TestFunctionDecorator:
         def failing_func() -> Never:
             raise ValueError("Test error")
 
-        with patch('time.perf_counter', side_effect=[1.0, 1.5]):
+        with patch("time.perf_counter", side_effect=[1.0, 1.5]):
             with pytest.raises(ValueError):
                 failing_func()
 
@@ -303,6 +296,7 @@ class TestFunctionDecorator:
 
     def test_log_function_call_auto_logger(self) -> None:
         """Test decorator with automatic logger creation."""
+
         @log_function_call()  # No logger provided
         def auto_func() -> str:
             return "result"
@@ -315,45 +309,43 @@ class TestFunctionDecorator:
 class TestConvenienceFunctions:
     """Test module-level convenience functions."""
 
-    @patch('ebm.core.logging.logger')
+    @patch("ebm.core.logging.logger")
     def test_debug(self, mock_logger) -> None:
         """Test debug convenience function."""
         debug("Debug message", value=123)
         mock_logger.debug.assert_called_once_with("Debug message", value=123)
 
-    @patch('ebm.core.logging.logger')
+    @patch("ebm.core.logging.logger")
     def test_info(self, mock_logger) -> None:
         """Test info convenience function."""
         info("Info message", status="ok")
         mock_logger.info.assert_called_once_with("Info message", status="ok")
 
-    @patch('ebm.core.logging.logger')
+    @patch("ebm.core.logging.logger")
     def test_warning(self, mock_logger) -> None:
         """Test warning convenience function."""
         warning("Warning message")
         mock_logger.warning.assert_called_once_with("Warning message")
 
-    @patch('ebm.core.logging.logger')
+    @patch("ebm.core.logging.logger")
     def test_error(self, mock_logger) -> None:
         """Test error convenience function."""
         error("Error message", code=500)
         mock_logger.error.assert_called_once_with("Error message", code=500)
 
-    @patch('ebm.core.logging.logger')
+    @patch("ebm.core.logging.logger")
     def test_metrics(self, mock_logger) -> None:
         """Test metrics convenience function."""
         metrics("Training metrics", loss=0.123, accuracy=0.95)
         mock_logger.info.assert_called_once_with(
-            "Training metrics",
-            loss=0.123,
-            accuracy=0.95
+            "Training metrics", loss=0.123, accuracy=0.95
         )
 
 
 class TestSetupLogging:
     """Test setup_logging function."""
 
-    @patch('ebm.core.logging.LogConfig')
+    @patch("ebm.core.logging.LogConfig")
     def test_setup_logging_defaults(self, mock_config_class) -> None:
         """Test setup with default parameters."""
         mock_config = MagicMock()
@@ -368,11 +360,11 @@ class TestSetupLogging:
             file=None,
             structured=False,
             colors=True,
-            metrics=True
+            metrics=True,
         )
         mock_config.setup.assert_called_once()
 
-    @patch('ebm.core.logging.LogConfig')
+    @patch("ebm.core.logging.LogConfig")
     def test_setup_logging_custom(self, mock_config_class) -> None:
         """Test setup with custom parameters."""
         mock_config = MagicMock()
@@ -385,7 +377,7 @@ class TestSetupLogging:
             file="test.log",
             structured=True,
             colors=False,
-            metrics=False
+            metrics=False,
         )
 
         mock_config_class.assert_called_once_with(
@@ -394,7 +386,7 @@ class TestSetupLogging:
             file="test.log",
             structured=True,
             colors=False,
-            metrics=False
+            metrics=False,
         )
 
 
@@ -407,10 +399,7 @@ class TestIntegration:
 
         # Setup logging
         test_logger = setup_logging(
-            level="DEBUG",
-            file=str(log_file),
-            structured=False,
-            colors=False
+            level="DEBUG", file=str(log_file), structured=False, colors=False
         )
 
         # Log some messages
@@ -435,18 +424,12 @@ class TestIntegration:
 
         # Setup structured logging
         test_logger = setup_logging(
-            file=str(log_file),
-            structured=True,
-            console=False
+            file=str(log_file), structured=True, console=False
         )
 
         # Log structured data
         test_logger.info(
-            "Training step",
-            epoch=1,
-            batch=10,
-            loss=0.123,
-            accuracy=0.95
+            "Training step", epoch=1, batch=10, loss=0.123, accuracy=0.95
         )
 
         # Read and parse JSON

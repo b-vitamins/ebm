@@ -28,6 +28,7 @@ class MockLatentModel(LatentVariableModel):
         self.hbias = nn.Parameter(torch.zeros(n_hidden))
 
     def sample_hidden(self, visible, *, beta=None, return_prob=False):
+        """Sample hidden units from visible layer."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -39,6 +40,7 @@ class MockLatentModel(LatentVariableModel):
         return sample_h
 
     def sample_visible(self, hidden, *, beta=None, return_prob=False):
+        """Sample visible units from hidden layer."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
             pre_v = pre_v * beta
@@ -50,6 +52,7 @@ class MockLatentModel(LatentVariableModel):
         return sample_v
 
     def free_energy(self, v, *, beta=None):
+        """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -61,22 +64,22 @@ class MockLatentModel(LatentVariableModel):
 
     @property
     def device(self):
+        """Return device of model parameters."""
         return self.W.device
 
     @property
     def dtype(self):
+        """Return dtype of model parameters."""
         return self.W.dtype
 
     def energy(self, x, *, beta=None, return_parts=False):
+        """Return constant energy (not used in CD)."""
         # Not used in CD
         return torch.zeros(x.shape[0])
 
     def named_parameters(self):
-        return [
-            ("W", self.W),
-            ("vbias", self.vbias),
-            ("hbias", self.hbias)
-        ]
+        """Return model parameters as name-parameter pairs."""
+        return [("W", self.W), ("vbias", self.vbias), ("hbias", self.hbias)]
 
 
 class TestContrastiveDivergence:
@@ -116,7 +119,7 @@ class TestContrastiveDivergence:
         assert gradients["hbias"].shape == model.hbias.shape
 
         # Check that negative samples were stored
-        assert hasattr(cd, 'last_negative_samples')
+        assert hasattr(cd, "last_negative_samples")
         assert cd.last_negative_samples.shape == data.shape
 
     def test_gradient_computation(self) -> None:
@@ -125,10 +128,9 @@ class TestContrastiveDivergence:
         model = MockLatentModel(n_visible=5, n_hidden=3)
 
         # Use specific data for testing
-        data = torch.tensor([
-            [1., 0., 1., 0., 1.],
-            [0., 1., 0., 1., 0.]
-        ])
+        data = torch.tensor(
+            [[1.0, 0.0, 1.0, 0.0, 1.0], [0.0, 1.0, 0.0, 1.0, 0.0]]
+        )
 
         # Get gradients
         gradients = cd.estimate_gradient(model, data)
@@ -143,14 +145,15 @@ class TestContrastiveDivergence:
         h_model_prob = model.sample_hidden(v_model, return_prob=True)[1]
 
         # Expected gradients
-        expected_W = (batch_outer_product(h_data_prob, data).mean(dim=0) -
-                      batch_outer_product(h_model_prob, v_model).mean(dim=0))
+        expected_w = batch_outer_product(h_data_prob, data).mean(
+            dim=0
+        ) - batch_outer_product(h_model_prob, v_model).mean(dim=0)
         expected_vbias = data.mean(dim=0) - v_model.mean(dim=0)
         expected_hbias = h_data_prob.mean(dim=0) - h_model_prob.mean(dim=0)
 
         # Note: Due to stochasticity in sampling, we can't expect exact matches
         # But shapes should match
-        assert gradients["W"].shape == expected_W.shape
+        assert gradients["W"].shape == expected_w.shape
         assert gradients["vbias"].shape == expected_vbias.shape
         assert gradients["hbias"].shape == expected_hbias.shape
 
@@ -160,14 +163,14 @@ class TestContrastiveDivergence:
         model = MockLatentModel()
 
         # Store original parameters
-        W_orig = model.W.data.clone()
+        w_orig = model.W.data.clone()
         vbias_orig = model.vbias.data.clone()
 
         # Create mock gradients
         gradients = {
             "W": torch.ones_like(model.W),
             "vbias": torch.ones_like(model.vbias),
-            "hbias": torch.ones_like(model.hbias)
+            "hbias": torch.ones_like(model.hbias),
         }
 
         # Apply gradients
@@ -175,8 +178,10 @@ class TestContrastiveDivergence:
         cd.apply_gradients(model, gradients, lr=lr)
 
         # Check parameters were updated (gradient ascent)
-        assert torch.allclose(model.W.data, W_orig + lr * gradients["W"])
-        assert torch.allclose(model.vbias.data, vbias_orig + lr * gradients["vbias"])
+        assert torch.allclose(model.W.data, w_orig + lr * gradients["W"])
+        assert torch.allclose(
+            model.vbias.data, vbias_orig + lr * gradients["vbias"]
+        )
 
     def test_invalid_model_type(self) -> None:
         """Test error on non-latent model."""
@@ -186,7 +191,9 @@ class TestContrastiveDivergence:
         model = Mock(spec=EnergyBasedModel)
         data = torch.rand(10, 5)
 
-        with pytest.raises(TypeError, match="CD requires a LatentVariableModel"):
+        with pytest.raises(
+            TypeError, match="CD requires a LatentVariableModel"
+        ):
             cd.estimate_gradient(model, data)
 
 
@@ -208,7 +215,7 @@ class TestCDSampler:
         assert sampler_pcd.persistent is True
         assert sampler_pcd.num_chains == 100
         assert sampler_pcd.name == "PCD-5"
-        assert hasattr(sampler_pcd, 'persistent_chains')
+        assert hasattr(sampler_pcd, "persistent_chains")
 
     def test_non_persistent_sampling(self) -> None:
         """Test non-persistent CD sampling."""
@@ -312,10 +319,7 @@ class TestFastPersistentCD:
     def test_initialization(self) -> None:
         """Test FPCD initialization."""
         fpcd = FastPersistentCD(
-            k=1,
-            num_chains=100,
-            momentum=0.9,
-            fast_weight_scale=5.0
+            k=1, num_chains=100, momentum=0.9, fast_weight_scale=5.0
         )
 
         assert fpcd.momentum == 0.9
@@ -330,7 +334,7 @@ class TestFastPersistentCD:
         data = torch.rand(20, 20)
 
         # Store original parameters
-        W_orig = model.W.data.clone()
+        w_orig2 = model.W.data.clone()
 
         # First call - initializes velocities
         fpcd.estimate_gradient(model, data)
@@ -341,7 +345,7 @@ class TestFastPersistentCD:
         assert "hbias" in fpcd.velocities
 
         # Parameters should be restored
-        assert torch.allclose(model.W.data, W_orig)
+        assert torch.allclose(model.W.data, w_orig2)
 
         # Second call - uses velocities
         gradients2 = fpcd.estimate_gradient(model, data)
@@ -359,7 +363,9 @@ class TestFastPersistentCD:
         fpcd.velocities["W"] = torch.zeros(3, 5)
 
         # Update velocity
-        fpcd.velocities["W"].mul_(fpcd.momentum).add_(grad1, alpha=1-fpcd.momentum)
+        fpcd.velocities["W"].mul_(fpcd.momentum).add_(
+            grad1, alpha=1 - fpcd.momentum
+        )
 
         expected = 0.05 * grad1  # (1-0.95) * grad1
         assert torch.allclose(fpcd.velocities["W"], expected)
@@ -371,10 +377,7 @@ class TestCDWithDecay:
     def test_initialization(self) -> None:
         """Test CD with decay initialization."""
         cd_decay = CDWithDecay(
-            initial_k=25,
-            final_k=1,
-            decay_epochs=10,
-            persistent=False
+            initial_k=25, final_k=1, decay_epochs=10, persistent=False
         )
 
         assert cd_decay.initial_k == 25
@@ -385,11 +388,7 @@ class TestCDWithDecay:
 
     def test_k_update(self) -> None:
         """Test k decay mechanism."""
-        cd_decay = CDWithDecay(
-            initial_k=20,
-            final_k=2,
-            decay_epochs=10
-        )
+        cd_decay = CDWithDecay(initial_k=20, final_k=2, decay_epochs=10)
 
         # Initial k
         assert cd_decay.k == 20
@@ -413,11 +412,7 @@ class TestCDWithDecay:
 
     def test_sampling_with_decay(self) -> None:
         """Test that sampling uses current k value."""
-        cd_decay = CDWithDecay(
-            initial_k=10,
-            final_k=1,
-            decay_epochs=5
-        )
+        cd_decay = CDWithDecay(initial_k=10, final_k=1, decay_epochs=5)
 
         model = MockLatentModel()
         data = torch.rand(5, 20)
@@ -496,7 +491,9 @@ class TestEdgeCases:
         # Chains should maintain their size
         assert pcd.sampler.persistent_chains.shape[0] == 10
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_device_consistency(self) -> None:
         """Test that sampling maintains device consistency."""
         cd = ContrastiveDivergence(k=1)

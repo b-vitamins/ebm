@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import Tensor, nn
 
 from ebm.core.config import GaussianRBMConfig
@@ -57,7 +57,9 @@ class GaussianBernoulliRBM(RBMBase):
             sigma = getattr(self.config, "sigma", 1.0)
             self.register_buffer(
                 "log_sigma",
-                torch.full((self.num_visible,), math.log(sigma), dtype=self.dtype),
+                torch.full(
+                    (self.num_visible,), math.log(sigma), dtype=self.dtype
+                ),
             )
 
     @property
@@ -87,7 +89,11 @@ class GaussianBernoulliRBM(RBMBase):
         return torch.bernoulli(prob)
 
     def sample_visible(
-        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
+        self,
+        hidden: Tensor,
+        *,
+        beta: Tensor | None = None,
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units from Gaussian distribution.
 
@@ -248,7 +254,6 @@ class GaussianBernoulliRBM(RBMBase):
         target = -noise / (noise_std**2)
         return 0.5 * ((score - target) ** 2).sum(dim=-1).mean()
 
-
     def sample_fantasy_particles(
         self,
         num_samples: int,
@@ -277,7 +282,10 @@ class GaussianBernoulliRBM(RBMBase):
         else:
             # Initialize from prior (Gaussian with learned mean/variance)
             v = self.vbias + self.sigma * torch.randn(
-                num_samples, self.num_visible, device=self.device, dtype=self.dtype
+                num_samples,
+                self.num_visible,
+                device=self.device,
+                dtype=self.dtype,
             )
 
         chain = [v.clone()] if return_chain else None
@@ -326,8 +334,12 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
             data_loader: DataLoader providing training data
         """
         # Compute data statistics
-        sum_x = torch.zeros(self.num_visible, device=self.device, dtype=self.dtype)
-        sum_x_sq = torch.zeros(self.num_visible, device=self.device, dtype=self.dtype)
+        sum_x = torch.zeros(
+            self.num_visible, device=self.device, dtype=self.dtype
+        )
+        sum_x_sq = torch.zeros(
+            self.num_visible, device=self.device, dtype=self.dtype
+        )
         count = 0
 
         with torch.no_grad():

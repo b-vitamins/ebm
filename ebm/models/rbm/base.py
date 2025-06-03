@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import abstractmethod
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import Tensor, nn
 
 from ebm.core.config import RBMConfig
@@ -55,8 +55,12 @@ class RBMBase(LatentVariableModel):
                 torch.empty(self.num_hidden, dtype=self.dtype)
             )
         else:
-            self.register_buffer('vbias', torch.zeros(self.num_visible, dtype=self.dtype))
-            self.register_buffer('hbias', torch.zeros(self.num_hidden, dtype=self.dtype))
+            self.register_buffer(
+                "vbias", torch.zeros(self.num_visible, dtype=self.dtype)
+            )
+            self.register_buffer(
+                "hbias", torch.zeros(self.num_hidden, dtype=self.dtype)
+            )
 
         # Initialize parameters
         self._initialize_parameters()
@@ -85,7 +89,7 @@ class RBMBase(LatentVariableModel):
         x: Tensor,
         *,
         beta: Tensor | None = None,
-        return_parts: bool = False
+        return_parts: bool = False,
     ) -> Tensor | dict[str, Tensor]:
         """Compute energy of configurations.
 
@@ -110,7 +114,7 @@ class RBMBase(LatentVariableModel):
         hidden: Tensor,
         *,
         beta: Tensor | None = None,
-        return_parts: bool = False
+        return_parts: bool = False,
     ) -> Tensor | dict[str, Tensor]:
         """Compute joint energy of visible and hidden configurations.
 
@@ -131,22 +135,24 @@ class RBMBase(LatentVariableModel):
 
         # Compute energy components
         # Interaction term: h^T W v
-        interaction = torch.einsum('...h,...v->...', hidden, F.linear(visible, self.W))
+        interaction = torch.einsum(
+            "...h,...v->...", hidden, F.linear(visible, self.W)
+        )
 
         # Bias terms
-        v_bias_term = torch.einsum('...v,v->...', visible, self.vbias)
-        h_bias_term = torch.einsum('...h,h->...', hidden, self.hbias)
+        v_bias_term = torch.einsum("...v,v->...", visible, self.vbias)
+        h_bias_term = torch.einsum("...h,h->...", hidden, self.hbias)
 
         if return_parts:
             parts = {
-                'interaction': -interaction,
-                'visible_bias': -v_bias_term,
-                'hidden_bias': -h_bias_term,
+                "interaction": -interaction,
+                "visible_bias": -v_bias_term,
+                "hidden_bias": -h_bias_term,
             }
             if beta is not None:
                 beta = shape_for_broadcast(beta, visible.shape[:-1])
                 parts = {k: beta * v for k, v in parts.items()}
-            parts['total'] = sum(parts.values())
+            parts["total"] = sum(parts.values())
             return parts
 
         # Total energy
@@ -158,12 +164,7 @@ class RBMBase(LatentVariableModel):
 
         return energy
 
-    def free_energy(
-        self,
-        v: Tensor,
-        *,
-        beta: Tensor | None = None
-    ) -> Tensor:
+    def free_energy(self, v: Tensor, *, beta: Tensor | None = None) -> Tensor:
         """Compute free energy of visible configurations.
 
         Free energy: F(v) = -a^T v - sum_j log(1 + exp(W_j v + b_j))
@@ -185,14 +186,13 @@ class RBMBase(LatentVariableModel):
         if beta is not None:
             beta = shape_for_broadcast(beta, pre_h.shape[:-1])
             pre_h = beta * pre_h
-            v_bias_term = beta * torch.einsum('...v,v->...', v, self.vbias)
+            v_bias_term = beta * torch.einsum("...v,v->...", v, self.vbias)
         else:
-            v_bias_term = torch.einsum('...v,v->...', v, self.vbias)
+            v_bias_term = torch.einsum("...v,v->...", v, self.vbias)
 
         # Free energy computation
         hidden_term = F.softplus(pre_h).sum(dim=-1)
         return -v_bias_term - hidden_term
-
 
     @abstractmethod
     def hidden_activation(self, pre_activation: Tensor) -> Tensor:
@@ -223,7 +223,7 @@ class RBMBase(LatentVariableModel):
         visible: Tensor,
         *,
         beta: Tensor | None = None,
-        return_prob: bool = False
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units given visible units.
 
@@ -261,7 +261,7 @@ class RBMBase(LatentVariableModel):
         hidden: Tensor,
         *,
         beta: Tensor | None = None,
-        return_prob: bool = False
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units given hidden units.
 
@@ -316,8 +316,8 @@ class RBMBase(LatentVariableModel):
         -------
             Tuple of (visible, hidden)
         """
-        v = x[..., :self.num_visible]
-        h = x[..., self.num_visible:]
+        v = x[..., : self.num_visible]
+        h = x[..., self.num_visible :]
         return v, h
 
     def init_from_data(self, data_loader: torch.utils.data.DataLoader) -> None:
@@ -330,7 +330,9 @@ class RBMBase(LatentVariableModel):
             return
 
         # Compute data statistics
-        sum_v = torch.zeros(self.num_visible, device=self.device, dtype=self.dtype)
+        sum_v = torch.zeros(
+            self.num_visible, device=self.device, dtype=self.dtype
+        )
         count = 0
 
         with torch.no_grad():
@@ -365,11 +367,15 @@ class RBMBase(LatentVariableModel):
         base_energy = self.joint_energy(v, h)
 
         # Add regularization if configured
-        if hasattr(self.config, 'l2_weight') and self.config.l2_weight > 0:
-            base_energy = base_energy + 0.5 * self.config.l2_weight * (self.W ** 2).sum()
+        if hasattr(self.config, "l2_weight") and self.config.l2_weight > 0:
+            base_energy = (
+                base_energy + 0.5 * self.config.l2_weight * (self.W**2).sum()
+            )
 
-        if hasattr(self.config, 'l1_weight') and self.config.l1_weight > 0:
-            base_energy = base_energy + self.config.l1_weight * self.W.abs().sum()
+        if hasattr(self.config, "l1_weight") and self.config.l1_weight > 0:
+            base_energy = (
+                base_energy + self.config.l1_weight * self.W.abs().sum()
+            )
 
         return base_energy
 
@@ -425,15 +431,13 @@ class RBMAISAdapter(AISInterpolator):
         v, h = self.rbm._split_visible_hidden(x)
 
         # Base energy has no interaction term
-        v_term = -torch.einsum('...v,v->...', v, self.base_vbias)
-        h_term = -torch.einsum('...h,h->...', h, self.base_hbias)
+        v_term = -torch.einsum("...v,v->...", v, self.base_vbias)
+        h_term = -torch.einsum("...h,h->...", h, self.base_hbias)
 
         return v_term + h_term
 
     def interpolated_energy(
-        self,
-        x: Tensor,
-        beta: float | None = None
+        self, x: Tensor, beta: float | None = None
     ) -> Tensor:
         """Compute interpolated energy for AIS.
 
@@ -455,10 +459,9 @@ class RBMAISAdapter(AISInterpolator):
         h_bias = (1 - beta) * self.base_hbias + beta * self.rbm.hbias
 
         # Compute energy with interpolated parameters
-        interaction = torch.einsum('...h,...v->...', h, F.linear(v, self.rbm.W))
-        v_bias_term = torch.einsum('...v,v->...', v, v_bias)
-        h_bias_term = torch.einsum('...h,h->...', h, h_bias)
+        interaction = torch.einsum("...h,...v->...", h, F.linear(v, self.rbm.W))
+        v_bias_term = torch.einsum("...v,v->...", v, v_bias)
+        h_bias_term = torch.einsum("...h,h->...", h, h_bias)
 
         # Only the interaction term is scaled by beta
         return -(beta * interaction + v_bias_term + h_bias_term)
-

@@ -38,7 +38,7 @@ def small_gaussian_rbm():
         learn_sigma=True,
         device="cpu",
         dtype="float32",
-        seed=42
+        seed=42,
     )
     return GaussianBernoulliRBM(config)
 
@@ -63,20 +63,23 @@ def pretrained_rbm(simple_bernoulli_rbm, synthetic_binary_data):
         model.W.data[:n_components] = top_eigvecs.T
 
         # Set biases based on data statistics
-        model.vbias.data = torch.log(data.mean(dim=0).clamp(0.01, 0.99) /
-                                     (1 - data.mean(dim=0).clamp(0.01, 0.99)))
+        model.vbias.data = torch.log(
+            data.mean(dim=0).clamp(0.01, 0.99)
+            / (1 - data.mean(dim=0).clamp(0.01, 0.99))
+        )
 
     return model
 
 
 @pytest.fixture
 def make_test_rbm():
-    """Factory fixture for creating test RBMs with various configurations."""
+    """Create test RBMs with various configurations."""
+
     def _make_test_rbm(
         visible_units: int = 100,
         hidden_units: int = 50,
         model_type: str = "bernoulli",
-        **kwargs
+        **kwargs,
     ):
         """Create a test RBM with specified configuration."""
         base_config = {
@@ -84,7 +87,7 @@ def make_test_rbm():
             "hidden_units": hidden_units,
             "device": "cpu",
             "dtype": "float32",
-            "seed": 42
+            "seed": 42,
         }
         base_config.update(kwargs)
 
@@ -117,6 +120,7 @@ def model_comparison_suite(make_test_rbm):
 @pytest.fixture
 def save_and_load_model(tmp_path: Path):
     """Fixture for testing model save/load functionality."""
+
     def _save_and_load(model, filename: str = "test_model.pt"):
         """Save a model and load it back."""
         save_path = tmp_path / filename
@@ -141,6 +145,7 @@ def save_and_load_model(tmp_path: Path):
 @pytest.fixture
 def model_parameter_stats():
     """Fixture for computing model parameter statistics."""
+
     def _compute_stats(model):
         """Compute statistics for model parameters."""
         stats = {}
@@ -156,7 +161,7 @@ def model_parameter_stats():
                 "norm": param_data.norm().item(),
                 "num_zeros": (param_data == 0).sum().item(),
                 "num_params": param_data.numel(),
-                "requires_grad": param.requires_grad
+                "requires_grad": param.requires_grad,
             }
 
             # Add gradient stats if available

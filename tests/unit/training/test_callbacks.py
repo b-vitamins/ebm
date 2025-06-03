@@ -26,9 +26,9 @@ class MockTrainer:
     def __init__(self) -> None:
         self.current_epoch = 0
         self.global_step = 0
-        self.best_metric = float('inf')
+        self.best_metric = float("inf")
         self.optimizer = Mock()
-        self.optimizer.param_groups = [{'lr': 0.01}]
+        self.optimizer.param_groups = [{"lr": 0.01}]
         self.callbacks = Mock()
         self.callbacks._should_stop = False
 
@@ -48,30 +48,37 @@ class MockModel(EnergyBasedModel):
         self.hbias = torch.randn(10)
 
     def named_parameters(self):
+        """Return parameters with names for the mock model."""
         return [
             ("W", torch.nn.Parameter(self.W)),
             ("vbias", torch.nn.Parameter(self.vbias)),
-            ("hbias", torch.nn.Parameter(self.hbias))
+            ("hbias", torch.nn.Parameter(self.hbias)),
         ]
 
     def parameters(self):
+        """Return list of model parameters."""
         return [p for _, p in self.named_parameters()]
 
     def sample_fantasy_particles(self, num_samples, num_steps):
+        """Generate random fantasy particles."""
         return torch.randn(num_samples, 20)
 
     @property
     def device(self):
+        """Return the device of the model."""
         return torch.device("cpu")
 
     @property
     def dtype(self):
+        """Return the dtype of the model."""
         return torch.float32
 
     def energy(self, x, *, beta=None, return_parts=False):
+        """Return zero energy for all inputs."""
         return torch.zeros(x.shape[0])
 
     def free_energy(self, v, *, beta=None):
+        """Return zero free energy for all inputs."""
         return torch.zeros(v.shape[0])
 
 
@@ -140,6 +147,7 @@ class TestCallbackList:
 
     def test_missing_method_handling(self) -> None:
         """Test handling of callbacks without all methods."""
+
         # Callback with only some methods
         class PartialCallback:
             def on_epoch_start(self, trainer, model) -> None:
@@ -167,9 +175,7 @@ class TestLoggingCallback:
     def test_initialization(self) -> None:
         """Test logging callback initialization."""
         callback = LoggingCallback(
-            log_every=50,
-            log_gradients=True,
-            log_weights=True
+            log_every=50, log_gradients=True, log_weights=True
         )
 
         assert callback.log_every == 50
@@ -178,7 +184,7 @@ class TestLoggingCallback:
         assert callback.step_count == 0
         assert callback.epoch_start_time is None
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_epoch_logging(self, mock_logger) -> None:
         """Test epoch start/end logging."""
         callback = LoggingCallback()
@@ -188,10 +194,7 @@ class TestLoggingCallback:
 
         # Start epoch
         callback.on_epoch_start(trainer, model)
-        mock_logger.info.assert_called_with(
-            "Starting epoch 1",
-            lr=0.01
-        )
+        mock_logger.info.assert_called_with("Starting epoch 1", lr=0.01)
         assert callback.epoch_start_time is not None
 
         # End epoch
@@ -205,7 +208,7 @@ class TestLoggingCallback:
         assert "Epoch 1 completed" in end_call[0][0]
         assert "loss=0.5000, accuracy=0.9500" in end_call[1]["metrics"]
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_batch_logging(self, mock_logger) -> None:
         """Test batch logging."""
         callback = LoggingCallback(log_every=2)
@@ -228,7 +231,7 @@ class TestLoggingCallback:
         assert log_call[1]["step"] == 2
         assert log_call[1]["loss"] == 0.4
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_gradient_logging(self, mock_logger) -> None:
         """Test gradient statistics logging."""
         callback = LoggingCallback(log_every=1, log_gradients=True)
@@ -247,7 +250,7 @@ class TestLoggingCallback:
         assert "grad_norm_max" in log_call[1]
         assert log_call[1]["grad_norm_mean"] > 0
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_weight_logging(self, mock_logger) -> None:
         """Test weight statistics logging."""
         callback = LoggingCallback(log_every=1, log_weights=True)
@@ -334,7 +337,7 @@ class TestCheckpointCallback:
             save_every=5,
             save_best=True,
             monitor="val_loss",
-            mode="min"
+            mode="min",
         )
 
         assert callback.checkpoint_dir == tmp_path
@@ -342,14 +345,11 @@ class TestCheckpointCallback:
         assert callback.save_best is True
         assert callback.monitor == "val_loss"
         assert callback.mode == "min"
-        assert callback.best_value == float('inf')
+        assert callback.best_value == float("inf")
 
     def test_regular_checkpointing(self, tmp_path) -> None:
         """Test regular epoch checkpointing."""
-        callback = CheckpointCallback(
-            checkpoint_dir=tmp_path,
-            save_every=2
-        )
+        callback = CheckpointCallback(checkpoint_dir=tmp_path, save_every=2)
         trainer = MockTrainer()
         model = MockModel()
 
@@ -368,7 +368,7 @@ class TestCheckpointCallback:
         callback.on_epoch_end(trainer, model, {})
         assert (tmp_path / "checkpoint_epoch_2.pt").exists()
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_best_model_saving(self, mock_logger, tmp_path) -> None:
         """Test best model checkpointing."""
         callback = CheckpointCallback(
@@ -376,7 +376,7 @@ class TestCheckpointCallback:
             save_every=10,  # High value to avoid regular saves
             save_best=True,
             monitor="loss",
-            mode="min"
+            mode="min",
         )
         trainer = MockTrainer()
         model = MockModel()
@@ -407,12 +407,12 @@ class TestCheckpointCallback:
             checkpoint_dir=tmp_path,
             save_best=True,
             monitor="accuracy",
-            mode="max"
+            mode="max",
         )
         trainer = MockTrainer()
         model = MockModel()
 
-        assert callback.best_value == float('-inf')
+        assert callback.best_value == float("-inf")
 
         # Should save when metric increases
         callback.on_epoch_end(trainer, model, {"accuracy": 0.8})
@@ -431,27 +431,21 @@ class TestEarlyStoppingCallback:
     def test_initialization(self) -> None:
         """Test early stopping initialization."""
         callback = EarlyStoppingCallback(
-            patience=5,
-            min_delta=0.001,
-            monitor="val_loss",
-            mode="min"
+            patience=5, min_delta=0.001, monitor="val_loss", mode="min"
         )
 
         assert callback.patience == 5
         assert callback.min_delta == 0.001
         assert callback.monitor == "val_loss"
         assert callback.mode == "min"
-        assert callback.best_value == float('inf')
+        assert callback.best_value == float("inf")
         assert callback.patience_counter == 0
         assert callback.trainer is None
 
     def test_improvement_detection(self) -> None:
         """Test improvement detection."""
         callback = EarlyStoppingCallback(
-            patience=3,
-            min_delta=0.01,
-            monitor="loss",
-            mode="min"
+            patience=3, min_delta=0.01, monitor="loss", mode="min"
         )
         trainer = MockTrainer()
         model = MockModel()
@@ -477,14 +471,10 @@ class TestEarlyStoppingCallback:
         callback.on_epoch_end(trainer, model, {"loss": 0.96})
         assert callback.patience_counter == 2
 
-    @patch('ebm.training.callbacks.logger')
+    @patch("ebm.training.callbacks.logger")
     def test_early_stopping_trigger(self, mock_logger) -> None:
         """Test early stopping trigger."""
-        callback = EarlyStoppingCallback(
-            patience=2,
-            monitor="loss",
-            mode="min"
-        )
+        callback = EarlyStoppingCallback(patience=2, monitor="loss", mode="min")
         trainer = MockTrainer()
         model = MockModel()
 
@@ -523,7 +513,7 @@ class TestEarlyStoppingCallback:
 
         # Should not update counters
         assert callback.patience_counter == 0
-        assert callback.best_value == float('inf')
+        assert callback.best_value == float("inf")
 
 
 class TestVisualizationCallback:
@@ -532,9 +522,7 @@ class TestVisualizationCallback:
     def test_initialization(self, tmp_path) -> None:
         """Test visualization callback initialization."""
         callback = VisualizationCallback(
-            visualize_every=5,
-            num_samples=32,
-            save_dir=tmp_path
+            visualize_every=5, num_samples=32, save_dir=tmp_path
         )
 
         assert callback.visualize_every == 5
@@ -542,14 +530,14 @@ class TestVisualizationCallback:
         assert callback.save_dir == tmp_path
         assert tmp_path.exists()
 
-    @patch('ebm.utils.visualization.visualize_samples')
-    @patch('ebm.utils.visualization.visualize_filters')
-    def test_visualization_generation(self, mock_vis_filters, mock_vis_samples, tmp_path) -> None:
+    @patch("ebm.utils.visualization.visualize_samples")
+    @patch("ebm.utils.visualization.visualize_filters")
+    def test_visualization_generation(
+        self, mock_vis_filters, mock_vis_samples, tmp_path
+    ) -> None:
         """Test visualization generation."""
         callback = VisualizationCallback(
-            visualize_every=2,
-            num_samples=16,
-            save_dir=tmp_path
+            visualize_every=2, num_samples=16, save_dir=tmp_path
         )
         trainer = MockTrainer()
         model = MockModel()
@@ -587,25 +575,25 @@ class TestLearningRateSchedulerCallback:
 
     def test_initialization(self) -> None:
         """Test LR scheduler callback initialization."""
+
         def schedule_fn(epoch, step):
-            return 0.1 * (0.9 ** epoch)
+            return 0.1 * (0.9**epoch)
 
         callback = LearningRateSchedulerCallback(
-            schedule_fn=schedule_fn,
-            update_every='epoch'
+            schedule_fn=schedule_fn, update_every="epoch"
         )
 
         assert callback.schedule_fn is schedule_fn
-        assert callback.update_every == 'epoch'
+        assert callback.update_every == "epoch"
 
     def test_epoch_update(self) -> None:
         """Test LR update at epoch start."""
+
         def schedule_fn(epoch, step):
-            return 0.1 * (0.5 ** epoch)
+            return 0.1 * (0.5**epoch)
 
         callback = LearningRateSchedulerCallback(
-            schedule_fn=schedule_fn,
-            update_every='epoch'
+            schedule_fn=schedule_fn, update_every="epoch"
         )
         trainer = MockTrainer()
         model = MockModel()
@@ -613,26 +601,26 @@ class TestLearningRateSchedulerCallback:
         # Epoch 0
         trainer.current_epoch = 0
         callback.on_epoch_start(trainer, model)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.1
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.1
 
         # Epoch 1
         trainer.current_epoch = 1
         callback.on_epoch_start(trainer, model)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.05
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.05
 
         # Epoch 2
         trainer.current_epoch = 2
         callback.on_epoch_start(trainer, model)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.025
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.025
 
     def test_step_update(self) -> None:
         """Test LR update at batch start."""
+
         def schedule_fn(epoch, step):
             return 0.1 / (1 + 0.01 * step)
 
         callback = LearningRateSchedulerCallback(
-            schedule_fn=schedule_fn,
-            update_every='step'
+            schedule_fn=schedule_fn, update_every="step"
         )
         trainer = MockTrainer()
         model = MockModel()
@@ -641,17 +629,17 @@ class TestLearningRateSchedulerCallback:
         # Step 0
         trainer.global_step = 0
         callback.on_batch_start(trainer, model, batch)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.1
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.1
 
         # Step 10
         trainer.global_step = 10
         callback.on_batch_start(trainer, model, batch)
-        assert abs(trainer.optimizer.param_groups[0]['lr'] - 0.0909) < 0.001
+        assert abs(trainer.optimizer.param_groups[0]["lr"] - 0.0909) < 0.001
 
         # Step 100
         trainer.global_step = 100
         callback.on_batch_start(trainer, model, batch)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.05
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.05
 
 
 class TestWarmupCallback:
@@ -659,11 +647,7 @@ class TestWarmupCallback:
 
     def test_initialization(self) -> None:
         """Test warmup callback initialization."""
-        callback = WarmupCallback(
-            warmup_steps=100,
-            start_lr=1e-6,
-            end_lr=1e-3
-        )
+        callback = WarmupCallback(warmup_steps=100, start_lr=1e-6, end_lr=1e-3)
 
         assert callback.warmup_steps == 100
         assert callback.start_lr == 1e-6
@@ -671,11 +655,7 @@ class TestWarmupCallback:
 
     def test_linear_warmup(self) -> None:
         """Test linear warmup schedule."""
-        callback = WarmupCallback(
-            warmup_steps=10,
-            start_lr=0.0,
-            end_lr=0.1
-        )
+        callback = WarmupCallback(warmup_steps=10, start_lr=0.0, end_lr=0.1)
         trainer = MockTrainer()
         model = MockModel()
         batch = torch.randn(32, 10)
@@ -683,21 +663,21 @@ class TestWarmupCallback:
         # Step 0
         trainer.global_step = 0
         callback.on_batch_start(trainer, model, batch)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.0
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.0
 
         # Step 5 (halfway)
         trainer.global_step = 5
         callback.on_batch_start(trainer, model, batch)
-        assert abs(trainer.optimizer.param_groups[0]['lr'] - 0.05) < 0.001
+        assert abs(trainer.optimizer.param_groups[0]["lr"] - 0.05) < 0.001
 
         # Step 9 (almost done)
         trainer.global_step = 9
         callback.on_batch_start(trainer, model, batch)
-        assert abs(trainer.optimizer.param_groups[0]['lr'] - 0.09) < 0.001
+        assert abs(trainer.optimizer.param_groups[0]["lr"] - 0.09) < 0.001
 
         # Step 10 (after warmup)
         trainer.global_step = 10
-        trainer.optimizer.param_groups[0]['lr'] = 0.2  # Set different value
+        trainer.optimizer.param_groups[0]["lr"] = 0.2  # Set different value
         callback.on_batch_start(trainer, model, batch)
         # Should not change after warmup
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.2
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.2

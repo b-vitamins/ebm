@@ -21,7 +21,7 @@ from ebm.core.logging import logger
 class BinaryTransform:
     """Transform to binarize data using various methods."""
 
-    def __init__(self, method: str = 'threshold', threshold: float = 0.5):
+    def __init__(self, method: str = "threshold", threshold: float = 0.5):
         """Initialize binary transform.
 
         Args:
@@ -41,11 +41,11 @@ class BinaryTransform:
         -------
             Binarized tensor
         """
-        if self.method == 'threshold':
+        if self.method == "threshold":
             return (x > self.threshold).float()
-        if self.method == 'bernoulli':
+        if self.method == "bernoulli":
             return torch.bernoulli(x)
-        if self.method == 'median':
+        if self.method == "median":
             return (x > x.median()).float()
         raise ValueError(f"Unknown binarization method: {self.method}")
 
@@ -55,9 +55,9 @@ class AddNoise:
 
     def __init__(
         self,
-        noise_type: str = 'gaussian',
+        noise_type: str = "gaussian",
         noise_level: float = 0.1,
-        clip: bool = True
+        clip: bool = True,
     ):
         """Initialize noise transform.
 
@@ -80,13 +80,13 @@ class AddNoise:
         -------
             Noisy tensor
         """
-        if self.noise_type == 'gaussian':
+        if self.noise_type == "gaussian":
             noise = torch.randn_like(x) * self.noise_level
             x = x + noise
-        elif self.noise_type == 'uniform':
+        elif self.noise_type == "uniform":
             noise = (torch.rand_like(x) - 0.5) * 2 * self.noise_level
             x = x + noise
-        elif self.noise_type == 'salt_pepper':
+        elif self.noise_type == "salt_pepper":
             mask = torch.rand_like(x) < self.noise_level
             salt_pepper = torch.randint_like(x, 0, 2).float()
             x = torch.where(mask, salt_pepper, x)
@@ -134,7 +134,7 @@ class EnergyDataset(Dataset):
         self,
         base_dataset: Dataset,
         model: Any | None = None,
-        transform: Callable | None = None
+        transform: Callable | None = None,
     ):
         """Initialize energy dataset.
 
@@ -148,6 +148,7 @@ class EnergyDataset(Dataset):
         self.transform = transform
 
     def __len__(self) -> int:
+        """Return the number of samples in the base dataset."""
         return len(self.base_dataset)
 
     def __getitem__(self, idx: int) -> Tensor | tuple[Tensor, float]:
@@ -180,11 +181,11 @@ class EnergyDataset(Dataset):
 
 
 def get_mnist_datasets(
-    data_dir: str | Path = './data',
+    data_dir: str | Path = "./data",
     binary: bool = True,
     flatten: bool = True,
     train_val_split: float = 0.9,
-    download: bool = True
+    download: bool = True,
 ) -> tuple[Dataset, Dataset, Dataset]:
     """Get MNIST datasets for EBM training.
 
@@ -205,7 +206,7 @@ def get_mnist_datasets(
     transform_list = [transforms.ToTensor()]
 
     if binary:
-        transform_list.append(BinaryTransform('bernoulli'))
+        transform_list.append(BinaryTransform("bernoulli"))
 
     if flatten:
         transform_list.append(transforms.Lambda(lambda x: x.view(-1)))
@@ -224,8 +225,9 @@ def get_mnist_datasets(
     n_train = int(len(full_train) * train_val_split)
     n_val = len(full_train) - n_train
     train, val = random_split(
-        full_train, [n_train, n_val],
-        generator=torch.Generator().manual_seed(42)
+        full_train,
+        [n_train, n_val],
+        generator=torch.Generator().manual_seed(42),
     )
 
     logger.info(
@@ -236,8 +238,7 @@ def get_mnist_datasets(
 
 
 def get_fashion_mnist_datasets(
-    data_dir: str | Path = './data',
-    **kwargs
+    data_dir: str | Path = "./data", **kwargs
 ) -> tuple[Dataset, Dataset, Dataset]:
     """Get Fashion-MNIST datasets.
 
@@ -252,14 +253,14 @@ def get_fashion_mnist_datasets(
     data_dir = Path(data_dir)
 
     # Same transforms as MNIST
-    binary = kwargs.get('binary', True)
-    flatten = kwargs.get('flatten', True)
-    train_val_split = kwargs.get('train_val_split', 0.9)
-    download = kwargs.get('download', True)
+    binary = kwargs.get("binary", True)
+    flatten = kwargs.get("flatten", True)
+    train_val_split = kwargs.get("train_val_split", 0.9)
+    download = kwargs.get("download", True)
 
     transform_list = [transforms.ToTensor()]
     if binary:
-        transform_list.append(BinaryTransform('bernoulli'))
+        transform_list.append(BinaryTransform("bernoulli"))
     if flatten:
         transform_list.append(transforms.Lambda(lambda x: x.view(-1)))
 
@@ -277,8 +278,9 @@ def get_fashion_mnist_datasets(
     n_train = int(len(full_train) * train_val_split)
     n_val = len(full_train) - n_train
     train, val = random_split(
-        full_train, [n_train, n_val],
-        generator=torch.Generator().manual_seed(42)
+        full_train,
+        [n_train, n_val],
+        generator=torch.Generator().manual_seed(42),
     )
 
     return train, val, test
@@ -291,9 +293,9 @@ class SyntheticDataset(Dataset):
         self,
         n_samples: int = 1000,
         n_features: int = 100,
-        pattern: str = 'random',
+        pattern: str = "random",
         sparsity: float = 0.1,
-        seed: int = 42
+        seed: int = 42,
     ):
         """Initialize synthetic dataset.
 
@@ -315,20 +317,20 @@ class SyntheticDataset(Dataset):
 
     def _generate_data(self) -> Tensor:
         """Generate synthetic data based on pattern."""
-        if self.pattern == 'random':
+        if self.pattern == "random":
             # Random binary data
             return torch.bernoulli(
                 torch.full((self.n_samples, self.n_features), self.sparsity)
             )
 
-        if self.pattern == 'structured':
+        if self.pattern == "structured":
             # Data with structure (e.g., bars and stripes)
             data = torch.zeros(self.n_samples, self.n_features)
 
             # Add horizontal stripes
             for i in range(0, self.n_features, 10):
                 mask = torch.rand(self.n_samples) < 0.5
-                data[mask, i:i+5] = 1
+                data[mask, i : i + 5] = 1
 
             # Add vertical patterns
             for i in range(self.n_samples):
@@ -338,25 +340,30 @@ class SyntheticDataset(Dataset):
 
             return data
 
-        if self.pattern == 'correlated':
+        if self.pattern == "correlated":
             # Data with correlations
             # Generate latent factors
             n_factors = max(10, self.n_features // 10)
             factors = torch.randn(self.n_samples, n_factors)
 
             # Generate mixing matrix
-            W = torch.randn(n_factors, self.n_features) * 0.5
+            mixing_matrix = torch.randn(n_factors, self.n_features) * 0.5
 
             # Generate data
-            data = torch.sigmoid(factors @ W + torch.randn(self.n_samples, self.n_features) * 0.1)
+            data = torch.sigmoid(
+                factors @ mixing_matrix
+                + torch.randn(self.n_samples, self.n_features) * 0.1
+            )
             return torch.bernoulli(data)
 
         raise ValueError(f"Unknown pattern: {self.pattern}")
 
     def __len__(self) -> int:
+        """Return total number of generated samples."""
         return self.n_samples
 
     def __getitem__(self, idx: int) -> Tensor:
+        """Return a data sample by index."""
         return self.data[idx]
 
 
@@ -367,7 +374,7 @@ def create_data_loaders(
     batch_size: int = 64,
     num_workers: int = 0,
     pin_memory: bool = True,
-    shuffle_train: bool = True
+    shuffle_train: bool = True,
 ) -> tuple[DataLoader, DataLoader | None, DataLoader | None]:
     """Create data loaders from datasets.
 
@@ -389,7 +396,7 @@ def create_data_loaders(
         batch_size=batch_size,
         shuffle=shuffle_train,
         num_workers=num_workers,
-        pin_memory=pin_memory
+        pin_memory=pin_memory,
     )
 
     val_loader = None
@@ -399,7 +406,7 @@ def create_data_loaders(
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=pin_memory
+            pin_memory=pin_memory,
         )
 
     test_loader = None
@@ -409,15 +416,14 @@ def create_data_loaders(
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
-            pin_memory=pin_memory
+            pin_memory=pin_memory,
         )
 
     return train_loader, val_loader, test_loader
 
 
 def compute_data_statistics(
-    data_loader: DataLoader,
-    device: torch.device | None = None
+    data_loader: DataLoader, device: torch.device | None = None
 ) -> dict[str, Tensor]:
     """Compute statistics of a dataset.
 
@@ -430,7 +436,7 @@ def compute_data_statistics(
         Dictionary with 'mean', 'std', 'min', 'max' statistics
     """
     if device is None:
-        device = torch.device('cpu')
+        device = torch.device("cpu")
 
     # Initialize accumulators
     n_samples = 0
@@ -452,24 +458,24 @@ def compute_data_statistics(
 
         if sum_x is None:
             sum_x = batch_flat.sum(dim=0)
-            sum_x2 = (batch_flat ** 2).sum(dim=0)
+            sum_x2 = (batch_flat**2).sum(dim=0)
             min_x = batch_flat.min(dim=0)[0]
             max_x = batch_flat.max(dim=0)[0]
         else:
             sum_x += batch_flat.sum(dim=0)
-            sum_x2 += (batch_flat ** 2).sum(dim=0)
+            sum_x2 += (batch_flat**2).sum(dim=0)
             min_x = torch.minimum(min_x, batch_flat.min(dim=0)[0])
             max_x = torch.maximum(max_x, batch_flat.max(dim=0)[0])
 
     # Compute statistics
     mean = sum_x / n_samples
-    var = (sum_x2 / n_samples) - (mean ** 2)
+    var = (sum_x2 / n_samples) - (mean**2)
     std = torch.sqrt(torch.clamp(var, min=0))
 
     return {
-        'mean': mean,
-        'std': std,
-        'min': min_x,
-        'max': max_x,
-        'n_samples': n_samples
+        "mean": mean,
+        "std": std,
+        "min": min_x,
+        "max": max_x,
+        "n_samples": n_samples,
     }

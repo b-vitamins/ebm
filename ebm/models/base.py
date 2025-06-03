@@ -54,7 +54,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             "Initialized model",
             model_type=self.__class__.__name__,
             device=str(self.device),
-            dtype=str(self.dtype)
+            dtype=str(self.dtype),
         )
 
     @property
@@ -77,7 +77,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         x: Tensor,
         *,
         beta: Tensor | None = None,
-        return_parts: bool = False
+        return_parts: bool = False,
     ) -> Tensor | dict[str, Tensor]:
         """Compute energy of configurations.
 
@@ -92,12 +92,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         """
 
     @abstractmethod
-    def free_energy(
-        self,
-        v: Tensor,
-        *,
-        beta: Tensor | None = None
-    ) -> Tensor:
+    def free_energy(self, v: Tensor, *, beta: Tensor | None = None) -> Tensor:
         """Compute free energy by marginalizing latent variables.
 
         Args:
@@ -110,10 +105,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         """
 
     def log_probability(
-        self,
-        x: Tensor,
-        *,
-        log_z: float | None = None
+        self, x: Tensor, *, log_z: float | None = None
     ) -> Tensor:
         """Compute log probability of configurations.
 
@@ -143,9 +135,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         return self.to_device(x)
 
     def save_checkpoint(
-        self,
-        path: str | Path,
-        metadata: dict[str, Any] | None = None
+        self, path: str | Path, metadata: dict[str, Any] | None = None
     ) -> None:
         """Save model checkpoint.
 
@@ -157,13 +147,13 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         path.parent.mkdir(parents=True, exist_ok=True)
 
         checkpoint = {
-            'model_state_dict': self.state_dict(),
-            'config': self.config.dict(),
-            'model_class': self.__class__.__name__,
+            "model_state_dict": self.state_dict(),
+            "config": self.config.dict(),
+            "model_class": self.__class__.__name__,
         }
 
         if metadata:
-            checkpoint['metadata'] = metadata
+            checkpoint["metadata"] = metadata
 
         torch.save(checkpoint, path)
         self.log_info(f"Saved checkpoint to {path}")
@@ -172,7 +162,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         self,
         path: str | Path,
         strict: bool = True,
-        map_location: Device | None = None
+        map_location: Device | None = None,
     ) -> dict[str, Any]:
         """Load model checkpoint.
 
@@ -192,17 +182,14 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         checkpoint = torch.load(path, map_location=map_location)
 
         # Load state dict
-        self.load_state_dict(checkpoint['model_state_dict'], strict=strict)
+        self.load_state_dict(checkpoint["model_state_dict"], strict=strict)
 
         self.log_info(f"Loaded checkpoint from {path}")
-        return checkpoint.get('metadata', {})
+        return checkpoint.get("metadata", {})
 
     @classmethod
     def from_checkpoint(
-        cls,
-        path: str | Path,
-        device: Device | None = None,
-        **config_overrides
+        cls, path: str | Path, device: Device | None = None, **config_overrides
     ) -> EnergyBasedModel:
         """Create model instance from checkpoint.
 
@@ -216,12 +203,12 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             Loaded model instance
         """
         # Load checkpoint to CPU first
-        checkpoint = torch.load(path, map_location='cpu')
+        checkpoint = torch.load(path, map_location="cpu")
 
         # Reconstruct config
-        config_dict = checkpoint['config']
+        config_dict = checkpoint["config"]
         if device is not None:
-            config_dict['device'] = device
+            config_dict["device"] = device
         config_dict.update(config_overrides)
 
         # Get config class from model class
@@ -230,7 +217,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
 
         # Create model
         model = cls(config)
-        model.load_state_dict(checkpoint['model_state_dict'])
+        model.load_state_dict(checkpoint["model_state_dict"])
 
         return model
 
@@ -242,23 +229,30 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
     def reset_parameters(self) -> None:
         """Reset all model parameters to initial values."""
         for module in self.modules():
-            if hasattr(module, 'reset_parameters') and module != self:
+            if hasattr(module, "reset_parameters") and module != self:
                 module.reset_parameters()
 
     def parameter_summary(self) -> dict[str, Any]:
         """Get summary of model parameters."""
         total_params = sum(p.numel() for p in self.parameters())
-        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        trainable_params = sum(
+            p.numel() for p in self.parameters() if p.requires_grad
+        )
 
         return {
-            'total_parameters': total_params,
-            'trainable_parameters': trainable_params,
-            'non_trainable_parameters': total_params - trainable_params,
-            'model_size_mb': total_params * 4 / (1024 * 1024),  # Assuming float32
+            "total_parameters": total_params,
+            "trainable_parameters": trainable_params,
+            "non_trainable_parameters": total_params - trainable_params,
+            "model_size_mb": total_params
+            * 4
+            / (1024 * 1024),  # Assuming float32
         }
 
     def __repr__(self) -> str:
-        config_str = ', '.join(f'{k}={v}' for k, v in self.config.dict().items())
+        """Return representation with configuration values."""
+        config_str = ", ".join(
+            f"{k}={v}" for k, v in self.config.dict().items()
+        )
         return f"{self.__class__.__name__}({config_str})"
 
 
@@ -275,7 +269,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         visible: Tensor,
         *,
         beta: Tensor | None = None,
-        return_prob: bool = False
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden/latent units given visible units.
 
@@ -295,7 +289,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         hidden: Tensor,
         *,
         beta: Tensor | None = None,
-        return_prob: bool = False
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units given hidden units.
 
@@ -310,11 +304,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         """
 
     def joint_energy(
-        self,
-        visible: Tensor,
-        hidden: Tensor,
-        *,
-        beta: Tensor | None = None
+        self, visible: Tensor, hidden: Tensor, *, beta: Tensor | None = None
     ) -> Tensor:
         """Compute joint energy of visible and hidden configurations.
 
@@ -336,7 +326,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         visible: Tensor,
         *,
         beta: Tensor | None = None,
-        start_from: str = 'visible'
+        start_from: str = "visible",
     ) -> tuple[Tensor, Tensor]:
         """Perform one step of Gibbs sampling.
 
@@ -349,7 +339,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         -------
             New visible and hidden states
         """
-        if start_from == 'visible':
+        if start_from == "visible":
             hidden = self.sample_hidden(visible, beta=beta)
             visible = self.sample_visible(hidden, beta=beta)
         else:
@@ -360,11 +350,7 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         return visible, hidden
 
     def reconstruct(
-        self,
-        visible: Tensor,
-        *,
-        num_steps: int = 1,
-        beta: Tensor | None = None
+        self, visible: Tensor, *, num_steps: int = 1, beta: Tensor | None = None
     ) -> Tensor:
         """Reconstruct visible units through sampling.
 
@@ -417,9 +403,7 @@ class AISInterpolator(nn.Module):
         """Compute log partition function of base distribution."""
 
     def interpolated_energy(
-        self,
-        x: Tensor,
-        beta: float | None = None
+        self, x: Tensor, beta: float | None = None
     ) -> Tensor:
         """Compute interpolated energy for AIS.
 

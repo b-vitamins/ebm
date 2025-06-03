@@ -66,7 +66,10 @@ class ParallelTempering(AnnealedSampler):
         self.register_buffer("chain_temps", None)
 
     def init_chains(
-        self, model: LatentVariableModel, batch_size: int, state_shape: tuple[int, ...]
+        self,
+        model: LatentVariableModel,
+        batch_size: int,
+        state_shape: tuple[int, ...],
     ) -> None:
         """Initialize chains at all temperatures.
 
@@ -196,7 +199,9 @@ class ParallelTempering(AnnealedSampler):
             delta = (beta_j - beta_i) * (energy_i - energy_j)
 
             # Accept/reject swaps
-            accept = torch.rand(batch_size, device=delta.device) < torch.exp(delta)
+            accept = torch.rand(batch_size, device=delta.device) < torch.exp(
+                delta
+            )
 
             # Perform swaps
             if accept.any():
@@ -262,7 +267,11 @@ class PTGradientEstimator(GradientEstimator):
     """Gradient estimator using Parallel Tempering."""
 
     def __init__(
-        self, num_temps: int = 10, k: int = 1, swap_every: int = 1, **pt_kwargs: Any
+        self,
+        num_temps: int = 10,
+        k: int = 1,
+        swap_every: int = 1,
+        **pt_kwargs: Any,
     ):
         """Initialize PT gradient estimator.
 
@@ -293,7 +302,9 @@ class PTGradientEstimator(GradientEstimator):
             Parameter gradients
         """
         if not isinstance(model, LatentVariableModel):
-            raise TypeError("PT gradient estimation requires LatentVariableModel")
+            raise TypeError(
+                "PT gradient estimation requires LatentVariableModel"
+            )
 
         # Positive phase
         h_data = model.sample_hidden(data, return_prob=True)[1]
@@ -327,7 +338,9 @@ class AnnealedImportanceSampling(AnnealedSampler):
     using a sequence of intermediate distributions.
     """
 
-    def __init__(self, num_temps: int = 1000, num_chains: int = 100, k: int = 1):
+    def __init__(
+        self, num_temps: int = 1000, num_chains: int = 100, k: int = 1
+    ):
         """Initialize AIS.
 
         Args:
@@ -335,12 +348,17 @@ class AnnealedImportanceSampling(AnnealedSampler):
             num_chains: Number of independent AIS runs
             k: Gibbs steps at each temperature
         """
-        super().__init__(name="AIS", num_temps=num_temps, min_beta=0.0, max_beta=1.0)
+        super().__init__(
+            name="AIS", num_temps=num_temps, min_beta=0.0, max_beta=1.0
+        )
         self.num_chains = num_chains
         self.k = k
 
     def estimate_log_partition(
-        self, model: LatentVariableModel, base_log_z: float, return_bounds: bool = False
+        self,
+        model: LatentVariableModel,
+        base_log_z: float,
+        return_bounds: bool = False,
     ) -> float | tuple[float, float, float]:
         """Estimate log partition function.
 
@@ -357,7 +375,9 @@ class AnnealedImportanceSampling(AnnealedSampler):
 
         # Initialize at base distribution (beta=0)
         # For RBMs, this is typically independent Bernoulli units
-        h_init = torch.rand(self.num_chains, model.num_hidden, device=device).round()
+        h_init = torch.rand(
+            self.num_chains, model.num_hidden, device=device
+        ).round()
 
         # Sample initial visible units from base distribution
         v = model.sample_visible(h_init, beta=0.0)
@@ -384,7 +404,9 @@ class AnnealedImportanceSampling(AnnealedSampler):
 
         # Compute estimate
         log_z_estimate = (
-            base_log_z + log_sum_exp(log_w) - torch.log(torch.tensor(self.num_chains))
+            base_log_z
+            + log_sum_exp(log_w)
+            - torch.log(torch.tensor(self.num_chains))
         )
 
         if return_bounds:

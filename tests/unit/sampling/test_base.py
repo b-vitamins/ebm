@@ -26,8 +26,9 @@ class ConcreteSampler(Sampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
+        """Return samples by adding Gaussian noise."""
         # Simple implementation: add noise
         state = init_state
         for _ in range(num_steps):
@@ -40,16 +41,11 @@ class ConcreteGradientEstimator(GradientEstimator):
     """Concrete gradient estimator for testing."""
 
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
+        """Return mock gradients for testing."""
         # Return mock gradients
-        return {
-            "param1": torch.randn(10, 10),
-            "param2": torch.randn(10)
-        }
+        return {"param1": torch.randn(10, 10), "param2": torch.randn(10)}
 
 
 class TestSamplerState:
@@ -179,7 +175,7 @@ class TestGibbsSampler:
 
         # Starting from hidden
         model.reset_mock()
-        v_new2, h_new2 = sampler.gibbs_step(model, visible, start_from='hidden')
+        v_new2, h_new2 = sampler.gibbs_step(model, visible, start_from="hidden")
 
         # Should call sample_hidden twice
         assert model.sample_hidden.call_count == 2
@@ -229,7 +225,9 @@ class TestGibbsSampler:
         model = Mock(spec=EnergyBasedModel)
         init_state = torch.rand(5, 10)
 
-        with pytest.raises(TypeError, match="Gibbs sampling requires LatentVariableModel"):
+        with pytest.raises(
+            TypeError, match="Gibbs sampling requires LatentVariableModel"
+        ):
             sampler.sample(model, init_state)
 
 
@@ -240,11 +238,9 @@ class TestMCMCSampler:
         """Concrete MCMC sampler for testing."""
 
         def transition_kernel(
-            self,
-            model: EnergyBasedModel,
-            state: Tensor,
-            **kwargs: Any
+            self, model: EnergyBasedModel, state: Tensor, **kwargs: Any
         ) -> tuple[Tensor, dict[str, Any]]:
+            """Perform one step of a random-walk proposal."""
             # Simple random walk
             proposal = state + torch.randn_like(state) * 0.1
 
@@ -279,11 +275,7 @@ class TestMCMCSampler:
         init_state = torch.zeros(5, 10)
 
         # With burn-in
-        samples = sampler.sample(
-            model, init_state,
-            num_steps=10,
-            burn_in=5
-        )
+        samples = sampler.sample(model, init_state, num_steps=10, burn_in=5)
 
         # Should have done 15 total steps
         assert sampler.num_steps_taken == 15
@@ -299,19 +291,12 @@ class TestMCMCSampler:
         init_state = torch.randn(5, 10)
 
         # Without return_all, thinning doesn't affect final sample
-        samples = sampler.sample(
-            model, init_state,
-            num_steps=10,
-            thin=2
-        )
+        samples = sampler.sample(model, init_state, num_steps=10, thin=2)
         assert samples.shape == init_state.shape
 
         # With return_all and thinning
         all_samples = sampler.sample(
-            model, init_state,
-            num_steps=10,
-            thin=2,
-            return_all=True
+            model, init_state, num_steps=10, thin=2, return_all=True
         )
         # Should keep every 2nd sample: 10 steps / 2 = 5 samples
         assert all_samples.shape == (5, 5, 10)
@@ -324,11 +309,7 @@ class TestMCMCSampler:
         init_state = torch.randn(3, 8)
 
         all_samples = sampler.sample(
-            model, init_state,
-            num_steps=20,
-            burn_in=10,
-            thin=5,
-            return_all=True
+            model, init_state, num_steps=20, burn_in=10, thin=5, return_all=True
         )
 
         # 20 steps, thin by 5 = 4 kept samples
@@ -416,31 +397,26 @@ class TestAnnealedSampler:
             model: EnergyBasedModel,
             init_state: Tensor,
             num_steps: int = 1,
-            **kwargs: Any
+            **kwargs: Any,
         ) -> Tensor:
+            """Return an annealed sample with added noise."""
             # Simple implementation
             return init_state + torch.randn_like(init_state) * 0.1
 
     def test_initialization(self) -> None:
         """Test annealed sampler initialization."""
-        sampler = self.ConcreteAnnealed(
-            num_temps=5,
-            min_beta=0.1,
-            max_beta=1.0
-        )
+        sampler = self.ConcreteAnnealed(num_temps=5, min_beta=0.1, max_beta=1.0)
 
         assert sampler.num_temps == 5
         assert sampler.min_beta == 0.1
         assert sampler.max_beta == 1.0
-        assert hasattr(sampler, 'betas')
+        assert hasattr(sampler, "betas")
         assert len(sampler.betas) == 5
 
     def test_temperature_schedule(self) -> None:
         """Test temperature schedule creation."""
         sampler = self.ConcreteAnnealed(
-            num_temps=10,
-            min_beta=0.01,
-            max_beta=1.0
+            num_temps=10, min_beta=0.01, max_beta=1.0
         )
 
         # Check betas are in increasing order
@@ -457,11 +433,7 @@ class TestAnnealedSampler:
 
     def test_temperatures_property(self) -> None:
         """Test temperature computation."""
-        sampler = self.ConcreteAnnealed(
-            num_temps=3,
-            min_beta=0.5,
-            max_beta=2.0
-        )
+        sampler = self.ConcreteAnnealed(num_temps=3, min_beta=0.5, max_beta=2.0)
 
         temps = sampler.temperatures
 

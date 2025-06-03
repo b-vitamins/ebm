@@ -28,29 +28,37 @@ class MockModel(EnergyBasedModel):
         pass
 
     def energy(self, x, *, beta=None, return_parts=False):
-        return torch.sum(x ** 2, dim=-1)
+        """Compute a simple quadratic energy."""
+        return torch.sum(x**2, dim=-1)
 
     def free_energy(self, v, *, beta=None):
+        """Return free energy equal to energy."""
         return self.energy(v, beta=beta)
 
     @property
     def device(self):
+        """Return the device used for parameters."""
         return self._device
 
     @property
     def dtype(self):
+        """Return the dtype used for parameters."""
         return self._dtype
 
     def parameters(self):
+        """Return model parameters."""
         return [self.param1, self.param2]
 
     def named_parameters(self):
+        """Return named parameters."""
         return [("param1", self.param1), ("param2", self.param2)]
 
     def state_dict(self):
+        """Return state dictionary of model."""
         return {"param1": self.param1, "param2": self.param2}
 
     def load_state_dict(self, state_dict) -> None:
+        """Load parameters from a state dictionary."""
         self.param1.data = state_dict["param1"].data
         self.param2.data = state_dict["param2"].data
 
@@ -59,7 +67,9 @@ class MockModel(EnergyBasedModel):
 
     @classmethod
     def get_config_class(cls):
+        """Return the configuration class for this mock model."""
         from ebm.core.config import ModelConfig
+
         return ModelConfig
 
 
@@ -72,18 +82,14 @@ class TestTrainer:
         return TrainingConfig(
             epochs=5,
             batch_size=32,
-            optimizer=OptimizerConfig(
-                name="sgd",
-                lr=0.01,
-                momentum=0.9
-            ),
+            optimizer=OptimizerConfig(name="sgd", lr=0.01, momentum=0.9),
             checkpoint_dir=tmp_path / "checkpoints",
             checkpoint_every=2,
             log_every=10,
             eval_every=1,
             early_stopping=False,
             mixed_precision=False,
-            compile_model=False
+            compile_model=False,
         )
 
     @pytest.fixture
@@ -92,13 +98,13 @@ class TestTrainer:
         estimator = Mock(spec=GradientEstimator)
         estimator.estimate_gradient.return_value = {
             "param1": torch.randn(10, 10) * 0.01,
-            "param2": torch.randn(10) * 0.01
+            "param2": torch.randn(10) * 0.01,
         }
         estimator.compute_metrics.return_value = {
             "energy_gap": 1.0,
             "reconstruction_error": 0.1,
             "data_energy": -10.0,
-            "sample_energy": -9.0
+            "sample_energy": -9.0,
         }
         estimator.last_negative_samples = torch.randn(32, 10)
         return estimator
@@ -110,13 +116,15 @@ class TestTrainer:
         dataset = TensorDataset(data)
         return DataLoader(dataset, batch_size=32, shuffle=True)
 
-    def test_initialization(self, training_config, mock_gradient_estimator) -> None:
+    def test_initialization(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test trainer initialization."""
         model = MockModel()
         trainer = Trainer(
             model=model,
             config=training_config,
-            gradient_estimator=mock_gradient_estimator
+            gradient_estimator=mock_gradient_estimator,
         )
 
         assert trainer.model is model
@@ -124,12 +132,12 @@ class TestTrainer:
         assert trainer.gradient_estimator is mock_gradient_estimator
         assert trainer.current_epoch == 0
         assert trainer.global_step == 0
-        assert trainer.best_metric == float('inf')
+        assert trainer.best_metric == float("inf")
 
         # Check optimizer creation
         assert isinstance(trainer.optimizer, torch.optim.SGD)
-        assert trainer.optimizer.param_groups[0]['lr'] == 0.01
-        assert trainer.optimizer.param_groups[0]['momentum'] == 0.9
+        assert trainer.optimizer.param_groups[0]["lr"] == 0.01
+        assert trainer.optimizer.param_groups[0]["momentum"] == 0.9
 
     def test_optimizer_creation(self, training_config) -> None:
         """Test different optimizer configurations."""
@@ -159,21 +167,28 @@ class TestTrainer:
 
         # Step scheduler
         training_config.optimizer.scheduler = "step"
-        training_config.optimizer.scheduler_params = {"step_size": 10, "gamma": 0.1}
+        training_config.optimizer.scheduler_params = {
+            "step_size": 10,
+            "gamma": 0.1,
+        }
         trainer = Trainer(model, training_config, estimator)
         assert isinstance(trainer.scheduler, torch.optim.lr_scheduler.StepLR)
 
         # Cosine scheduler
         training_config.optimizer.scheduler = "cosine"
         trainer = Trainer(model, training_config, estimator)
-        assert isinstance(trainer.scheduler, torch.optim.lr_scheduler.CosineAnnealingLR)
+        assert isinstance(
+            trainer.scheduler, torch.optim.lr_scheduler.CosineAnnealingLR
+        )
 
         # No scheduler
         training_config.optimizer.scheduler = None
         trainer = Trainer(model, training_config, estimator)
         assert trainer.scheduler is None
 
-    def test_callback_setup(self, training_config, mock_gradient_estimator) -> None:
+    def test_callback_setup(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test callback initialization."""
         model = MockModel()
 
@@ -184,7 +199,7 @@ class TestTrainer:
             model=model,
             config=training_config,
             gradient_estimator=mock_gradient_estimator,
-            callbacks=[custom_callback]
+            callbacks=[custom_callback],
         )
 
         # Should have default callbacks plus custom
@@ -192,12 +207,16 @@ class TestTrainer:
         assert custom_callback in trainer.callbacks.callbacks
 
         # Check default callbacks exist
-        callback_types = [type(cb).__name__ for cb in trainer.callbacks.callbacks]
+        callback_types = [
+            type(cb).__name__ for cb in trainer.callbacks.callbacks
+        ]
         assert "MetricsCallback" in callback_types
         assert "LoggingCallback" in callback_types
         assert "CheckpointCallback" in callback_types  # checkpoint_every > 0
 
-    def test_training_step(self, training_config, mock_gradient_estimator) -> None:
+    def test_training_step(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test single training step."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -206,7 +225,9 @@ class TestTrainer:
         loss, metrics = trainer._training_step(data)
 
         # Check gradient estimation was called
-        mock_gradient_estimator.estimate_gradient.assert_called_once_with(model, data)
+        mock_gradient_estimator.estimate_gradient.assert_called_once_with(
+            model, data
+        )
 
         # Check gradients were applied
         assert model.param1.grad is not None
@@ -224,7 +245,7 @@ class TestTrainer:
             epochs=1,
             batch_size=32,
             optimizer=OptimizerConfig(name="sgd", lr=0.01),
-            grad_clip=1.0
+            grad_clip=1.0,
         )
 
         trainer = Trainer(model, config, mock_gradient_estimator)
@@ -232,7 +253,7 @@ class TestTrainer:
         # Set large gradients
         mock_gradient_estimator.estimate_gradient.return_value = {
             "param1": torch.ones(10, 10) * 100,  # Large gradient
-            "param2": torch.ones(10) * 100
+            "param2": torch.ones(10) * 100,
         }
 
         data = torch.randn(32, 10)
@@ -243,11 +264,13 @@ class TestTrainer:
         for param in model.parameters():
             if param.grad is not None:
                 total_norm += param.grad.norm().item() ** 2
-        total_norm = total_norm ** 0.5
+        total_norm = total_norm**0.5
 
         assert total_norm <= 1.0 * 1.1  # Allow small numerical error
 
-    def test_train_epoch(self, training_config, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_train_epoch(
+        self, training_config, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test training for one epoch."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -262,12 +285,17 @@ class TestTrainer:
 
         # Check that multiple batches were processed
         expected_batches = len(simple_data_loader)
-        assert mock_gradient_estimator.estimate_gradient.call_count == expected_batches
+        assert (
+            mock_gradient_estimator.estimate_gradient.call_count
+            == expected_batches
+        )
 
         # Check global step increased
         assert trainer.global_step == expected_batches
 
-    def test_validation(self, training_config, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_validation(
+        self, training_config, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test validation."""
         model = MockModel()
 
@@ -285,7 +313,9 @@ class TestTrainer:
         # Should be in eval mode
         assert model.reconstruct.called
 
-    def test_fit_method(self, training_config, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_fit_method(
+        self, training_config, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test complete training loop."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -299,7 +329,7 @@ class TestTrainer:
         # Run training
         result = trainer.fit(
             train_loader=simple_data_loader,
-            num_epochs=2  # Override config
+            num_epochs=2,  # Override config
         )
 
         # Check callbacks were called
@@ -313,7 +343,9 @@ class TestTrainer:
         assert "best_metric" in result
         assert len(result["history"]["train"]) == 2
 
-    def test_early_stopping(self, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_early_stopping(
+        self, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test early stopping functionality."""
         model = MockModel()
         config = TrainingConfig(
@@ -321,7 +353,7 @@ class TestTrainer:
             batch_size=32,
             optimizer=OptimizerConfig(name="sgd", lr=0.01),
             early_stopping=True,
-            patience=2
+            patience=2,
         )
 
         trainer = Trainer(model, config, mock_gradient_estimator)
@@ -341,7 +373,9 @@ class TestTrainer:
         # Should stop early
         assert len(result["history"]["train"]) == 3
 
-    def test_checkpoint_save_load(self, training_config, mock_gradient_estimator, tmp_path) -> None:
+    def test_checkpoint_save_load(
+        self, training_config, mock_gradient_estimator, tmp_path
+    ) -> None:
         """Test checkpoint saving and loading."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -359,7 +393,9 @@ class TestTrainer:
 
         # Create new trainer and load
         new_model = MockModel()
-        new_trainer = Trainer(new_model, training_config, mock_gradient_estimator)
+        new_trainer = Trainer(
+            new_model, training_config, mock_gradient_estimator
+        )
 
         new_trainer.load_checkpoint(saved_path)
 
@@ -372,13 +408,17 @@ class TestTrainer:
         assert torch.allclose(new_model.param1, model.param1)
         assert torch.allclose(new_model.param2, model.param2)
 
-    @pytest.mark.skipif(not hasattr(torch, 'compile'), reason="torch.compile not available")
-    def test_model_compilation(self, training_config, mock_gradient_estimator) -> None:
+    @pytest.mark.skipif(
+        not hasattr(torch, "compile"), reason="torch.compile not available"
+    )
+    def test_model_compilation(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test model compilation with torch.compile."""
         model = MockModel()
         training_config.compile_model = True
 
-        with patch('torch.compile') as mock_compile:
+        with patch("torch.compile") as mock_compile:
             mock_compile.return_value = model
 
             Trainer(model, training_config, mock_gradient_estimator)
@@ -395,7 +435,7 @@ class TestTrainer:
             epochs=1,
             batch_size=32,
             optimizer=OptimizerConfig(name="sgd", lr=0.01),
-            mixed_precision=True
+            mixed_precision=True,
         )
 
         trainer = Trainer(model, config, mock_gradient_estimator)
@@ -404,7 +444,9 @@ class TestTrainer:
         assert trainer.scaler is not None
         assert isinstance(trainer.scaler, torch.cuda.amp.GradScaler)
 
-    def test_interrupt_handling(self, training_config, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_interrupt_handling(
+        self, training_config, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test handling of keyboard interrupt."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -423,11 +465,13 @@ class TestTrainer:
         trainer._train_epoch = Mock(side_effect=interrupt_after_one)
 
         # Run training
-        with patch('ebm.training.trainer.logger') as mock_logger:
+        with patch("ebm.training.trainer.logger") as mock_logger:
             trainer.fit(simple_data_loader)
 
             # Check warning logged
-            mock_logger.warning.assert_called_with("Training interrupted by user")
+            mock_logger.warning.assert_called_with(
+                "Training interrupted by user"
+            )
 
         # Should have completed one epoch
         assert call_count == 2
@@ -436,7 +480,9 @@ class TestTrainer:
 class TestTrainerEdgeCases:
     """Test edge cases for Trainer."""
 
-    def test_empty_data_loader(self, training_config, mock_gradient_estimator) -> None:
+    def test_empty_data_loader(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test training with empty data loader."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -449,7 +495,9 @@ class TestTrainerEdgeCases:
         trainer._train_epoch(empty_loader)
         assert trainer.global_step == 0
 
-    def test_single_batch(self, training_config, mock_gradient_estimator) -> None:
+    def test_single_batch(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test training with single batch."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -462,7 +510,9 @@ class TestTrainerEdgeCases:
         trainer._train_epoch(loader)
         assert trainer.global_step == 1
 
-    def test_different_batch_formats(self, training_config, mock_gradient_estimator) -> None:
+    def test_different_batch_formats(
+        self, training_config, mock_gradient_estimator
+    ) -> None:
         """Test handling different batch formats."""
         model = MockModel()
         trainer = Trainer(model, training_config, mock_gradient_estimator)
@@ -480,7 +530,9 @@ class TestTrainerEdgeCases:
         assert isinstance(loss, float)
         mock_gradient_estimator.estimate_gradient.assert_called()
 
-    def test_scheduler_with_validation_metric(self, mock_gradient_estimator, simple_data_loader) -> None:
+    def test_scheduler_with_validation_metric(
+        self, mock_gradient_estimator, simple_data_loader
+    ) -> None:
         """Test ReduceLROnPlateau scheduler."""
         model = MockModel()
         config = TrainingConfig(
@@ -490,9 +542,9 @@ class TestTrainerEdgeCases:
                 name="sgd",
                 lr=0.1,
                 scheduler="reduce_on_plateau",
-                scheduler_params={"factor": 0.5, "patience": 1}
+                scheduler_params={"factor": 0.5, "patience": 1},
             ),
-            eval_every=1
+            eval_every=1,
         )
 
         trainer = Trainer(model, config, mock_gradient_estimator)
@@ -504,4 +556,6 @@ class TestTrainerEdgeCases:
         trainer.fit(simple_data_loader, simple_data_loader)
 
         # Scheduler should have been called
-        assert isinstance(trainer.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau)
+        assert isinstance(
+            trainer.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+        )

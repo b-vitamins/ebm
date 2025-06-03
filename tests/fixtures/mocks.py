@@ -15,10 +15,9 @@ from ebm.training.callbacks import Callback
 @pytest.fixture
 def mock_data_loader():
     """Provide a mock data loader for testing."""
+
     def _make_mock_loader(
-        n_batches: int = 10,
-        batch_size: int = 32,
-        n_features: int = 100
+        n_batches: int = 10, batch_size: int = 32, n_features: int = 100
     ):
         """Create a mock data loader."""
         # Create synthetic data
@@ -39,8 +38,11 @@ def mock_data_loader():
 @pytest.fixture
 def mock_gradient_estimator():
     """Provide a mock gradient estimator."""
+
     class MockGradientEstimator(GradientEstimator):
-        def __init__(self, return_gradients: dict[str, torch.Tensor] | None = None):
+        def __init__(
+            self, return_gradients: dict[str, torch.Tensor] | None = None
+        ):
             # Create a mock sampler
             mock_sampler = Mock(spec=Sampler)
             super().__init__(mock_sampler)
@@ -52,10 +54,7 @@ def mock_gradient_estimator():
             self.last_negative_samples = None
 
         def estimate_gradient(
-            self,
-            model: EnergyBasedModel,
-            data: torch.Tensor,
-            **kwargs: Any
+            self, model: EnergyBasedModel, data: torch.Tensor, **kwargs: Any
         ) -> dict[str, torch.Tensor]:
             """Return mock gradients."""
             self.call_count += 1
@@ -76,14 +75,14 @@ def mock_gradient_estimator():
             self,
             model: EnergyBasedModel,
             data: torch.Tensor,
-            samples: torch.Tensor
+            samples: torch.Tensor,
         ) -> dict[str, float]:
             """Return mock metrics."""
             return {
                 "energy_gap": 1.0,
                 "reconstruction_error": 0.1,
                 "data_energy": -10.0,
-                "sample_energy": -9.0
+                "sample_energy": -9.0,
             }
 
     return MockGradientEstimator
@@ -92,6 +91,7 @@ def mock_gradient_estimator():
 @pytest.fixture
 def mock_callback():
     """Provide a mock callback for testing."""
+
     class MockCallback(Callback):
         def __init__(self) -> None:
             self.events = []
@@ -107,7 +107,9 @@ def mock_callback():
         def on_epoch_start(self, trainer: Any, model: Any) -> None:
             self.events.append(f"epoch_start_{trainer.current_epoch}")
 
-        def on_epoch_end(self, trainer: Any, model: Any, metrics: dict[str, float]) -> None:
+        def on_epoch_end(
+            self, trainer: Any, model: Any, metrics: dict[str, float]
+        ) -> None:
             self.events.append(f"epoch_end_{trainer.current_epoch}")
             self.epoch_metrics.append(metrics)
 
@@ -115,7 +117,9 @@ def mock_callback():
             if self.should_stop:
                 trainer.callbacks.stop_training()
 
-        def on_batch_start(self, trainer: Any, model: Any, batch: torch.Tensor) -> None:
+        def on_batch_start(
+            self, trainer: Any, model: Any, batch: torch.Tensor
+        ) -> None:
             self.events.append("batch_start")
 
         def on_batch_end(self, trainer: Any, model: Any, loss: float) -> None:
@@ -127,6 +131,7 @@ def mock_callback():
 @pytest.fixture
 def mock_sampler():
     """Provide a mock sampler for testing."""
+
     class MockSampler(Sampler):
         def __init__(self, return_same: bool = False):
             super().__init__(name="MockSampler")
@@ -139,7 +144,7 @@ def mock_sampler():
             model: EnergyBasedModel,
             init_state: torch.Tensor,
             num_steps: int = 1,
-            **kwargs: Any
+            **kwargs: Any,
         ) -> torch.Tensor:
             """Return mock samples."""
             self.sample_count += 1
@@ -158,10 +163,9 @@ def mock_sampler():
 @pytest.fixture
 def mock_model():
     """Provide a mock energy-based model."""
+
     def _make_mock_model(
-        n_visible: int = 100,
-        n_hidden: int = 50,
-        device: str = "cpu"
+        n_visible: int = 100, n_hidden: int = 50, device: str = "cpu"
     ):
         """Create a mock EBM."""
         model = MagicMock(spec=EnergyBasedModel)
@@ -180,13 +184,13 @@ def mock_model():
         model.parameters.return_value = [
             torch.randn(n_hidden, n_visible, requires_grad=True),
             torch.randn(n_visible, requires_grad=True),
-            torch.randn(n_hidden, requires_grad=True)
+            torch.randn(n_hidden, requires_grad=True),
         ]
 
         model.named_parameters.return_value = [
             ("W", model.parameters.return_value[0]),
             ("vbias", model.parameters.return_value[1]),
-            ("hbias", model.parameters.return_value[2])
+            ("hbias", model.parameters.return_value[2]),
         ]
 
         return model
@@ -197,6 +201,7 @@ def mock_model():
 @pytest.fixture
 def mock_optimizer():
     """Provide a mock optimizer."""
+
     def _make_mock_optimizer(lr: float = 0.01):
         """Create a mock optimizer."""
         optimizer = MagicMock()
@@ -217,6 +222,7 @@ def mock_optimizer():
 @pytest.fixture
 def mock_scheduler():
     """Provide a mock learning rate scheduler."""
+
     def _make_mock_scheduler(optimizer):
         """Create a mock scheduler."""
         scheduler = MagicMock()

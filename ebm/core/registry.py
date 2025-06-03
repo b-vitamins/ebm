@@ -13,8 +13,8 @@ from typing import Any, TypeVar
 from .config import BaseConfig
 from .logging import logger
 
-T = TypeVar('T')
-ConfigT = TypeVar('ConfigT', bound=BaseConfig)
+T = TypeVar("T")
+ConfigT = TypeVar("ConfigT", bound=BaseConfig)
 
 
 class Registry(ABC):
@@ -49,7 +49,7 @@ class Registry(ABC):
         cls: type[T] | None = None,
         *,
         aliases: list[str] | None = None,
-        **metadata: Any
+        **metadata: Any,
     ) -> type[T] | Callable[[type[T]], type[T]]:
         """Register a class in the registry.
 
@@ -73,6 +73,7 @@ class Registry(ABC):
             # Or directly:
             registry.register('my_model', MyModel)
         """
+
         def decorator(cls_to_register: type[T]) -> type[T]:
             self._validate_class(cls_to_register)
 
@@ -83,7 +84,7 @@ class Registry(ABC):
                     registry=self.name,
                     name=name,
                     old_class=self._registry[name].__name__,
-                    new_class=cls_to_register.__name__
+                    new_class=cls_to_register.__name__,
                 )
 
             # Register the class
@@ -99,7 +100,7 @@ class Registry(ABC):
                 f"Registered {cls_to_register.__name__}",
                 registry=self.name,
                 name=name,
-                aliases=aliases
+                aliases=aliases,
             )
 
             return cls_to_register
@@ -127,7 +128,7 @@ class Registry(ABC):
             name = self._aliases[name]
 
         if name not in self._registry:
-            available = ', '.join(sorted(self._registry.keys()))
+            available = ", ".join(sorted(self._registry.keys()))
             raise KeyError(
                 f"'{name}' not found in {self.name} registry. "
                 f"Available: {available}"
@@ -136,11 +137,7 @@ class Registry(ABC):
         return self._registry[name]
 
     def create(
-        self,
-        name: str,
-        *args,
-        config: ConfigT | None = None,
-        **kwargs
+        self, name: str, *args, config: ConfigT | None = None, **kwargs
     ) -> T:
         """Create an instance of a registered class.
 
@@ -175,7 +172,11 @@ class Registry(ABC):
         """List all registered names with their aliases."""
         result = {}
         for name in self._registry:
-            aliases = [alias for alias, target in self._aliases.items() if target == name]
+            aliases = [
+                alias
+                for alias, target in self._aliases.items()
+                if target == name
+            ]
             result[name] = aliases
         return result
 
@@ -190,6 +191,7 @@ class Registry(ABC):
         return name in self._registry or name in self._aliases
 
     def __repr__(self) -> str:
+        """Return representation with name and registered items."""
         return f"{self.__class__.__name__}(name='{self.name}', items={self.list()})"
 
 
@@ -200,7 +202,7 @@ class ModelRegistry(Registry):
         """Validate that class implements the EnergyModel protocol."""
         # Import here to avoid circular imports
 
-        required_methods = {'energy', 'free_energy', 'device', 'dtype'}
+        required_methods = {"energy", "free_energy", "device", "dtype"}
         class_methods = set(dir(cls))
 
         missing = required_methods - class_methods
@@ -215,7 +217,7 @@ class SamplerRegistry(Registry):
 
     def _validate_class(self, cls: type[T]) -> None:
         """Validate that class implements the Sampler protocol."""
-        required_methods = {'sample', 'reset'}
+        required_methods = {"sample", "reset"}
         class_methods = set(dir(cls))
 
         missing = required_methods - class_methods
@@ -231,7 +233,7 @@ class OptimizerRegistry(Registry):
     def _validate_class(self, cls: type[T]) -> None:
         """Validate that class is an optimizer."""
         # Check if it's a torch optimizer or has similar interface
-        if not (hasattr(cls, 'step') and hasattr(cls, 'zero_grad')):
+        if not (hasattr(cls, "step") and hasattr(cls, "zero_grad")):
             raise TypeError(
                 f"Optimizer class {cls.__name__} must have 'step' and 'zero_grad' methods"
             )
@@ -242,7 +244,7 @@ class TransformRegistry(Registry):
 
     def _validate_class(self, cls: type[T]) -> None:
         """Validate that class implements the Transform protocol."""
-        required_methods = {'__call__', 'inverse'}
+        required_methods = {"__call__", "inverse"}
         class_methods = set(dir(cls))
 
         missing = required_methods - class_methods
@@ -253,30 +255,30 @@ class TransformRegistry(Registry):
 
 
 # Global registry instances
-models = ModelRegistry('models')
-samplers = SamplerRegistry('samplers')
-optimizers = OptimizerRegistry('optimizers')
-transforms = TransformRegistry('transforms')
+models = ModelRegistry("models")
+samplers = SamplerRegistry("samplers")
+optimizers = OptimizerRegistry("optimizers")
+transforms = TransformRegistry("transforms")
 
 
 # Convenience decorators
 def register_model(name: str, **kwargs):
-    """Decorator to register a model class."""
+    """Register a model class in the global registry."""
     return models.register(name, **kwargs)
 
 
 def register_sampler(name: str, **kwargs):
-    """Decorator to register a sampler class."""
+    """Register a sampler class in the global registry."""
     return samplers.register(name, **kwargs)
 
 
 def register_optimizer(name: str, **kwargs):
-    """Decorator to register an optimizer class."""
+    """Register an optimizer class in the global registry."""
     return optimizers.register(name, **kwargs)
 
 
 def register_transform(name: str, **kwargs):
-    """Decorator to register a transform class."""
+    """Register a transform class in the global registry."""
     return transforms.register(name, **kwargs)
 
 
@@ -292,6 +294,7 @@ def discover_plugins(module_name: str) -> None:
     """
     try:
         import importlib
+
         importlib.import_module(module_name)
         logger.info(f"Loaded plugins from {module_name}")
     except ImportError as e:
@@ -301,8 +304,8 @@ def discover_plugins(module_name: str) -> None:
 def get_all_registries() -> dict[str, Registry]:
     """Get all available registries."""
     return {
-        'models': models,
-        'samplers': samplers,
-        'optimizers': optimizers,
-        'transforms': transforms,
+        "models": models,
+        "samplers": samplers,
+        "optimizers": optimizers,
+        "transforms": transforms,
     }
