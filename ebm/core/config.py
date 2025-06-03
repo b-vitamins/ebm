@@ -38,6 +38,12 @@ class BaseConfig(BaseModel, ABC):
             Path: str,
         }
 
+    def __setattr__(self, name: str, value: Any) -> None:  # noqa: D401
+        """Prevent mutation of frozen models by raising AttributeError."""
+        if self.__config__.frozen:
+            raise AttributeError(f"{self.__class__.__name__} is immutable")
+        super().__setattr__(name, value)
+
     @classmethod
     def from_dict(cls: type[T], config_dict: dict[str, Any]) -> T:
         """Create configuration from dictionary."""
@@ -88,6 +94,12 @@ class BaseConfig(BaseModel, ABC):
         else:
             with path.open("w") as f:
                 json.dump(self.dict(), f, indent=2)
+
+    def dict(self, **kwargs: Any) -> dict[str, Any]:  # noqa: D401
+        """Return a JSON-serializable dictionary representation."""
+        import json
+
+        return json.loads(super().json(**kwargs))
 
     def with_updates(self: T, **kwargs: Any) -> T:
         """Create a new config with updated fields."""
@@ -194,6 +206,20 @@ class OptimizerConfig(BaseConfig):
             raise ValueError(f"Unknown optimizer: {v}. Must be one of {valid}")
         return v.lower()
 
+    @validator("lr")
+    def validate_lr(cls, v: float) -> float:  # noqa: N805
+        """Ensure learning rate is positive."""
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
+        return v
+
+    @validator("weight_decay")
+    def validate_weight_decay(cls, v: float) -> float:  # noqa: N805
+        """Ensure weight decay is non-negative."""
+        if v < 0:
+            raise ValueError("ensure this value is greater than or equal to 0")
+        return v
+
 
 class TrainingConfig(BaseConfig):
     """Configuration for training loop."""
@@ -246,6 +272,13 @@ class TrainingConfig(BaseConfig):
     )
     num_workers: int = Field(0, description="DataLoader workers", ge=0)
     pin_memory: bool = Field(True, description="Pin memory for DataLoader")
+
+    @validator("epochs", "batch_size")
+    def validate_positive(cls, v: int) -> int:  # noqa: N805
+        """Ensure integer fields expected to be positive are > 0."""
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
+        return v
 
     @property
     def eval_batch_size_actual(self) -> int:
@@ -314,6 +347,19 @@ class RBMConfig(ModelConfig):
     # Regularization
     l2_weight: float = Field(0.0, description="L2 weight regularization", ge=0)
     l1_weight: float = Field(0.0, description="L1 weight regularization", ge=0)
+
+    @validator("visible_units", "hidden_units")
+    def validate_units(cls, v: int) -> int:  # noqa: N805
+        """Ensure unit counts are positive."""
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
+        return v
+
+    @validator("l2_weight", "l1_weight")
+    def validate_regularization(cls, v: float) -> float:  # noqa: N805
+        if v < 0:
+            raise ValueError("ensure this value is greater than or equal to 0")
+        return v
 
     @validator("weight_init")
     def validate_init_method(cls, v: str) -> str:  # noqa: N805
