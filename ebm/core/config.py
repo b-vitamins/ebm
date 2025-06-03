@@ -38,7 +38,7 @@ class BaseConfig(BaseModel, ABC):
             Path: str,
         }
 
-    def __setattr__(self, name: str, value: Any) -> None:  # noqa: D401
+    def __setattr__(self, name: str, value: Any) -> None:
         """Prevent mutation of frozen models by raising AttributeError."""
         if self.__config__.frozen:
             raise AttributeError(f"{self.__class__.__name__} is immutable")
@@ -95,7 +95,7 @@ class BaseConfig(BaseModel, ABC):
             with path.open("w") as f:
                 json.dump(self.dict(), f, indent=2)
 
-    def dict(self, **kwargs: Any) -> dict[str, Any]:  # noqa: D401
+    def dict(self, **kwargs: Any) -> dict[str, Any]:
         """Return a JSON-serializable dictionary representation."""
         import json
 

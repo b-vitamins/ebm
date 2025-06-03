@@ -159,7 +159,7 @@ class MetricProcessor:
             if (
                 key in metric_keys
                 or key.endswith(("_loss", "_error", "_accuracy", "_score"))
-            ) and isinstance(value, (int, float)):
+            ) and isinstance(value, int | float):
                 metrics[key] = value
                 event_dict.pop(key)
             elif key in {"epoch", "step", "iteration", "batch"}:
