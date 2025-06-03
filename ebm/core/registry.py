@@ -137,7 +137,7 @@ class Registry(ABC):
         return self._registry[name]
 
     def create(
-        self, name: str, *args, config: ConfigT | None = None, **kwargs
+        self, name: str, *args: Any, config: ConfigT | None = None, **kwargs: Any
     ) -> T:
         """Create an instance of a registered class.
 
@@ -262,22 +262,22 @@ transforms = TransformRegistry("transforms")
 
 
 # Convenience decorators
-def register_model(name: str, **kwargs):
+def register_model(name: str, **kwargs: Any) -> Callable[[type], type] | type:
     """Register a model class in the global registry."""
     return models.register(name, **kwargs)
 
 
-def register_sampler(name: str, **kwargs):
+def register_sampler(name: str, **kwargs: Any) -> Callable[[type], type] | type:
     """Register a sampler class in the global registry."""
     return samplers.register(name, **kwargs)
 
 
-def register_optimizer(name: str, **kwargs):
+def register_optimizer(name: str, **kwargs: Any) -> Callable[[type], type] | type:
     """Register an optimizer class in the global registry."""
     return optimizers.register(name, **kwargs)
 
 
-def register_transform(name: str, **kwargs):
+def register_transform(name: str, **kwargs: Any) -> Callable[[type], type] | type:
     """Register a transform class in the global registry."""
     return transforms.register(name, **kwargs)
 

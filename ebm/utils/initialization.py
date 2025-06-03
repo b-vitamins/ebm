@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable
 from enum import Enum
+from typing import Any
 
 import torch
 from torch import Tensor, nn
@@ -45,7 +46,7 @@ class InitMethod(str, Enum):
 class Initializer:
     """Flexible parameter initializer supporting various strategies."""
 
-    def __init__(self, method: InitStrategy, **kwargs):
+    def __init__(self, method: InitStrategy, **kwargs: Any):
         """Initialize the initializer.
 
         Args:
@@ -290,7 +291,7 @@ def initialize_module(
     module: nn.Module,
     weight_init: InitStrategy | None = None,
     bias_init: InitStrategy | None = None,
-    **init_kwargs,
+    **init_kwargs: Any,
 ) -> None:
     """Initialize all parameters in a module.
 

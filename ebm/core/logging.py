@@ -16,6 +16,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
+from typing import Any, ParamSpec, TypeVar, cast
 
 import structlog
 from structlog.types import EventDict, WrappedLogger
@@ -161,7 +162,7 @@ class MetricProcessor:
 class LoggerMixin:
     """Mixin class that provides logging functionality."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._logger = None
 
@@ -172,25 +173,25 @@ class LoggerMixin:
             self._logger = structlog.get_logger(self.__class__.__name__)
         return self._logger
 
-    def log_debug(self, message: str, **kwargs) -> None:
+    def log_debug(self, message: str, **kwargs: Any) -> None:
         """Log debug message."""
         self.logger.debug(message, **kwargs)
 
-    def log_info(self, message: str, **kwargs) -> None:
+    def log_info(self, message: str, **kwargs: Any) -> None:
         """Log info message."""
         self.logger.info(message, **kwargs)
 
-    def log_warning(self, message: str, **kwargs) -> None:
+    def log_warning(self, message: str, **kwargs: Any) -> None:
         """Log warning message."""
         self.logger.warning(message, **kwargs)
 
-    def log_error(self, message: str, **kwargs) -> None:
+    def log_error(self, message: str, **kwargs: Any) -> None:
         """Log error message."""
         self.logger.error(message, **kwargs)
 
 
 @contextmanager
-def log_context(**kwargs) -> Iterator[None]:
+def log_context(**kwargs: Any) -> Iterator[None]:
     """Context manager that adds context to all logs within the block.
 
     Example:
@@ -208,7 +209,7 @@ def log_context(**kwargs) -> Iterator[None]:
 
 @contextmanager
 def log_duration(
-    logger: structlog.BoundLogger, message: str, **kwargs
+    logger: structlog.BoundLogger, message: str, **kwargs: Any
 ) -> Iterator[None]:
     """Context manager that logs the duration of a block.
 
@@ -225,7 +226,11 @@ def log_duration(
         logger.info(message, duration=duration, **kwargs)
 
 
-def log_function_call(logger: structlog.BoundLogger | None = None):
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def log_function_call(logger: structlog.BoundLogger | None = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Log function calls with arguments and return values.
 
     Args:
@@ -237,13 +242,13 @@ def log_function_call(logger: structlog.BoundLogger | None = None):
             ...
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         nonlocal logger
         if logger is None:
             logger = structlog.get_logger(func.__module__)
 
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             logger.debug(f"Calling {func.__name__}", args=args, kwargs=kwargs)
             start_time = time.perf_counter()
 
@@ -266,7 +271,7 @@ def log_function_call(logger: structlog.BoundLogger | None = None):
                 )
                 raise
 
-        return wrapper
+        return cast(Callable[P, R], wrapper)
 
     return decorator
 
@@ -309,27 +314,27 @@ logger = structlog.get_logger("ebm")
 
 
 # Convenience functions
-def debug(message: str, **kwargs) -> None:
+def debug(message: str, **kwargs: Any) -> None:
     """Log debug message."""
     logger.debug(message, **kwargs)
 
 
-def info(message: str, **kwargs) -> None:
+def info(message: str, **kwargs: Any) -> None:
     """Log info message."""
     logger.info(message, **kwargs)
 
 
-def warning(message: str, **kwargs) -> None:
+def warning(message: str, **kwargs: Any) -> None:
     """Log warning message."""
     logger.warning(message, **kwargs)
 
 
-def error(message: str, **kwargs) -> None:
+def error(message: str, **kwargs: Any) -> None:
     """Log error message."""
     logger.error(message, **kwargs)
 
 
-def metrics(message: str, **metric_values) -> None:
+def metrics(message: str, **metric_values: Any) -> None:
     """Log metrics with automatic formatting.
 
     Example:

@@ -30,7 +30,7 @@ class PartitionFunctionEstimator(nn.Module, LoggerMixin):
         super().__init__()
         self.model = model
 
-    def estimate(self, **kwargs) -> float | tuple[float, float, float]:
+    def estimate(self, **kwargs: Any) -> float | tuple[float, float, float]:
         """Estimate log partition function.
 
         Returns
@@ -387,7 +387,7 @@ class RatioEstimator(PartitionFunctionEstimator):
         self.method = method
 
     def estimate_all_ratios(
-        self, reference_idx: int = 0, **kwargs
+        self, reference_idx: int = 0, **kwargs: Any
     ) -> dict[tuple[int, int], tuple[float, float]]:
         """Estimate all pairwise log ratios.
 

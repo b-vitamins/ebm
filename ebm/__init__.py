@@ -8,6 +8,8 @@ __version__ = "0.1.0"
 __author__ = "EBM Contributors"
 __license__ = "MIT"
 
+from typing import Any
+
 # Core functionality
 from . import core, inference, models, sampling, training, utils
 
@@ -89,7 +91,7 @@ def create_model(name: str, config: ModelConfig) -> EnergyBasedModel:
     return model_registry.create(name, config=config)
 
 
-def create_sampler(name: str, **kwargs) -> Sampler:
+def create_sampler(name: str, **kwargs: Any) -> Sampler:
     """Create a sampler by name.
 
     Args:
