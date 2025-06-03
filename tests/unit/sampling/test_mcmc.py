@@ -499,7 +499,7 @@ class TestEdgeCases:
 
     def test_ais_with_zero_chains(self) -> None:
         """Test AIS with invalid number of chains."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="num_chains > 0"):
             # Should validate num_chains > 0
             AnnealedImportanceSampling(num_chains=0)
 

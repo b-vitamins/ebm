@@ -13,7 +13,7 @@ from typing import overload
 import torch
 from torch import Tensor
 
-from ebm.core.types import Device, DType, Shape, TensorLike
+from ebm.core.types_ import Device, DType, Shape, TensorLike
 
 
 def ensure_tensor(

@@ -22,7 +22,7 @@ from .device import (
     set_device,
     to_device,
 )
-from .logging import (
+from .logging_utils import (
     LogConfig,
     LoggerMixin,
     MetricProcessor,
@@ -54,7 +54,7 @@ from .registry import (
     samplers,
     transforms,
 )
-from .types import (
+from .types_ import (
     Callback,
     ChainState,
     Config,

@@ -22,7 +22,7 @@ from .core.config import (
     TrainingConfig,
 )
 from .core.device import DeviceManager, get_device, set_device
-from .core.logging import logger, setup_logging
+from .core.logging_utils import logger, setup_logging
 from .core.registry import models as model_registry
 from .core.registry import samplers as sampler_registry
 

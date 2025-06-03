@@ -23,10 +23,10 @@ class ConcreteSampler(Sampler):
 
     def sample(
         self,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Return samples by adding Gaussian noise."""
         # Simple implementation: add noise
@@ -41,7 +41,7 @@ class ConcreteGradientEstimator(GradientEstimator):
     """Concrete gradient estimator for testing."""
 
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, _model: EnergyBasedModel, _data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Return mock gradients for testing."""
         # Return mock gradients
@@ -189,12 +189,14 @@ class TestGibbsSampler:
         model = Mock(spec=LatentVariableModel)
         counter = 0
 
-        def mock_sample_hidden(v: torch.Tensor, **kwargs: Any) -> torch.Tensor:
+        def mock_sample_hidden(v: torch.Tensor, **_kwargs: Any) -> torch.Tensor:
             nonlocal counter
             counter += 1
             return torch.rand_like(v) + counter * 0.01
 
-        def mock_sample_visible(h: torch.Tensor, **kwargs: Any) -> torch.Tensor:
+        def mock_sample_visible(
+            h: torch.Tensor, **_kwargs: Any
+        ) -> torch.Tensor:
             return torch.rand_like(h) + counter * 0.01
 
         model.sample_hidden.side_effect = mock_sample_hidden
@@ -238,7 +240,7 @@ class TestMCMCSampler:
         """Concrete MCMC sampler for testing."""
 
         def transition_kernel(
-            self, model: EnergyBasedModel, state: Tensor, **kwargs: Any
+            self, _model: EnergyBasedModel, state: Tensor, **_kwargs: Any
         ) -> tuple[Tensor, dict[str, Any]]:
             """Perform one step of a random-walk proposal."""
             # Simple random walk
@@ -394,10 +396,10 @@ class TestAnnealedSampler:
 
         def sample(
             self,
-            model: EnergyBasedModel,
+            _model: EnergyBasedModel,
             init_state: Tensor,
-            num_steps: int = 1,
-            **kwargs: Any,
+            _num_steps: int = 1,
+            **_kwargs: Any,
         ) -> Tensor:
             """Return an annealed sample with added noise."""
             # Simple implementation

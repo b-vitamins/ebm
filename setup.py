@@ -15,7 +15,7 @@ else:
 version_file = Path(__file__).parent / "ebm" / "__init__.py"
 version = "0.1.0"  # Default version
 if version_file.exists():
-    with open(version_file) as f:
+    with version_file.open() as f:
         for line in f:
             if line.startswith("__version__"):
                 version = line.split("=")[1].strip().strip("\"'")

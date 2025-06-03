@@ -77,8 +77,7 @@ class TestBinaryTransform:
     def test_invalid_method(self) -> None:
         """Test error on invalid method."""
         with pytest.raises(ValueError, match="Unknown binarization method"):
-            transform = BinaryTransform(method="invalid")
-            transform(torch.randn(10))
+            BinaryTransform(method="invalid")(torch.randn(10))
 
 
 class TestAddNoise:

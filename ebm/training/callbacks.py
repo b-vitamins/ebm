@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from ebm.core.logging import logger
+from ebm.core.logging_utils import logger
 from ebm.models.base import EnergyBasedModel
 
 if TYPE_CHECKING:
@@ -33,19 +33,21 @@ class Callback:
     def on_train_end(self, trainer: Trainer) -> None:
         """Call at the end of training."""
 
-    def on_epoch_start(self, trainer: Trainer, model: EnergyBasedModel) -> None:
+    def on_epoch_start(
+        self, trainer: Trainer, _model: EnergyBasedModel
+    ) -> None:
         """Call at the start of each epoch."""
 
     def on_epoch_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         metrics: dict[str, float],
     ) -> None:
         """Call at the end of each epoch."""
 
     def on_batch_start(
-        self, trainer: Trainer, model: EnergyBasedModel, batch: Tensor
+        self, trainer: Trainer, _model: EnergyBasedModel, _batch: Tensor
     ) -> None:
         """Call before processing each batch."""
 
@@ -122,7 +124,9 @@ class LoggingCallback(Callback):
         self.step_count = 0
         self.epoch_start_time = None
 
-    def on_epoch_start(self, trainer: Trainer, model: EnergyBasedModel) -> None:
+    def on_epoch_start(
+        self, trainer: Trainer, _model: EnergyBasedModel
+    ) -> None:
         """Log epoch start."""
         self.epoch_start_time = time.time()
         logger.info(
@@ -133,7 +137,7 @@ class LoggingCallback(Callback):
     def on_epoch_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         metrics: dict[str, float],
     ) -> None:
         """Log epoch end."""
@@ -200,7 +204,7 @@ class MetricsCallback(Callback):
     def on_epoch_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         metrics: dict[str, float],
     ) -> None:
         """Store training metrics."""
@@ -214,7 +218,7 @@ class MetricsCallback(Callback):
     def on_validation_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         metrics: dict[str, float],
     ) -> None:
         """Store validation metrics."""
@@ -229,7 +233,7 @@ class MetricsCallback(Callback):
         """Save metrics to file."""
         data = {"train": self.train_metrics, "val": self.val_metrics}
 
-        with open(self.save_path, "w") as f:
+        with self.save_path.open("w") as f:
             json.dump(data, f, indent=2)
 
 
@@ -266,8 +270,8 @@ class CheckpointCallback(Callback):
     def on_epoch_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
-        metrics: dict[str, float],
+        _model: EnergyBasedModel,
+        _metrics: dict[str, float],
     ) -> None:
         """Save checkpoint if needed."""
         epoch = trainer.current_epoch
@@ -278,8 +282,8 @@ class CheckpointCallback(Callback):
             trainer.save_checkpoint(path)
 
         # Best model checkpoint
-        if self.save_best and self.monitor in metrics:
-            current_value = metrics[self.monitor]
+        if self.save_best and self.monitor in _metrics:
+            current_value = _metrics[self.monitor]
 
             is_better = (
                 self.mode == "min" and current_value < self.best_value
@@ -328,7 +332,7 @@ class EarlyStoppingCallback(Callback):
     def on_epoch_end(
         self,
         trainer: Trainer,
-        model: EnergyBasedModel,
+        _model: EnergyBasedModel,
         metrics: dict[str, float],
     ) -> None:
         """Check for improvement."""
@@ -385,7 +389,7 @@ class VisualizationCallback(Callback):
         self,
         trainer: Trainer,
         model: EnergyBasedModel,
-        metrics: dict[str, float],
+        _metrics: dict[str, float],
     ) -> None:
         """Generate and save visualizations."""
         if trainer.current_epoch % self.visualize_every != 0:
@@ -411,8 +415,7 @@ class VisualizationCallback(Callback):
             # Visualize filters for RBMs
             if hasattr(model, "W") and self.save_dir:
                 path = (
-                    self.save_dir
-                    / f"filters_epoch_{trainer.current_epoch}.png"
+                    self.save_dir / f"filters_epoch_{trainer.current_epoch}.png"
                 )
                 visualize_filters(model.W, save_path=path)
 
@@ -430,14 +433,16 @@ class LearningRateSchedulerCallback(Callback):
         self.schedule_fn = schedule_fn
         self.update_every = update_every
 
-    def on_epoch_start(self, trainer: Trainer, model: EnergyBasedModel) -> None:
+    def on_epoch_start(
+        self, trainer: Trainer, _model: EnergyBasedModel
+    ) -> None:
         """Update learning rate at epoch start."""
         if self.update_every == "epoch":
             lr = self.schedule_fn(trainer.current_epoch, trainer.global_step)
             self._update_lr(trainer, lr)
 
     def on_batch_start(
-        self, trainer: Trainer, model: EnergyBasedModel, batch: Tensor
+        self, trainer: Trainer, _model: EnergyBasedModel, _batch: Tensor
     ) -> None:
         """Update learning rate at batch start."""
         if self.update_every == "step":
@@ -468,7 +473,7 @@ class WarmupCallback(Callback):
         self.end_lr = end_lr
 
     def on_batch_start(
-        self, trainer: Trainer, model: EnergyBasedModel, batch: Tensor
+        self, trainer: Trainer, _model: EnergyBasedModel, _batch: Tensor
     ) -> None:
         """Update learning rate during warmup."""
         if trainer.global_step < self.warmup_steps:

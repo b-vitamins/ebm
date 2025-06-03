@@ -54,14 +54,14 @@ class BaseConfig(BaseModel, ABC):
             try:
                 import yaml
 
-                with open(path) as f:
+                with path.open() as f:
                     data = yaml.safe_load(f)
             except ImportError as err:
                 raise ImportError(
                     "PyYAML required for YAML config files"
                 ) from err
         elif path.suffix == ".json":
-            with open(path) as f:
+            with path.open() as f:
                 data = json.load(f)
         else:
             raise ValueError(f"Unsupported config file type: {path.suffix}")
@@ -79,14 +79,14 @@ class BaseConfig(BaseModel, ABC):
             try:
                 import yaml
 
-                with open(path, "w") as f:
+                with path.open("w") as f:
                     yaml.safe_dump(self.dict(), f, default_flow_style=False)
             except ImportError as err:
                 raise ImportError(
                     "PyYAML required for YAML config files"
                 ) from err
         else:
-            with open(path, "w") as f:
+            with path.open("w") as f:
                 json.dump(self.dict(), f, indent=2)
 
     def with_updates(self: T, **kwargs: Any) -> T:
@@ -115,9 +115,8 @@ class ModelConfig(BaseConfig):
         """Validate and normalize device string."""
         if v is None or v == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
-        if v not in {"cuda", "cpu", "mps"}:
-            if not v.startswith("cuda:"):
-                raise ValueError(f"Invalid device: {v}")
+        if v not in {"cuda", "cpu", "mps"} and not v.startswith("cuda:"):
+            raise ValueError(f"Invalid device: {v}")
         return v
 
     @validator("dtype")

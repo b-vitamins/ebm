@@ -337,8 +337,6 @@ class TestRBMAISAdapter:
 
         log_z_base = adapter.base_log_partition()
 
-        # For independent Bernoulli units:
-        # Z = prod_i (1 + exp(a_i)) * 2^num_hidden
         expected_log_z_v = (
             torch.nn.functional.softplus(adapter.base_vbias).sum().item()
         )

@@ -59,7 +59,7 @@ class ParallelTempering(AnnealedSampler):
         self.register_buffer("swap_attempts", torch.zeros(num_temps - 1))
         self.register_buffer("swap_accepts", torch.zeros(num_temps - 1))
 
-        # Chains: (num_chains, num_temps, *state_shape)
+        # Chains have shape (num_chains, num_temps, *state_shape)
         self.register_buffer("chains", None)
 
         # Track which chain is at which temperature
@@ -115,7 +115,7 @@ class ParallelTempering(AnnealedSampler):
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int = 1,
-        **kwargs: Any,
+        **_kwargs: Any,
     ) -> Tensor:
         """Run parallel tempering sampling.
 
@@ -288,7 +288,7 @@ class PTGradientEstimator(GradientEstimator):
         self.k = k
 
     def estimate_gradient(
-        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **_kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using PT samples.
 

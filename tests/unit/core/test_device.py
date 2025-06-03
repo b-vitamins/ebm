@@ -101,12 +101,14 @@ class TestDeviceManager:
 
     def test_invalid_device(self) -> None:
         """Test invalid device specification."""
-        with patch("torch.cuda.is_available", return_value=False):
-            with pytest.raises(
+        with (
+            patch("torch.cuda.is_available", return_value=False),
+            pytest.raises(
                 RuntimeError,
                 match="CUDA device requested but CUDA is not available",
-            ):
-                DeviceManager("cuda")
+            ),
+        ):
+            DeviceManager("cuda")
 
     def test_device_from_torch_device(self) -> None:
         """Test initialization with torch.device object."""

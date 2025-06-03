@@ -15,8 +15,8 @@ from torch import Tensor, nn
 
 from ebm.core.config import ModelConfig
 from ebm.core.device import DeviceManager
-from ebm.core.logging import LoggerMixin
-from ebm.core.types import Device
+from ebm.core.logging_utils import LoggerMixin
+from ebm.core.types_ import Device
 from ebm.utils.tensor import ensure_tensor
 
 

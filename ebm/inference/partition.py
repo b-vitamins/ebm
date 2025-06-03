@@ -14,7 +14,7 @@ import torch
 from torch import Tensor, nn
 from tqdm.auto import tqdm
 
-from ebm.core.logging import LoggerMixin
+from ebm.core.logging_utils import LoggerMixin
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 
@@ -419,17 +419,17 @@ class RatioEstimator(PartitionFunctionEstimator):
         # Use transitivity to get other ratios
         for i in range(n_models):
             for j in range(n_models):
-                if (i, j) not in ratios and i != j:
-                    # Use path through reference
-                    if (i, reference_idx) in ratios and (
-                        reference_idx,
-                        j,
-                    ) in ratios:
-                        log_ir, se_ir = ratios[(i, reference_idx)]
-                        log_rj, se_rj = ratios[(reference_idx, j)]
-                        ratios[(i, j)] = (
-                            log_ir + log_rj,
-                            (se_ir**2 + se_rj**2) ** 0.5,
-                        )
+                if (
+                    (i, j) not in ratios
+                    and i != j
+                    and (i, reference_idx) in ratios
+                    and (reference_idx, j) in ratios
+                ):
+                    log_ir, se_ir = ratios[(i, reference_idx)]
+                    log_rj, se_rj = ratios[(reference_idx, j)]
+                    ratios[(i, j)] = (
+                        log_ir + log_rj,
+                        (se_ir**2 + se_rj**2) ** 0.5,
+                    )
 
         return ratios
