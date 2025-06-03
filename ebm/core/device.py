@@ -7,9 +7,11 @@ and handling of different hardware accelerators (CUDA, MPS, etc.).
 from __future__ import annotations
 
 import gc
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import wraps
+from typing import ParamSpec, TypeVar, cast
 
 import torch
 from torch import Tensor
@@ -186,7 +188,9 @@ class DeviceManager:
         return module.to(device=self._device)
 
     @contextmanager
-    def autocast(self, enabled: bool = True, dtype: torch.dtype | None = None):
+    def autocast(
+        self, enabled: bool = True, dtype: torch.dtype | None = None
+    ) -> Iterator[None]:
         """Context manager for automatic mixed precision.
 
         Args:
@@ -281,21 +285,27 @@ def to_device(tensor: Tensor, device: torch.device | None = None) -> Tensor:
     return tensor.to(device=device)
 
 
-def auto_device(fn):
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def auto_device(fn: Callable[P, R]) -> Callable[P, R]:
     """Automatically place tensors on the configured device."""
 
-    def wrapper(*args, **kwargs):
+    @wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         get_device_manager()
         # Could add more sophisticated device handling here
         return fn(*args, **kwargs)
 
-    return wrapper
+    return cast(Callable[P, R], wrapper)
 
 
-def memory_efficient(fn):
+def memory_efficient(fn: Callable[P, R]) -> Callable[P, R]:
     """Run function while clearing device cache."""
 
-    def wrapper(*args, **kwargs):
+    @wraps(fn)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
         manager = get_device_manager()
         manager.clear_cache()
         try:
@@ -303,4 +313,4 @@ def memory_efficient(fn):
         finally:
             manager.clear_cache()
 
-    return wrapper
+    return cast(Callable[P, R], wrapper)

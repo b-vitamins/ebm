@@ -189,7 +189,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
 
     @classmethod
     def from_checkpoint(
-        cls, path: str | Path, device: Device | None = None, **config_overrides
+        cls, path: str | Path, device: Device | None = None, **config_overrides: Any
     ) -> EnergyBasedModel:
         """Create model instance from checkpoint.
 

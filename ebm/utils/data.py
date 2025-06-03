@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import datasets, transforms
 
 from ebm.core.logging import logger
+from ebm.models.base import EnergyBasedModel
 
 
 class BinaryTransform:
@@ -133,7 +134,7 @@ class EnergyDataset(Dataset):
     def __init__(
         self,
         base_dataset: Dataset,
-        model: Any | None = None,
+        model: EnergyBasedModel | None = None,
         transform: Callable | None = None,
     ):
         """Initialize energy dataset.
@@ -238,7 +239,7 @@ def get_mnist_datasets(
 
 
 def get_fashion_mnist_datasets(
-    data_dir: str | Path = "./data", **kwargs
+    data_dir: str | Path = "./data", **kwargs: Any
 ) -> tuple[Dataset, Dataset, Dataset]:
     """Get Fashion-MNIST datasets.
 

@@ -297,7 +297,7 @@ class ModelEvaluator:
         b = torch.zeros(1, requires_grad=True)
         optimizer = torch.optim.LBFGS([w, b], lr=0.1, max_iter=100)
 
-        def closure():
+        def closure() -> Tensor:
             optimizer.zero_grad()
             logits = data @ w + b
             loss = F.binary_cross_entropy_with_logits(logits, labels)

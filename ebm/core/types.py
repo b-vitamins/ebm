@@ -18,6 +18,8 @@ from typing import (
 import torch
 from torch import Tensor
 
+from ebm.training.trainer import Trainer
+
 # Type aliases for common patterns
 TensorLike: TypeAlias = Tensor | list[float] | float
 Device: TypeAlias = torch.device | str | None
@@ -193,24 +195,24 @@ class GradientEstimator(Protocol):
 class Callback(Protocol):
     """Protocol for training callbacks."""
 
-    def on_epoch_start(self, trainer: Any, model: EnergyModel) -> None:
+    def on_epoch_start(self, trainer: Trainer, model: EnergyModel) -> None:
         """Call at the start of each epoch."""
         ...
 
     def on_epoch_end(
-        self, trainer: Any, model: EnergyModel, metrics: dict[str, float]
+        self, trainer: Trainer, model: EnergyModel, metrics: dict[str, float]
     ) -> None:
         """Call at the end of each epoch."""
         ...
 
     def on_batch_start(
-        self, trainer: Any, model: EnergyModel, batch: Tensor
+        self, trainer: Trainer, model: EnergyModel, batch: Tensor
     ) -> None:
         """Call before processing each batch."""
         ...
 
     def on_batch_end(
-        self, trainer: Any, model: EnergyModel, loss: float
+        self, trainer: Trainer, model: EnergyModel, loss: float
     ) -> None:
         """Call after processing each batch."""
         ...

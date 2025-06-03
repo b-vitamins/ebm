@@ -12,6 +12,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib import animation
 from matplotlib.figure import Figure
 from torch import Tensor
 
@@ -136,7 +137,7 @@ def visualize_filters(
     cmap: str = "RdBu_r",
     save_path: Path | None = None,
     figsize: tuple[int, int] | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Figure:
     """Visualize weight filters (e.g., RBM weights).
 
@@ -196,8 +197,8 @@ def visualize_samples(
     ncols: int | None = None,
     save_path: Path | None = None,
     figsize: tuple[int, int] | None = None,
-    **kwargs,
-) -> Figure:
+    **kwargs: Any,
+    ) -> Figure:
     """Visualize generated samples.
 
     Args:
@@ -453,7 +454,7 @@ def create_animation(
     fps: int = 10,
     save_path: Path | None = None,
     title: str = "Animation",
-) -> Any:
+) -> animation.FuncAnimation:
     """Create animation from a sequence of frames.
 
     Args:
@@ -466,8 +467,6 @@ def create_animation(
     -------
         Animation object
     """
-    from matplotlib import animation
-
     # Prepare frames
     frames_np = []
     for frame in frames:
@@ -486,7 +485,7 @@ def create_animation(
     # Create animation
     im = ax.imshow(frames_np[0], cmap=cmap, aspect="auto")
 
-    def update(i):
+    def update(i: int) -> list[plt.Artist]:
         im.set_array(frames_np[i])
         return [im]
 
