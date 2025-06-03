@@ -1,24 +1,27 @@
 """Mock objects for testing."""
 
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, Mock
 
 import pytest
 import torch
+from torch.optim import Optimizer
 from torch.utils.data import DataLoader, TensorDataset
 
 from ebm.models.base import EnergyBasedModel
 from ebm.sampling.base import GradientEstimator, Sampler
 from ebm.training.callbacks import Callback
+from ebm.training.trainer import Trainer
 
 
 @pytest.fixture
-def mock_data_loader():
+def mock_data_loader() -> Callable[[int, int, int], DataLoader]:
     """Provide a mock data loader for testing."""
 
     def _make_mock_loader(
         n_batches: int = 10, batch_size: int = 32, n_features: int = 100
-    ):
+    ) -> DataLoader:
         """Create a mock data loader."""
         # Create synthetic data
         data = torch.rand(n_batches * batch_size, n_features)
@@ -36,7 +39,7 @@ def mock_data_loader():
 
 
 @pytest.fixture
-def mock_gradient_estimator():
+def mock_gradient_estimator() -> type[GradientEstimator]:
     """Provide a mock gradient estimator."""
 
     class MockGradientEstimator(GradientEstimator):
@@ -89,7 +92,7 @@ def mock_gradient_estimator():
 
 
 @pytest.fixture
-def mock_callback():
+def mock_callback() -> type[Callback]:
     """Provide a mock callback for testing."""
 
     class MockCallback(Callback):
@@ -98,17 +101,22 @@ def mock_callback():
             self.epoch_metrics = []
             self.should_stop = False
 
-        def on_train_begin(self, trainer: Any) -> None:
+        def on_train_begin(self, trainer: Trainer) -> None:
             self.events.append("train_begin")
 
-        def on_train_end(self, trainer: Any) -> None:
+        def on_train_end(self, trainer: Trainer) -> None:
             self.events.append("train_end")
 
-        def on_epoch_start(self, trainer: Any, model: Any) -> None:
+        def on_epoch_start(
+            self, trainer: Trainer, model: EnergyBasedModel
+        ) -> None:
             self.events.append(f"epoch_start_{trainer.current_epoch}")
 
         def on_epoch_end(
-            self, trainer: Any, model: Any, metrics: dict[str, float]
+            self,
+            trainer: Trainer,
+            model: EnergyBasedModel,
+            metrics: dict[str, float],
         ) -> None:
             self.events.append(f"epoch_end_{trainer.current_epoch}")
             self.epoch_metrics.append(metrics)
@@ -118,18 +126,20 @@ def mock_callback():
                 trainer.callbacks.stop_training()
 
         def on_batch_start(
-            self, trainer: Any, model: Any, batch: torch.Tensor
+            self, trainer: Trainer, model: EnergyBasedModel, batch: torch.Tensor
         ) -> None:
             self.events.append("batch_start")
 
-        def on_batch_end(self, trainer: Any, model: Any, loss: float) -> None:
+        def on_batch_end(
+            self, trainer: Trainer, model: EnergyBasedModel, loss: float
+        ) -> None:
             self.events.append("batch_end")
 
     return MockCallback
 
 
 @pytest.fixture
-def mock_sampler():
+def mock_sampler() -> type[Sampler]:
     """Provide a mock sampler for testing."""
 
     class MockSampler(Sampler):
@@ -161,12 +171,12 @@ def mock_sampler():
 
 
 @pytest.fixture
-def mock_model():
+def mock_model() -> Callable[[int, int, str], EnergyBasedModel]:
     """Provide a mock energy-based model."""
 
     def _make_mock_model(
         n_visible: int = 100, n_hidden: int = 50, device: str = "cpu"
-    ):
+    ) -> EnergyBasedModel:
         """Create a mock EBM."""
         model = MagicMock(spec=EnergyBasedModel)
 
@@ -199,10 +209,10 @@ def mock_model():
 
 
 @pytest.fixture
-def mock_optimizer():
+def mock_optimizer() -> Callable[[float], Optimizer]:
     """Provide a mock optimizer."""
 
-    def _make_mock_optimizer(lr: float = 0.01):
+    def _make_mock_optimizer(lr: float = 0.01) -> Optimizer:
         """Create a mock optimizer."""
         optimizer = MagicMock()
         optimizer.param_groups = [{"lr": lr}]
@@ -220,16 +230,16 @@ def mock_optimizer():
 
 
 @pytest.fixture
-def mock_scheduler():
+def mock_scheduler() -> Callable[[Optimizer], object]:
     """Provide a mock learning rate scheduler."""
 
-    def _make_mock_scheduler(optimizer):
+    def _make_mock_scheduler(optimizer: Optimizer) -> object:
         """Create a mock scheduler."""
         scheduler = MagicMock()
         scheduler.optimizer = optimizer
         scheduler.step_count = 0
 
-        def step(metric=None) -> None:
+        def step(metric: float | None = None) -> None:
             scheduler.step_count += 1
             # Simulate learning rate decay
             for group in optimizer.param_groups:

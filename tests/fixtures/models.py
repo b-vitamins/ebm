@@ -1,11 +1,13 @@
 """Model fixtures for testing."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 import torch
 
 from ebm.core.config import GaussianRBMConfig, RBMConfig
+from ebm.models.base import EnergyBasedModel
 from ebm.models.rbm import (
     BernoulliRBM,
     CenteredBernoulliRBM,
@@ -14,7 +16,7 @@ from ebm.models.rbm import (
 
 
 @pytest.fixture
-def simple_bernoulli_rbm(small_rbm_config):
+def simple_bernoulli_rbm(small_rbm_config: RBMConfig) -> BernoulliRBM:
     """Provide a simple Bernoulli RBM for testing."""
     model = BernoulliRBM(small_rbm_config)
 
@@ -29,7 +31,7 @@ def simple_bernoulli_rbm(small_rbm_config):
 
 
 @pytest.fixture
-def small_gaussian_rbm():
+def small_gaussian_rbm() -> GaussianBernoulliRBM:
     """Provide a small Gaussian RBM for testing."""
     config = GaussianRBMConfig(
         visible_units=20,
@@ -44,7 +46,10 @@ def small_gaussian_rbm():
 
 
 @pytest.fixture
-def pretrained_rbm(simple_bernoulli_rbm, synthetic_binary_data):
+def pretrained_rbm(
+    simple_bernoulli_rbm: BernoulliRBM,
+    synthetic_binary_data: dict[str, object],
+) -> BernoulliRBM:
     """Provide a pre-trained RBM for testing inference."""
     model = simple_bernoulli_rbm
     data = synthetic_binary_data["data"]
@@ -72,15 +77,15 @@ def pretrained_rbm(simple_bernoulli_rbm, synthetic_binary_data):
 
 
 @pytest.fixture
-def make_test_rbm():
+def make_test_rbm() -> Callable[[int, int, str], EnergyBasedModel]:
     """Create test RBMs with various configurations."""
 
     def _make_test_rbm(
         visible_units: int = 100,
         hidden_units: int = 50,
         model_type: str = "bernoulli",
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> EnergyBasedModel:
         """Create a test RBM with specified configuration."""
         base_config = {
             "visible_units": visible_units,
@@ -106,7 +111,9 @@ def make_test_rbm():
 
 
 @pytest.fixture
-def model_comparison_suite(make_test_rbm):
+def model_comparison_suite(
+    make_test_rbm: Callable[[int, int, str], EnergyBasedModel],
+) -> dict[str, EnergyBasedModel]:
     """Provide a suite of models for comparison testing."""
     return {
         "small_bernoulli": make_test_rbm(20, 10, "bernoulli"),
@@ -118,10 +125,16 @@ def model_comparison_suite(make_test_rbm):
 
 
 @pytest.fixture
-def save_and_load_model(tmp_path: Path):
+def save_and_load_model(
+    tmp_path: Path,
+) -> Callable[
+    [EnergyBasedModel, str], tuple[EnergyBasedModel, dict[str, torch.Tensor]]
+]:
     """Fixture for testing model save/load functionality."""
 
-    def _save_and_load(model, filename: str = "test_model.pt"):
+    def _save_and_load(
+        model: EnergyBasedModel, filename: str = "test_model.pt"
+    ) -> tuple[EnergyBasedModel, dict[str, torch.Tensor]]:
         """Save a model and load it back."""
         save_path = tmp_path / filename
 
@@ -143,10 +156,10 @@ def save_and_load_model(tmp_path: Path):
 
 
 @pytest.fixture
-def model_parameter_stats():
+def model_parameter_stats() -> Callable[[EnergyBasedModel], dict[str, object]]:
     """Fixture for computing model parameter statistics."""
 
-    def _compute_stats(model):
+    def _compute_stats(model: EnergyBasedModel) -> dict[str, object]:
         """Compute statistics for model parameters."""
         stats = {}
 
