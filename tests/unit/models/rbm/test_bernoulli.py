@@ -137,8 +137,8 @@ class TestCenteredBernoulliRBM:
         rbm = CenteredBernoulliRBM(small_rbm_config)
 
         assert rbm.centered is True
-        assert hasattr(rbm, 'v_offset')
-        assert hasattr(rbm, 'h_offset')
+        assert hasattr(rbm, "v_offset")
+        assert hasattr(rbm, "h_offset")
 
         # Offsets should be parameters
         assert isinstance(rbm.v_offset, nn.Parameter)
@@ -183,15 +183,17 @@ class TestCenteredBernoulliRBM:
             rbm.v_offset.data = torch.tensor([0.3, 0.5, 0.7])
             rbm.h_offset.data = torch.tensor([0.4, 0.6])
 
-        v = torch.tensor([[1., 0., 1.]])
-        h = torch.tensor([[1., 0.]])
+        v = torch.tensor([[1.0, 0.0, 1.0]])
+        h = torch.tensor([[1.0, 0.0]])
 
         energy = rbm.joint_energy(v, h)
 
         # Manually compute
         v_centered = v - rbm.v_offset
         h_centered = h - rbm.h_offset
-        interaction = -torch.einsum('bh,bv->b', h_centered, v_centered @ rbm.W.T)
+        interaction = -torch.einsum(
+            "bh,bv->b", h_centered, v_centered @ rbm.W.T
+        )
         v_term = -(v @ rbm.vbias)
         h_term = -(h @ rbm.hbias)
         expected = interaction + v_term + h_term
@@ -217,15 +219,23 @@ class TestCenteredBernoulliRBM:
         v_small = torch.rand(2, 3)
 
         # Compute by summing over all hidden states
-        all_h = torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=torch.float32)
+        all_h = torch.tensor(
+            [[0, 0], [0, 1], [1, 0], [1, 1]], dtype=torch.float32
+        )
 
         for i in range(v_small.shape[0]):
-            v_i = v_small[i:i+1].expand(4, -1)
-            energies = torch.stack([rbm_small.joint_energy(v_i[j:j+1], all_h[j:j+1])
-                                   for j in range(4)]).squeeze()
+            v_i = v_small[i : i + 1].expand(4, -1)
+            energies = torch.stack(
+                [
+                    rbm_small.joint_energy(v_i[j : j + 1], all_h[j : j + 1])
+                    for j in range(4)
+                ]
+            ).squeeze()
             free_energy_exact = -torch.logsumexp(-energies, dim=0)
-            free_energy_computed = rbm_small.free_energy(v_small[i:i+1])
-            assert torch.allclose(free_energy_computed, free_energy_exact, atol=1e-4)
+            free_energy_computed = rbm_small.free_energy(v_small[i : i + 1])
+            assert torch.allclose(
+                free_energy_computed, free_energy_exact, atol=1e-4
+            )
 
     def test_update_offsets(self) -> None:
         """Test offset update mechanism."""
@@ -251,12 +261,16 @@ class TestCenteredBernoulliRBM:
         assert torch.allclose(rbm.v_offset, expected_v)
         assert torch.allclose(rbm.h_offset, expected_h)
 
-    def test_init_from_data_centered(self, synthetic_binary_data, make_data_loader) -> None:
+    def test_init_from_data_centered(
+        self, synthetic_binary_data, make_data_loader
+    ) -> None:
         """Test data initialization for centered RBM."""
         config = RBMConfig(visible_units=100, hidden_units=50)
         rbm = CenteredBernoulliRBM(config)
 
-        data_loader = make_data_loader(synthetic_binary_data["dataset"], batch_size=50)
+        data_loader = make_data_loader(
+            synthetic_binary_data["dataset"], batch_size=50
+        )
 
         rbm.init_from_data(data_loader)
 
@@ -280,7 +294,7 @@ class TestSparseBernoulliRBM:
             visible_units=20,
             hidden_units=10,
             sparsity_target=0.05,
-            sparsity_weight=0.1
+            sparsity_weight=0.1,
         )
 
         # Add sparsity attributes to config
@@ -295,7 +309,7 @@ class TestSparseBernoulliRBM:
         assert rbm.sparsity_damping == 0.95
 
         # Should have hidden mean buffer
-        assert hasattr(rbm, 'hidden_mean')
+        assert hasattr(rbm, "hidden_mean")
         assert rbm.hidden_mean.shape == (10,)
         assert torch.allclose(rbm.hidden_mean, torch.full((10,), 0.05))
 
@@ -399,12 +413,16 @@ class TestBernoulliRBMProperties:
             rbm.hbias.data = torch.tensor([0.2, -0.2])
 
         # Compute partition function by brute force
-        log_z = -float('inf')
+        log_z = -float("inf")
 
         for v_bits in range(4):  # 2^2 visible states
             for h_bits in range(4):  # 2^2 hidden states
-                v = torch.tensor([[(v_bits >> i) & 1 for i in range(2)]], dtype=torch.float32)
-                h = torch.tensor([[(h_bits >> i) & 1 for i in range(2)]], dtype=torch.float32)
+                v = torch.tensor(
+                    [[(v_bits >> i) & 1 for i in range(2)]], dtype=torch.float32
+                )
+                h = torch.tensor(
+                    [[(h_bits >> i) & 1 for i in range(2)]], dtype=torch.float32
+                )
 
                 energy = rbm.joint_energy(v, h)
                 log_z = torch.logaddexp(log_z, -energy.item())
@@ -412,7 +430,9 @@ class TestBernoulliRBMProperties:
         # Test that probabilities sum to 1
         total_prob = 0.0
         for v_bits in range(4):
-            v = torch.tensor([[(v_bits >> i) & 1 for i in range(2)]], dtype=torch.float32)
+            v = torch.tensor(
+                [[(v_bits >> i) & 1 for i in range(2)]], dtype=torch.float32
+            )
             log_prob = rbm.log_probability(v, log_z=log_z)
             total_prob += torch.exp(log_prob).item()
 
@@ -449,4 +469,6 @@ class TestBernoulliRBMProperties:
                 corr = torch.corrcoef(h_i.T)
                 # Off-diagonal elements should be small (independent)
                 off_diag = corr - torch.diag(torch.diag(corr))
-                assert torch.abs(off_diag).max() < 0.2  # Weak correlation due to finite samples
+                assert (
+                    torch.abs(off_diag).max() < 0.2
+                )  # Weak correlation due to finite samples

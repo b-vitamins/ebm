@@ -22,6 +22,7 @@ class ConcreteEnergyModel(EnergyBasedModel):
         self.bias = nn.Parameter(torch.zeros(10))
 
     def energy(self, x: Tensor, *, beta=None, return_parts=False):
+        """Compute the model energy for a batch."""
         x.shape[0]
         # Simple quadratic energy
         energy = 0.5 * (x @ self.weight @ x.T).diagonal() + (x @ self.bias)
@@ -33,16 +34,18 @@ class ConcreteEnergyModel(EnergyBasedModel):
             return {
                 "quadratic": 0.5 * (x @ self.weight @ x.T).diagonal(),
                 "linear": x @ self.bias,
-                "total": energy
+                "total": energy,
             }
         return energy
 
     def free_energy(self, v: Tensor, *, beta=None):
+        """Return free energy, delegating to ``energy``."""
         # For testing, just use energy
         return self.energy(v, beta=beta)
 
     @classmethod
     def get_config_class(cls):
+        """Return the config class used for this model."""
         return ModelConfig
 
 
@@ -55,11 +58,12 @@ class ConcreteLatentModel(LatentVariableModel):
         self.hbias = nn.Parameter(torch.zeros(20))
 
     def energy(self, x: Tensor, *, beta=None, return_parts=False):
+        """Compute energy for visible and hidden units."""
         # Split into visible and hidden
         v = x[..., :10]
         h = x[..., 10:]
 
-        interaction = -torch.einsum('...i,...j,ij->...', v, h, self.W.T)
+        interaction = -torch.einsum("...i,...j,ij->...", v, h, self.W.T)
         v_term = -(v @ self.vbias)
         h_term = -(h @ self.hbias)
 
@@ -73,11 +77,12 @@ class ConcreteLatentModel(LatentVariableModel):
                 "interaction": interaction,
                 "visible": v_term,
                 "hidden": h_term,
-                "total": energy
+                "total": energy,
             }
         return energy
 
     def free_energy(self, v: Tensor, *, beta=None):
+        """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -85,10 +90,13 @@ class ConcreteLatentModel(LatentVariableModel):
         else:
             v_term = -(v @ self.vbias)
 
-        h_term = -torch.logsumexp(torch.stack([torch.zeros_like(pre_h), pre_h], dim=-1), dim=-1).sum(-1)
+        h_term = -torch.logsumexp(
+            torch.stack([torch.zeros_like(pre_h), pre_h], dim=-1), dim=-1
+        ).sum(-1)
         return v_term + h_term
 
     def sample_hidden(self, visible: Tensor, *, beta=None, return_prob=False):
+        """Sample hidden units from visibles."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -100,6 +108,7 @@ class ConcreteLatentModel(LatentVariableModel):
         return sample_h
 
     def sample_visible(self, hidden: Tensor, *, beta=None, return_prob=False):
+        """Sample visible units from hiddens."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
             pre_v = pre_v * beta
@@ -112,6 +121,7 @@ class ConcreteLatentModel(LatentVariableModel):
 
     @classmethod
     def get_config_class(cls):
+        """Return the configuration class for the model."""
         return ModelConfig
 
 
@@ -126,8 +136,8 @@ class TestEnergyBasedModel:
         assert model.config == config
         assert model.device == torch.device("cpu")
         assert model.dtype == torch.float32
-        assert hasattr(model, 'weight')
-        assert hasattr(model, 'bias')
+        assert hasattr(model, "weight")
+        assert hasattr(model, "bias")
 
     def test_device_management(self) -> None:
         """Test device management."""
@@ -142,7 +152,9 @@ class TestEnergyBasedModel:
         for param in model.parameters():
             assert param.device == torch.device("cpu")
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_cuda_initialization(self) -> None:
         """Test CUDA initialization."""
         config = ModelConfig(device="cuda", dtype="float16")
@@ -163,6 +175,7 @@ class TestEnergyBasedModel:
 
         # Test with numpy array
         import numpy as np
+
         np_array = np.random.randn(5, 10)
         tensor = model.prepare_input(np_array)
         assert isinstance(tensor, Tensor)
@@ -315,9 +328,9 @@ class TestLatentVariableModel:
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteLatentModel(config)
 
-        assert hasattr(model, 'W')
-        assert hasattr(model, 'vbias')
-        assert hasattr(model, 'hbias')
+        assert hasattr(model, "W")
+        assert hasattr(model, "vbias")
+        assert hasattr(model, "hbias")
 
     def test_sampling_methods(self) -> None:
         """Test sampling visible and hidden units."""
@@ -353,12 +366,22 @@ class TestLatentVariableModel:
         model.sample_hidden(v, beta=torch.tensor(2.0))
 
         # Higher beta (lower temperature) should give more deterministic results
-        _, prob1 = model.sample_hidden(v, beta=torch.tensor(0.1), return_prob=True)
-        _, prob2 = model.sample_hidden(v, beta=torch.tensor(10.0), return_prob=True)
+        _, prob1 = model.sample_hidden(
+            v, beta=torch.tensor(0.1), return_prob=True
+        )
+        _, prob2 = model.sample_hidden(
+            v, beta=torch.tensor(10.0), return_prob=True
+        )
 
         # Check that high beta makes probabilities more extreme
-        entropy1 = -(prob1 * torch.log(prob1 + 1e-8) + (1-prob1) * torch.log(1-prob1 + 1e-8)).mean()
-        entropy2 = -(prob2 * torch.log(prob2 + 1e-8) + (1-prob2) * torch.log(1-prob2 + 1e-8)).mean()
+        entropy1 = -(
+            prob1 * torch.log(prob1 + 1e-8)
+            + (1 - prob1) * torch.log(1 - prob1 + 1e-8)
+        ).mean()
+        entropy2 = -(
+            prob2 * torch.log(prob2 + 1e-8)
+            + (1 - prob2) * torch.log(1 - prob2 + 1e-8)
+        ).mean()
         assert entropy2 < entropy1  # Lower entropy for higher beta
 
     def test_joint_energy(self) -> None:
@@ -391,7 +414,7 @@ class TestLatentVariableModel:
         assert h_new.shape == (10, 20)
 
         # Starting from hidden
-        v_new2, h_new2 = model.gibbs_step(v_init, start_from='hidden')
+        v_new2, h_new2 = model.gibbs_step(v_init, start_from="hidden")
         assert v_new2.shape == v_init.shape
         assert h_new2.shape == (10, 20)
 
@@ -449,6 +472,7 @@ class TestAISInterpolator:
 
     def test_interpolated_energy_default(self) -> None:
         """Test default interpolated energy computation."""
+
         # Need to create a concrete interpolator for testing
         class TestInterpolator(AISInterpolator):
             def base_log_partition(self) -> float:
@@ -495,6 +519,7 @@ class TestEdgeCases:
                 pass
 
             def energy(self, x, *, beta=None, return_parts=False) -> None:
+                """Unimplemented energy function."""
                 pass
 
             # Missing: free_energy, get_config_class

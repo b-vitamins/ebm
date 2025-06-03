@@ -18,7 +18,7 @@ from ebm.utils.tensor import batch_outer_product
 from .base import GibbsSampler, GradientEstimator
 
 
-@register_sampler('cd', aliases=['contrastive_divergence'])
+@register_sampler("cd", aliases=["contrastive_divergence"])
 class ContrastiveDivergence(GradientEstimator):
     """Contrastive Divergence (CD-k) gradient estimator.
 
@@ -31,7 +31,7 @@ class ContrastiveDivergence(GradientEstimator):
         k: int = 1,
         *,
         persistent: bool = False,
-        num_chains: int | None = None
+        num_chains: int | None = None,
     ):
         """Initialize CD sampler.
 
@@ -47,10 +47,7 @@ class ContrastiveDivergence(GradientEstimator):
         self.num_chains = num_chains
 
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients using contrastive divergence.
 
@@ -67,7 +64,9 @@ class ContrastiveDivergence(GradientEstimator):
             raise TypeError("CD requires a LatentVariableModel")
 
         # Positive phase: sample hidden given data
-        h_data = model.sample_hidden(data, return_prob=True)[1]  # Use probabilities
+        h_data = model.sample_hidden(data, return_prob=True)[
+            1
+        ]  # Use probabilities
 
         # Negative phase: run k steps of Gibbs sampling
         v_model = self.sampler.sample(model, data, num_steps=self.k)
@@ -79,14 +78,14 @@ class ContrastiveDivergence(GradientEstimator):
         # Weight gradient: <v h^T>_data - <v h^T>_model
         pos_stats = batch_outer_product(h_data, data).mean(dim=0)
         neg_stats = batch_outer_product(h_model, v_model).mean(dim=0)
-        gradients['W'] = pos_stats - neg_stats
+        gradients["W"] = pos_stats - neg_stats
 
         # Bias gradients
-        if hasattr(model, 'vbias') and model.vbias.requires_grad:
-            gradients['vbias'] = data.mean(dim=0) - v_model.mean(dim=0)
+        if hasattr(model, "vbias") and model.vbias.requires_grad:
+            gradients["vbias"] = data.mean(dim=0) - v_model.mean(dim=0)
 
-        if hasattr(model, 'hbias') and model.hbias.requires_grad:
-            gradients['hbias'] = h_data.mean(dim=0) - h_model.mean(dim=0)
+        if hasattr(model, "hbias") and model.hbias.requires_grad:
+            gradients["hbias"] = h_data.mean(dim=0) - h_model.mean(dim=0)
 
         # Store negative samples for metrics
         self.last_negative_samples = v_model.detach()
@@ -94,10 +93,7 @@ class ContrastiveDivergence(GradientEstimator):
         return gradients
 
     def apply_gradients(
-        self,
-        model: nn.Module,
-        gradients: dict[str, Tensor],
-        lr: float = 0.01
+        self, model: nn.Module, gradients: dict[str, Tensor], lr: float = 0.01
     ) -> None:
         """Apply gradients to model parameters.
 
@@ -121,7 +117,7 @@ class CDSampler(GibbsSampler):
         k: int = 1,
         *,
         persistent: bool = False,
-        num_chains: int | None = None
+        num_chains: int | None = None,
     ):
         """Initialize CD sampler.
 
@@ -136,14 +132,14 @@ class CDSampler(GibbsSampler):
         self.num_chains = num_chains
 
         if persistent:
-            self.register_buffer('persistent_chains', None)
+            self.register_buffer("persistent_chains", None)
 
     def sample(
         self,
         model: EnergyBasedModel,
         init_state: Tensor,
         num_steps: int | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Tensor:
         """Run CD sampling.
 
@@ -191,7 +187,7 @@ class CDSampler(GibbsSampler):
             self.persistent_chains = None
 
 
-@register_sampler('pcd', aliases=['persistent_cd'])
+@register_sampler("pcd", aliases=["persistent_cd"])
 class PersistentContrastiveDivergence(ContrastiveDivergence):
     """Persistent Contrastive Divergence (PCD) gradient estimator.
 
@@ -199,11 +195,7 @@ class PersistentContrastiveDivergence(ContrastiveDivergence):
     gradient step, providing better samples of the model distribution.
     """
 
-    def __init__(
-        self,
-        k: int = 1,
-        num_chains: int | None = None
-    ):
+    def __init__(self, k: int = 1, num_chains: int | None = None):
         """Initialize PCD sampler.
 
         Args:
@@ -213,7 +205,7 @@ class PersistentContrastiveDivergence(ContrastiveDivergence):
         super().__init__(k=k, persistent=True, num_chains=num_chains)
 
 
-@register_sampler('fast_pcd', aliases=['fpcd'])
+@register_sampler("fast_pcd", aliases=["fpcd"])
 class FastPersistentCD(PersistentContrastiveDivergence):
     """Fast Persistent Contrastive Divergence with momentum.
 
@@ -226,7 +218,7 @@ class FastPersistentCD(PersistentContrastiveDivergence):
         k: int = 1,
         num_chains: int | None = None,
         momentum: float = 0.9,
-        fast_weight_scale: float = 5.0
+        fast_weight_scale: float = 5.0,
     ):
         """Initialize Fast PCD.
 
@@ -244,10 +236,7 @@ class FastPersistentCD(PersistentContrastiveDivergence):
         self.velocities = {}
 
     def estimate_gradient(
-        self,
-        model: EnergyBasedModel,
-        data: Tensor,
-        **kwargs: Any
+        self, model: EnergyBasedModel, data: Tensor, **kwargs: Any
     ) -> dict[str, Tensor]:
         """Estimate gradients with fast weights.
 
@@ -270,7 +259,9 @@ class FastPersistentCD(PersistentContrastiveDivergence):
             for name, param in model.named_parameters():
                 if name in self.velocities:
                     # Apply momentum update
-                    param.add_(self.velocities[name], alpha=self.fast_weight_scale)
+                    param.add_(
+                        self.velocities[name], alpha=self.fast_weight_scale
+                    )
 
         # Get gradients with fast weights
         gradients = super().estimate_gradient(model, data, **kwargs)
@@ -284,12 +275,14 @@ class FastPersistentCD(PersistentContrastiveDivergence):
         for name, grad in gradients.items():
             if name not in self.velocities:
                 self.velocities[name] = torch.zeros_like(grad)
-            self.velocities[name].mul_(self.momentum).add_(grad, alpha=1-self.momentum)
+            self.velocities[name].mul_(self.momentum).add_(
+                grad, alpha=1 - self.momentum
+            )
 
         return gradients
 
 
-@register_sampler('cd_with_decay')
+@register_sampler("cd_with_decay")
 class CDWithDecay(ContrastiveDivergence):
     """CD with decaying number of steps during training.
 
@@ -302,7 +295,7 @@ class CDWithDecay(ContrastiveDivergence):
         initial_k: int = 25,
         final_k: int = 1,
         decay_epochs: int = 10,
-        persistent: bool = False
+        persistent: bool = False,
     ):
         """Initialize CD with decay.
 
@@ -330,7 +323,9 @@ class CDWithDecay(ContrastiveDivergence):
         else:
             # Linear decay
             decay_factor = epoch / self.decay_epochs
-            self.k = int(self.initial_k + decay_factor * (self.final_k - self.initial_k))
+            self.k = int(
+                self.initial_k + decay_factor * (self.final_k - self.initial_k)
+            )
 
         self.sampler.k = self.k
         self.log_info(f"Updated k to {self.k} at epoch {epoch}")

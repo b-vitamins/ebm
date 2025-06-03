@@ -30,6 +30,7 @@ class MockRBM(LatentVariableModel):
         self._dtype = torch.float32
 
     def free_energy(self, v, *, beta=None):
+        """Compute free energy of visible sample."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -40,6 +41,7 @@ class MockRBM(LatentVariableModel):
         return -v_term - h_term
 
     def sample_hidden(self, visible, *, beta=None, return_prob=False):
+        """Sample hidden units given visibles."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
             pre_h = pre_h * beta
@@ -51,6 +53,7 @@ class MockRBM(LatentVariableModel):
         return sample_h
 
     def sample_visible(self, hidden, *, beta=None, return_prob=False):
+        """Sample visible units given hiddens."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
             pre_v = pre_v * beta
@@ -62,6 +65,7 @@ class MockRBM(LatentVariableModel):
         return sample_v
 
     def sample_fantasy_particles(self, num_samples, num_steps):
+        """Generate fantasy particles via Gibbs sampling."""
         v = torch.rand(num_samples, self.num_visible).round()
         for _ in range(num_steps):
             h = self.sample_hidden(v)
@@ -76,13 +80,16 @@ class MockRBM(LatentVariableModel):
 
     @property
     def device(self):
+        """Return device used by the model."""
         return self._device
 
     @property
     def dtype(self):
+        """Return default tensor dtype."""
         return self._dtype
 
     def energy(self, x, *, beta=None, return_parts=False):
+        """Compute joint energy of visible and hidden units."""
         v = x[:, : self.num_visible]
         h = x[:, self.num_visible :]
 
@@ -136,7 +143,9 @@ class TestAISEstimator:
         model = Mock(spec=EnergyBasedModel)
         estimator = AISEstimator(model)
 
-        with pytest.raises(TypeError, match="AIS requires a LatentVariableModel"):
+        with pytest.raises(
+            TypeError, match="AIS requires a LatentVariableModel"
+        ):
             estimator.estimate()
 
     def test_basic_estimation(self) -> None:
@@ -219,7 +228,9 @@ class TestAISEstimator:
         with patch.object(
             model, "sample_hidden", wraps=model.sample_hidden
         ) as mock_hidden:
-            with patch.object(model, "sample_visible", wraps=model.sample_visible):
+            with patch.object(
+                model, "sample_visible", wraps=model.sample_visible
+            ):
                 estimator.estimate(show_progress=False)
 
                 # Check that different betas were used
@@ -241,7 +252,9 @@ class TestBridgeSampling:
         model1 = MockRBM(n_visible=5, n_hidden=3)
         model2 = MockRBM(n_visible=5, n_hidden=3)
 
-        estimator = BridgeSampling(model1=model1, model2=model2, num_samples=100)
+        estimator = BridgeSampling(
+            model1=model1, model2=model2, num_samples=100
+        )
 
         assert estimator.model is model1
         assert estimator.model2 is model2
@@ -430,7 +443,9 @@ class TestRatioEstimator:
             model2.W.data = model1.W.data * 1.5
             model3.W.data = model1.W.data * 2.0
 
-        estimator = RatioEstimator(models=[model1, model2, model3], method="bridge")
+        estimator = RatioEstimator(
+            models=[model1, model2, model3], method="bridge"
+        )
 
         # Mock BridgeSampling to avoid actual computation
         with patch("ebm.inference.partition.BridgeSampling") as mock_bridge:
@@ -539,7 +554,9 @@ class TestEdgeCases:
             log_z
         )  # May overflow but shouldn't be NaN
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_device_consistency(self) -> None:
         """Test estimation with CUDA models."""
         model = MockRBM()

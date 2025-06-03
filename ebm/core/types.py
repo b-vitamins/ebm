@@ -98,7 +98,11 @@ class LatentModel(EnergyModel, Protocol):
     """Protocol for models with explicit latent variables (e.g., RBMs)."""
 
     def sample_hidden(
-        self, visible: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
+        self,
+        visible: Tensor,
+        *,
+        beta: Tensor | None = None,
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units given visible units.
 
@@ -114,7 +118,11 @@ class LatentModel(EnergyModel, Protocol):
         ...
 
     def sample_visible(
-        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
+        self,
+        hidden: Tensor,
+        *,
+        beta: Tensor | None = None,
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units given hidden units.
 
@@ -135,7 +143,11 @@ class Sampler(Protocol):
     """Protocol for sampling algorithms."""
 
     def sample(
-        self, model: EnergyModel, init_state: Tensor, num_steps: int = 1, **kwargs: Any
+        self,
+        model: EnergyModel,
+        init_state: Tensor,
+        num_steps: int = 1,
+        **kwargs: Any,
     ) -> Tensor:
         """Generate samples from the model.
 
@@ -182,21 +194,25 @@ class Callback(Protocol):
     """Protocol for training callbacks."""
 
     def on_epoch_start(self, trainer: Any, model: EnergyModel) -> None:
-        """Called at the start of each epoch."""
+        """Call at the start of each epoch."""
         ...
 
     def on_epoch_end(
         self, trainer: Any, model: EnergyModel, metrics: dict[str, float]
     ) -> None:
-        """Called at the end of each epoch."""
+        """Call at the end of each epoch."""
         ...
 
-    def on_batch_start(self, trainer: Any, model: EnergyModel, batch: Tensor) -> None:
-        """Called before processing each batch."""
+    def on_batch_start(
+        self, trainer: Any, model: EnergyModel, batch: Tensor
+    ) -> None:
+        """Call before processing each batch."""
         ...
 
-    def on_batch_end(self, trainer: Any, model: EnergyModel, loss: float) -> None:
-        """Called after processing each batch."""
+    def on_batch_end(
+        self, trainer: Any, model: EnergyModel, loss: float
+    ) -> None:
+        """Call after processing each batch."""
         ...
 
 

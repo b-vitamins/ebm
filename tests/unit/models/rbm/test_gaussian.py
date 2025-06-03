@@ -20,17 +20,14 @@ class TestGaussianBernoulliRBM:
         assert rbm.learn_sigma is True
 
         # Check sigma parameter
-        assert hasattr(rbm, 'log_sigma')
+        assert hasattr(rbm, "log_sigma")
         assert isinstance(rbm.log_sigma, nn.Parameter)
         assert rbm.log_sigma.shape == (100,)
 
     def test_fixed_sigma(self) -> None:
         """Test Gaussian RBM with fixed sigma."""
         config = GaussianRBMConfig(
-            visible_units=20,
-            hidden_units=10,
-            sigma=2.0,
-            learn_sigma=False
+            visible_units=20, hidden_units=10, sigma=2.0, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -42,16 +39,15 @@ class TestGaussianBernoulliRBM:
     def test_sigma_properties(self) -> None:
         """Test sigma and sigma_sq properties."""
         config = GaussianRBMConfig(
-            visible_units=10,
-            hidden_units=5,
-            sigma=1.5,
-            learn_sigma=True
+            visible_units=10, hidden_units=5, sigma=1.5, learn_sigma=True
         )
         rbm = GaussianBernoulliRBM(config)
 
         # Set log_sigma
         with torch.no_grad():
-            rbm.log_sigma.data = torch.log(torch.tensor([1.0, 2.0, 0.5] + [1.5] * 7))
+            rbm.log_sigma.data = torch.log(
+                torch.tensor([1.0, 2.0, 0.5] + [1.5] * 7)
+            )
 
         sigma = rbm.sigma
         sigma_sq = rbm.sigma_sq
@@ -81,7 +77,7 @@ class TestGaussianBernoulliRBM:
             hidden_units=10,
             sigma=0.5,
             learn_sigma=False,
-            seed=42
+            seed=42,
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -103,7 +99,9 @@ class TestGaussianBernoulliRBM:
 
         # Check that samples are distributed around mean
         n_samples = 1000
-        samples = torch.stack([rbm.sample_visible(h[0:1]) for _ in range(n_samples)]).squeeze(1)
+        samples = torch.stack(
+            [rbm.sample_visible(h[0:1]) for _ in range(n_samples)]
+        ).squeeze(1)
         empirical_mean = samples.mean(dim=0)
         empirical_std = samples.std(dim=0)
 
@@ -113,10 +111,7 @@ class TestGaussianBernoulliRBM:
     def test_sample_visible_with_temperature(self) -> None:
         """Test temperature effects on visible sampling."""
         config = GaussianRBMConfig(
-            visible_units=10,
-            hidden_units=5,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=10, hidden_units=5, sigma=1.0, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -129,14 +124,18 @@ class TestGaussianBernoulliRBM:
         rbm.sample_visible(h, beta=torch.tensor(10.0))
 
         # Sample many times to check variance
-        samples_high = torch.stack([
-            rbm.sample_visible(h[0:1], beta=torch.tensor(0.1))
-            for _ in range(100)
-        ]).squeeze(1)
-        samples_low = torch.stack([
-            rbm.sample_visible(h[0:1], beta=torch.tensor(10.0))
-            for _ in range(100)
-        ]).squeeze(1)
+        samples_high = torch.stack(
+            [
+                rbm.sample_visible(h[0:1], beta=torch.tensor(0.1))
+                for _ in range(100)
+            ]
+        ).squeeze(1)
+        samples_low = torch.stack(
+            [
+                rbm.sample_visible(h[0:1], beta=torch.tensor(10.0))
+                for _ in range(100)
+            ]
+        ).squeeze(1)
 
         # High temperature should have higher variance
         var_high = samples_high.var(dim=0).mean()
@@ -146,10 +145,7 @@ class TestGaussianBernoulliRBM:
     def test_joint_energy_gaussian(self) -> None:
         """Test joint energy computation for Gaussian units."""
         config = GaussianRBMConfig(
-            visible_units=3,
-            hidden_units=2,
-            sigma=0.5,
-            learn_sigma=False
+            visible_units=3, hidden_units=2, sigma=0.5, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -185,10 +181,7 @@ class TestGaussianBernoulliRBM:
     def test_free_energy_gaussian(self) -> None:
         """Test free energy for Gaussian units."""
         config = GaussianRBMConfig(
-            visible_units=5,
-            hidden_units=3,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=5, hidden_units=3, sigma=1.0, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -200,33 +193,33 @@ class TestGaussianBernoulliRBM:
 
         # Compare with brute force for small model
         config_small = GaussianRBMConfig(
-            visible_units=3,
-            hidden_units=2,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=3, hidden_units=2, sigma=1.0, learn_sigma=False
         )
         rbm_small = GaussianBernoulliRBM(config_small)
 
         v_small = torch.randn(2, 3)
-        all_h = torch.tensor([[0, 0], [0, 1], [1, 0], [1, 1]], dtype=torch.float32)
+        all_h = torch.tensor(
+            [[0, 0], [0, 1], [1, 0], [1, 1]], dtype=torch.float32
+        )
 
         for i in range(v_small.shape[0]):
-            v_i = v_small[i:i+1].expand(4, -1)
-            energies = torch.stack([
-                rbm_small.joint_energy(v_i[j:j+1], all_h[j:j+1])
-                for j in range(4)
-            ]).squeeze()
+            v_i = v_small[i : i + 1].expand(4, -1)
+            energies = torch.stack(
+                [
+                    rbm_small.joint_energy(v_i[j : j + 1], all_h[j : j + 1])
+                    for j in range(4)
+                ]
+            ).squeeze()
             free_energy_exact = -torch.logsumexp(-energies, dim=0)
-            free_energy_computed = rbm_small.free_energy(v_small[i:i+1])
-            assert torch.allclose(free_energy_computed, free_energy_exact, atol=1e-4)
+            free_energy_computed = rbm_small.free_energy(v_small[i : i + 1])
+            assert torch.allclose(
+                free_energy_computed, free_energy_exact, atol=1e-4
+            )
 
     def test_score_matching_loss(self) -> None:
         """Test denoising score matching loss."""
         config = GaussianRBMConfig(
-            visible_units=20,
-            hidden_units=10,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=20, hidden_units=10, sigma=1.0, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -247,15 +240,12 @@ class TestGaussianBernoulliRBM:
             hidden_units=5,
             sigma=1.0,
             learn_sigma=False,
-            seed=42
+            seed=42,
         )
         rbm = GaussianBernoulliRBM(config)
 
         # Generate samples
-        samples = rbm.sample_fantasy_particles(
-            num_samples=20,
-            num_steps=100
-        )
+        samples = rbm.sample_fantasy_particles(num_samples=20, num_steps=100)
 
         assert samples.shape == (20, 10)
         assert torch.all(torch.isfinite(samples))
@@ -263,18 +253,14 @@ class TestGaussianBernoulliRBM:
         # Test with initialization from data
         init_data = torch.randn(30, 10)
         samples_init = rbm.sample_fantasy_particles(
-            num_samples=20,
-            num_steps=100,
-            init_from_data=init_data
+            num_samples=20, num_steps=100, init_from_data=init_data
         )
 
         assert samples_init.shape == (20, 10)
 
         # Test returning chain
         final, chain = rbm.sample_fantasy_particles(
-            num_samples=5,
-            num_steps=10,
-            return_chain=True
+            num_samples=5, num_steps=10, return_chain=True
         )
 
         assert final.shape == (5, 10)
@@ -297,34 +283,29 @@ class TestWhitenedGaussianRBM:
     def test_initialization(self) -> None:
         """Test whitened RBM initialization."""
         config = GaussianRBMConfig(
-            visible_units=20,
-            hidden_units=10,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=20, hidden_units=10, sigma=1.0, learn_sigma=False
         )
         rbm = WhitenedGaussianRBM(config)
 
-        assert hasattr(rbm, 'whitening_mean')
-        assert hasattr(rbm, 'whitening_std')
+        assert hasattr(rbm, "whitening_mean")
+        assert hasattr(rbm, "whitening_std")
         assert rbm.fitted is False
 
         # Whitening parameters should be None initially
         assert rbm.whitening_mean is None
         assert rbm.whitening_std is None
 
-    def test_fit_whitening(self, synthetic_continuous_data, make_data_loader) -> None:
+    def test_fit_whitening(
+        self, synthetic_continuous_data, make_data_loader
+    ) -> None:
         """Test fitting whitening transformation."""
         config = GaussianRBMConfig(
-            visible_units=50,
-            hidden_units=25,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=50, hidden_units=25, sigma=1.0, learn_sigma=False
         )
         rbm = WhitenedGaussianRBM(config)
 
         data_loader = make_data_loader(
-            synthetic_continuous_data["dataset"],
-            batch_size=100
+            synthetic_continuous_data["dataset"], batch_size=100
         )
 
         # Fit whitening
@@ -352,10 +333,7 @@ class TestWhitenedGaussianRBM:
     def test_whitening_transform(self) -> None:
         """Test whitening and unwhitening."""
         config = GaussianRBMConfig(
-            visible_units=10,
-            hidden_units=5,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=10, hidden_units=5, sigma=1.0, learn_sigma=False
         )
         rbm = WhitenedGaussianRBM(config)
 
@@ -401,7 +379,7 @@ class TestWhitenedGaussianRBM:
             hidden_units=5,
             sigma=1.0,
             learn_sigma=False,
-            seed=42
+            seed=42,
         )
         rbm = WhitenedGaussianRBM(config)
 
@@ -412,9 +390,7 @@ class TestWhitenedGaussianRBM:
 
         # Generate samples without unwhitening
         samples_white = rbm.sample_fantasy_particles(
-            num_samples=100,
-            num_steps=500,
-            unwhiten_output=False
+            num_samples=100, num_steps=500, unwhiten_output=False
         )
 
         # Should be centered around 0 (whitened space)
@@ -422,9 +398,7 @@ class TestWhitenedGaussianRBM:
 
         # Generate samples with unwhitening
         samples = rbm.sample_fantasy_particles(
-            num_samples=100,
-            num_steps=500,
-            unwhiten_output=True
+            num_samples=100, num_steps=500, unwhiten_output=True
         )
 
         # Should be in original scale
@@ -446,10 +420,7 @@ class TestGaussianRBMProperties:
     def test_energy_continuous_visible(self) -> None:
         """Test that energy handles continuous visible units correctly."""
         config = GaussianRBMConfig(
-            visible_units=5,
-            hidden_units=3,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=5, hidden_units=3, sigma=1.0, learn_sigma=False
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -463,8 +434,12 @@ class TestGaussianRBMProperties:
         assert torch.all(torch.isfinite(energy))
 
         # Energy should increase with distance from bias
-        v_near_bias = rbm.vbias.unsqueeze(0).expand(10, -1) + torch.randn(10, 5) * 0.1
-        v_far_from_bias = rbm.vbias.unsqueeze(0).expand(10, -1) + torch.randn(10, 5) * 5.0
+        v_near_bias = (
+            rbm.vbias.unsqueeze(0).expand(10, -1) + torch.randn(10, 5) * 0.1
+        )
+        v_far_from_bias = (
+            rbm.vbias.unsqueeze(0).expand(10, -1) + torch.randn(10, 5) * 5.0
+        )
 
         energy_near = rbm.joint_energy(v_near_bias, h)
         energy_far = rbm.joint_energy(v_far_from_bias, h)
@@ -474,10 +449,7 @@ class TestGaussianRBMProperties:
     def test_gradient_consistency(self) -> None:
         """Test gradient consistency for Gaussian units."""
         config = GaussianRBMConfig(
-            visible_units=5,
-            hidden_units=3,
-            sigma=0.5,
-            learn_sigma=True
+            visible_units=5, hidden_units=3, sigma=0.5, learn_sigma=True
         )
         rbm = GaussianBernoulliRBM(config)
 
@@ -509,16 +481,10 @@ class TestGaussianRBMProperties:
     def test_partition_independence(self) -> None:
         """Test that visible partition function depends on sigma."""
         config1 = GaussianRBMConfig(
-            visible_units=3,
-            hidden_units=2,
-            sigma=1.0,
-            learn_sigma=False
+            visible_units=3, hidden_units=2, sigma=1.0, learn_sigma=False
         )
         config2 = GaussianRBMConfig(
-            visible_units=3,
-            hidden_units=2,
-            sigma=2.0,
-            learn_sigma=False
+            visible_units=3, hidden_units=2, sigma=2.0, learn_sigma=False
         )
 
         rbm1 = GaussianBernoulliRBM(config1)
@@ -548,10 +514,7 @@ class TestGaussianRBMProperties:
     def test_learned_sigma_gradient(self) -> None:
         """Test that sigma can be learned via gradients."""
         config = GaussianRBMConfig(
-            visible_units=10,
-            hidden_units=5,
-            sigma=1.0,
-            learn_sigma=True
+            visible_units=10, hidden_units=5, sigma=1.0, learn_sigma=True
         )
         rbm = GaussianBernoulliRBM(config)
 

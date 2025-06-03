@@ -24,18 +24,23 @@ from structlog.types import EventDict, WrappedLogger
 try:
     from rich.console import Console
     from rich.logging import RichHandler
+
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
 
-def add_timestamp(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
+def add_timestamp(
+    logger: WrappedLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
     """Add timestamp to log entries."""
     event_dict["timestamp"] = time.time()
     return event_dict
 
 
-def add_logger_name(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
+def add_logger_name(
+    logger: WrappedLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
     """Add logger name to log entries."""
     if logger_name := event_dict.get("logger_name"):
         event_dict["logger"] = logger_name
@@ -55,7 +60,9 @@ class LogConfig:
         colors: bool = True,
         metrics: bool = True,
     ):
-        self.level = level if isinstance(level, int) else getattr(logging, level.upper())
+        self.level = (
+            level if isinstance(level, int) else getattr(logging, level.upper())
+        )
         self.console = console
         self.file = Path(file) if file else None
         self.structured = structured
@@ -119,7 +126,9 @@ class LogConfig:
         logging.basicConfig(
             level=self.level,
             handlers=handlers,
-            format="%(message)s" if self.structured else "%(asctime)s [%(levelname)s] %(message)s",
+            format="%(message)s"
+            if self.structured
+            else "%(asctime)s [%(levelname)s] %(message)s",
         )
 
         return structlog.get_logger()
@@ -128,21 +137,23 @@ class LogConfig:
 class MetricProcessor:
     """Processor that extracts and formats metrics from log events."""
 
-    def __call__(self, logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
+    def __call__(
+        self, logger: WrappedLogger, method_name: str, event_dict: EventDict
+    ) -> EventDict:
         """Extract metrics from event dict."""
         metrics = {}
 
         # Look for common metric patterns
         for key, value in list(event_dict.items()):
-            if key.endswith(('_loss', '_error', '_accuracy', '_score')):
+            if key.endswith(("_loss", "_error", "_accuracy", "_score")):
                 if isinstance(value, int | float):
                     metrics[key] = value
                     event_dict.pop(key)
-            elif key in {'epoch', 'step', 'iteration', 'batch'}:
+            elif key in {"epoch", "step", "iteration", "batch"}:
                 metrics[key] = value
 
         if metrics:
-            event_dict['metrics'] = metrics
+            event_dict["metrics"] = metrics
 
         return event_dict
 
@@ -196,7 +207,9 @@ def log_context(**kwargs) -> Iterator[None]:
 
 
 @contextmanager
-def log_duration(logger: structlog.BoundLogger, message: str, **kwargs) -> Iterator[None]:
+def log_duration(
+    logger: structlog.BoundLogger, message: str, **kwargs
+) -> Iterator[None]:
     """Context manager that logs the duration of a block.
 
     Example:
@@ -213,7 +226,7 @@ def log_duration(logger: structlog.BoundLogger, message: str, **kwargs) -> Itera
 
 
 def log_function_call(logger: structlog.BoundLogger | None = None):
-    """Decorator that logs function calls with arguments and return values.
+    """Log function calls with arguments and return values.
 
     Args:
         logger: Logger instance to use. If None, creates one based on function module.
@@ -223,6 +236,7 @@ def log_function_call(logger: structlog.BoundLogger | None = None):
         def train_model(epochs: int, lr: float) -> float:
             ...
     """
+
     def decorator(func: Callable) -> Callable:
         nonlocal logger
         if logger is None:
@@ -239,7 +253,7 @@ def log_function_call(logger: structlog.BoundLogger | None = None):
                 logger.debug(
                     f"Completed {func.__name__}",
                     duration=duration,
-                    result_type=type(result).__name__
+                    result_type=type(result).__name__,
                 )
                 return result
             except Exception as e:
@@ -248,11 +262,12 @@ def log_function_call(logger: structlog.BoundLogger | None = None):
                     f"Failed {func.__name__}",
                     duration=duration,
                     error=str(e),
-                    exc_info=True
+                    exc_info=True,
                 )
                 raise
 
         return wrapper
+
     return decorator
 
 
@@ -264,7 +279,7 @@ def setup_logging(
     colors: bool = True,
     metrics: bool = True,
 ) -> structlog.BoundLogger:
-    """Setup logging for the entire application.
+    """Configure logging for the application.
 
     Args:
         level: Logging level

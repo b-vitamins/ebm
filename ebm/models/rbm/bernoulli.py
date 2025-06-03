@@ -7,7 +7,7 @@ and their variants, including centered RBMs.
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import Tensor, nn
 
 from ebm.core.config import RBMConfig
@@ -85,9 +85,9 @@ class BernoulliRBM(RBMBase):
         f = self.free_energy(v, beta=beta)
 
         # Get gradients w.r.t. visible units
-        score_v = torch.autograd.grad(f.sum(), v, create_graph=True, retain_graph=True)[
-            0
-        ]
+        score_v = torch.autograd.grad(
+            f.sum(), v, create_graph=True, retain_graph=True
+        )[0]
 
         # Get gradients w.r.t. parameters
         params = {"W": self.W, "vbias": self.vbias, "hbias": self.hbias}
@@ -126,8 +126,12 @@ class CenteredBernoulliRBM(BernoulliRBM):
         super()._build_model()
 
         # Offset parameters
-        self.v_offset = nn.Parameter(torch.zeros(self.num_visible, dtype=self.dtype))
-        self.h_offset = nn.Parameter(torch.zeros(self.num_hidden, dtype=self.dtype))
+        self.v_offset = nn.Parameter(
+            torch.zeros(self.num_visible, dtype=self.dtype)
+        )
+        self.h_offset = nn.Parameter(
+            torch.zeros(self.num_hidden, dtype=self.dtype)
+        )
 
     def _initialize_parameters(self) -> None:
         """Initialize parameters including offsets."""
@@ -138,7 +142,11 @@ class CenteredBernoulliRBM(BernoulliRBM):
         nn.init.constant_(self.h_offset, 0.5)
 
     def sample_hidden(
-        self, visible: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
+        self,
+        visible: Tensor,
+        *,
+        beta: Tensor | None = None,
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample hidden units with centering.
 
@@ -175,7 +183,11 @@ class CenteredBernoulliRBM(BernoulliRBM):
         return h_sample
 
     def sample_visible(
-        self, hidden: Tensor, *, beta: Tensor | None = None, return_prob: bool = False
+        self,
+        hidden: Tensor,
+        *,
+        beta: Tensor | None = None,
+        return_prob: bool = False,
     ) -> Tensor | tuple[Tensor, Tensor]:
         """Sample visible units with centering.
 
@@ -297,7 +309,6 @@ class CenteredBernoulliRBM(BernoulliRBM):
         hidden_term = F.softplus(pre_h).sum(dim=-1)
         return -v_bias_term - hidden_term
 
-
     def update_offsets(
         self, v_mean: Tensor, h_mean: Tensor, momentum: float = 0.9
     ) -> None:
@@ -325,7 +336,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Also initialize v_offset to data mean
         with torch.no_grad():
-            sum_v = torch.zeros(self.num_visible, device=self.device, dtype=self.dtype)
+            sum_v = torch.zeros(
+                self.num_visible, device=self.device, dtype=self.dtype
+            )
             count = 0
 
             for batch in data_loader:
@@ -366,7 +379,8 @@ class SparseBernoulliRBM(BernoulliRBM):
         # Running average of hidden activations
         self.register_buffer(
             "hidden_mean",
-            torch.ones(self.num_hidden, dtype=self.dtype) * self.sparsity_target,
+            torch.ones(self.num_hidden, dtype=self.dtype)
+            * self.sparsity_target,
         )
 
     def sparsity_penalty(self, h_prob: Tensor) -> Tensor:
@@ -418,7 +432,9 @@ class SparseBernoulliRBM(BernoulliRBM):
         """
         # Get probabilities
         if return_prob:
-            h_sample, h_prob = self.sample_hidden(visible, beta=beta, return_prob=True)
+            h_sample, h_prob = self.sample_hidden(
+                visible, beta=beta, return_prob=True
+            )
         else:
             h_prob = self.sample_hidden(visible, beta=beta, return_prob=True)[1]
 

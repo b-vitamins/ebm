@@ -58,9 +58,7 @@ class TestBaseConfig:
     def test_save_load_json(self, tmp_path: Path) -> None:
         """Test saving and loading config as JSON."""
         config = RBMConfig(
-            visible_units=784,
-            hidden_units=500,
-            weight_init="xavier_normal"
+            visible_units=784, hidden_units=500, weight_init="xavier_normal"
         )
 
         # Save
@@ -81,7 +79,7 @@ class TestBaseConfig:
         config = TrainingConfig(
             epochs=100,
             batch_size=64,
-            optimizer=OptimizerConfig(name="adam", lr=0.001)
+            optimizer=OptimizerConfig(name="adam", lr=0.001),
         )
 
         # Save
@@ -179,8 +177,7 @@ class TestOptimizerConfig:
     def test_scheduler_config(self) -> None:
         """Test scheduler configuration."""
         config = OptimizerConfig(
-            scheduler="cosine",
-            scheduler_params={"eta_min": 0.0001}
+            scheduler="cosine", scheduler_params={"eta_min": 0.0001}
         )
 
         assert config.scheduler == "cosine"
@@ -242,24 +239,25 @@ class TestRBMConfig:
     def test_init_method_validation(self) -> None:
         """Test initialization method validation."""
         valid_methods = [
-            "xavier_uniform", "xavier_normal",
-            "kaiming_uniform", "kaiming_normal",
-            "normal", "uniform", "zeros", "ones"
+            "xavier_uniform",
+            "xavier_normal",
+            "kaiming_uniform",
+            "kaiming_normal",
+            "normal",
+            "uniform",
+            "zeros",
+            "ones",
         ]
 
         for method in valid_methods:
             config = RBMConfig(
-                visible_units=100,
-                hidden_units=50,
-                weight_init=method
+                visible_units=100, hidden_units=50, weight_init=method
             )
             assert config.weight_init == method
 
         with pytest.raises(ValueError):
             RBMConfig(
-                visible_units=100,
-                hidden_units=50,
-                weight_init="invalid_method"
+                visible_units=100, hidden_units=50, weight_init="invalid_method"
             )
 
     def test_regularization_params(self) -> None:
@@ -268,7 +266,7 @@ class TestRBMConfig:
             visible_units=100,
             hidden_units=50,
             l2_weight=0.001,
-            l1_weight=0.0001
+            l1_weight=0.0001,
         )
 
         assert config.l2_weight == 0.001
@@ -276,11 +274,7 @@ class TestRBMConfig:
 
         # Must be non-negative
         with pytest.raises(ValueError):
-            RBMConfig(
-                visible_units=100,
-                hidden_units=50,
-                l2_weight=-0.001
-            )
+            RBMConfig(visible_units=100, hidden_units=50, l2_weight=-0.001)
 
 
 class TestGaussianRBMConfig:
@@ -289,10 +283,7 @@ class TestGaussianRBMConfig:
     def test_gaussian_specific_params(self) -> None:
         """Test Gaussian-specific parameters."""
         config = GaussianRBMConfig(
-            visible_units=100,
-            hidden_units=50,
-            sigma=2.0,
-            learn_sigma=True
+            visible_units=100, hidden_units=50, sigma=2.0, learn_sigma=True
         )
 
         assert config.visible_type == "gaussian"
@@ -301,18 +292,12 @@ class TestGaussianRBMConfig:
 
         # Sigma must be positive
         with pytest.raises(ValueError):
-            GaussianRBMConfig(
-                visible_units=100,
-                hidden_units=50,
-                sigma=-1.0
-            )
+            GaussianRBMConfig(visible_units=100, hidden_units=50, sigma=-1.0)
 
     def test_inheritance(self) -> None:
         """Test that GaussianRBMConfig inherits from RBMConfig."""
         config = GaussianRBMConfig(
-            visible_units=100,
-            hidden_units=50,
-            weight_init="xavier_normal"
+            visible_units=100, hidden_units=50, weight_init="xavier_normal"
         )
 
         # Should have all RBMConfig attributes
@@ -346,10 +331,8 @@ class TestConfigSerialization:
         config = TrainingConfig(
             epochs=10,
             optimizer=OptimizerConfig(
-                name="adam",
-                lr=0.001,
-                scheduler="cosine"
-            )
+                name="adam", lr=0.001, scheduler="cosine"
+            ),
         )
 
         data = config.dict()

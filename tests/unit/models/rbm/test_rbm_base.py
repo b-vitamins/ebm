@@ -11,9 +11,11 @@ class ConcreteRBM(RBMBase):
     """Concrete RBM for testing."""
 
     def hidden_activation(self, pre_activation: Tensor) -> Tensor:
+        """Apply activation for hidden units."""
         return torch.sigmoid(pre_activation)
 
     def visible_activation(self, pre_activation: Tensor) -> Tensor:
+        """Apply activation for visible units."""
         return torch.sigmoid(pre_activation)
 
     def _sample_from_prob(self, prob: Tensor) -> Tensor:
@@ -32,9 +34,9 @@ class TestRBMBase:
         assert rbm.use_bias is True
 
         # Check parameters exist
-        assert hasattr(rbm, 'W')
-        assert hasattr(rbm, 'vbias')
-        assert hasattr(rbm, 'hbias')
+        assert hasattr(rbm, "W")
+        assert hasattr(rbm, "vbias")
+        assert hasattr(rbm, "hbias")
 
         # Check shapes
         assert rbm.W.shape == (10, 20)
@@ -43,11 +45,7 @@ class TestRBMBase:
 
     def test_no_bias_initialization(self) -> None:
         """Test RBM without bias terms."""
-        config = RBMConfig(
-            visible_units=20,
-            hidden_units=10,
-            use_bias=False
-        )
+        config = RBMConfig(visible_units=20, hidden_units=10, use_bias=False)
         rbm = ConcreteRBM(config)
 
         # Biases should be buffers, not parameters
@@ -63,7 +61,7 @@ class TestRBMBase:
             visible_units=100,
             hidden_units=50,
             weight_init="xavier_normal",
-            bias_init=0.01
+            bias_init=0.01,
         )
         rbm = ConcreteRBM(config)
 
@@ -83,17 +81,19 @@ class TestRBMBase:
 
         # Set known weights for testing
         with torch.no_grad():
-            rbm.W.data = torch.tensor([
-                [1.0, 0.0, -1.0, 0.0, 1.0],
-                [0.0, 1.0, 0.0, -1.0, 0.0],
-                [1.0, 1.0, 1.0, 1.0, 1.0]
-            ])
+            rbm.W.data = torch.tensor(
+                [
+                    [1.0, 0.0, -1.0, 0.0, 1.0],
+                    [0.0, 1.0, 0.0, -1.0, 0.0],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                ]
+            )
             rbm.vbias.data = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5])
             rbm.hbias.data = torch.tensor([0.1, 0.2, 0.3])
 
         # Test with concatenated state
-        v = torch.tensor([[1., 0., 1., 0., 1.]])
-        h = torch.tensor([[1., 0., 1.]])
+        v = torch.tensor([[1.0, 0.0, 1.0, 0.0, 1.0]])
+        h = torch.tensor([[1.0, 0.0, 1.0]])
         x = torch.cat([v, h], dim=-1)
 
         energy = rbm.energy(x)
@@ -132,7 +132,9 @@ class TestRBMBase:
         assert "total" in parts
 
         # Check parts sum to total
-        total = parts["interaction"] + parts["visible_bias"] + parts["hidden_bias"]
+        total = (
+            parts["interaction"] + parts["visible_bias"] + parts["hidden_bias"]
+        )
         assert torch.allclose(total, parts["total"])
 
     def test_free_energy(self) -> None:
@@ -153,11 +155,22 @@ class TestRBMBase:
         # Free energy should integrate out hidden units correctly
         # For small RBM, we can check by brute force
         # F(v) = -log(sum_h exp(-E(v,h)))
-        all_h = torch.tensor([[0, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 1],
-                              [1, 0, 0], [1, 0, 1], [1, 1, 0], [1, 1, 1]], dtype=torch.float32)
+        all_h = torch.tensor(
+            [
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 1, 0],
+                [0, 1, 1],
+                [1, 0, 0],
+                [1, 0, 1],
+                [1, 1, 0],
+                [1, 1, 1],
+            ],
+            dtype=torch.float32,
+        )
 
         for i in range(v.shape[0]):
-            v_i = v[i:i+1].expand(8, -1)
+            v_i = v[i : i + 1].expand(8, -1)
             energies = rbm.joint_energy(v_i, all_h)
             free_energy_exact = -torch.logsumexp(-energies, dim=0)
             assert torch.allclose(free_energy[i], free_energy_exact, atol=1e-5)
@@ -215,10 +228,14 @@ class TestRBMBase:
         _, h_prob_high_temp = rbm.sample_hidden(v, beta=0.1, return_prob=True)
 
         # Check that low temperature probabilities are more extreme
-        low_temp_entropy = -(h_prob_low_temp * torch.log(h_prob_low_temp + 1e-8) +
-                            (1 - h_prob_low_temp) * torch.log(1 - h_prob_low_temp + 1e-8)).mean()
-        high_temp_entropy = -(h_prob_high_temp * torch.log(h_prob_high_temp + 1e-8) +
-                             (1 - h_prob_high_temp) * torch.log(1 - h_prob_high_temp + 1e-8)).mean()
+        low_temp_entropy = -(
+            h_prob_low_temp * torch.log(h_prob_low_temp + 1e-8)
+            + (1 - h_prob_low_temp) * torch.log(1 - h_prob_low_temp + 1e-8)
+        ).mean()
+        high_temp_entropy = -(
+            h_prob_high_temp * torch.log(h_prob_high_temp + 1e-8)
+            + (1 - h_prob_high_temp) * torch.log(1 - h_prob_high_temp + 1e-8)
+        ).mean()
 
         assert low_temp_entropy < high_temp_entropy
 
@@ -235,13 +252,17 @@ class TestRBMBase:
         assert torch.allclose(v, x[:, :5])
         assert torch.allclose(h, x[:, 5:])
 
-    def test_init_from_data(self, synthetic_binary_data, make_data_loader) -> None:
+    def test_init_from_data(
+        self, synthetic_binary_data, make_data_loader
+    ) -> None:
         """Test initialization from data statistics."""
         config = RBMConfig(visible_units=100, hidden_units=50)
         rbm = ConcreteRBM(config)
 
         # Create data loader
-        data_loader = make_data_loader(synthetic_binary_data["dataset"], batch_size=50)
+        data_loader = make_data_loader(
+            synthetic_binary_data["dataset"], batch_size=50
+        )
 
         # Initialize from data
         rbm.init_from_data(data_loader)
@@ -249,17 +270,16 @@ class TestRBMBase:
         # Check visible bias is set based on data statistics
         data = synthetic_binary_data["data"]
         data_mean = data.mean(dim=0)
-        expected_bias = torch.log(data_mean.clamp(0.01, 0.99) / (1 - data_mean.clamp(0.01, 0.99)))
+        expected_bias = torch.log(
+            data_mean.clamp(0.01, 0.99) / (1 - data_mean.clamp(0.01, 0.99))
+        )
 
         assert torch.allclose(rbm.vbias, expected_bias, atol=0.1)
 
     def test_effective_energy(self) -> None:
         """Test effective energy with regularization."""
         config = RBMConfig(
-            visible_units=5,
-            hidden_units=3,
-            l2_weight=0.1,
-            l1_weight=0.05
+            visible_units=5, hidden_units=3, l2_weight=0.1, l1_weight=0.05
         )
         rbm = ConcreteRBM(config)
 
@@ -271,7 +291,7 @@ class TestRBMBase:
         base_energy = rbm.joint_energy(v, h)
 
         # Should include regularization
-        l2_reg = 0.5 * 0.1 * (rbm.W ** 2).sum()
+        l2_reg = 0.5 * 0.1 * (rbm.W**2).sum()
         l1_reg = 0.05 * rbm.W.abs().sum()
         expected = base_energy + l2_reg + l1_reg
 
@@ -299,7 +319,9 @@ class TestRBMAISAdapter:
 
         # Check base parameters are copied
         assert torch.allclose(adapter.base_vbias, simple_bernoulli_rbm.vbias)
-        assert torch.allclose(adapter.base_hbias, torch.zeros_like(simple_bernoulli_rbm.hbias))
+        assert torch.allclose(
+            adapter.base_hbias, torch.zeros_like(simple_bernoulli_rbm.hbias)
+        )
 
     def test_base_log_partition(self, simple_bernoulli_rbm) -> None:
         """Test base partition function calculation."""
@@ -309,8 +331,13 @@ class TestRBMAISAdapter:
 
         # For independent Bernoulli units:
         # Z = prod_i (1 + exp(a_i)) * 2^num_hidden
-        expected_log_z_v = torch.nn.functional.softplus(adapter.base_vbias).sum().item()
-        expected_log_z_h = simple_bernoulli_rbm.num_hidden * torch.log(torch.tensor(2.0)).item()
+        expected_log_z_v = (
+            torch.nn.functional.softplus(adapter.base_vbias).sum().item()
+        )
+        expected_log_z_h = (
+            simple_bernoulli_rbm.num_hidden
+            * torch.log(torch.tensor(2.0)).item()
+        )
         expected = expected_log_z_v + expected_log_z_h
 
         assert abs(log_z_base - expected) < 1e-5
@@ -353,9 +380,17 @@ class TestRBMAISAdapter:
         energy_mid = adapter.interpolated_energy(x, beta=beta)
 
         # Manually compute interpolated energy
-        interaction = torch.einsum('...h,...v->...', h, torch.nn.functional.linear(v, simple_bernoulli_rbm.W))
-        v_bias_interp = (1 - beta) * adapter.base_vbias + beta * simple_bernoulli_rbm.vbias
-        h_bias_interp = (1 - beta) * adapter.base_hbias + beta * simple_bernoulli_rbm.hbias
+        interaction = torch.einsum(
+            "...h,...v->...",
+            h,
+            torch.nn.functional.linear(v, simple_bernoulli_rbm.W),
+        )
+        v_bias_interp = (
+            1 - beta
+        ) * adapter.base_vbias + beta * simple_bernoulli_rbm.vbias
+        h_bias_interp = (
+            1 - beta
+        ) * adapter.base_hbias + beta * simple_bernoulli_rbm.hbias
         expected = -(beta * interaction + v @ v_bias_interp + h @ h_bias_interp)
 
         assert torch.allclose(energy_mid, expected, atol=1e-5)
@@ -364,7 +399,10 @@ class TestRBMAISAdapter:
         """Test AIS beta property usage."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
-        x = torch.randn(5, simple_bernoulli_rbm.num_visible + simple_bernoulli_rbm.num_hidden).round()
+        x = torch.randn(
+            5,
+            simple_bernoulli_rbm.num_visible + simple_bernoulli_rbm.num_hidden,
+        ).round()
 
         # Set beta and use default
         adapter.ais_beta = 0.7

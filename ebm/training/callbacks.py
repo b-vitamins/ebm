@@ -24,34 +24,38 @@ class Callback:
     """Abstract base class for training callbacks."""
 
     def on_train_begin(self, trainer: Any) -> None:
-        """Called at the beginning of training."""
+        """Call at the beginning of training."""
 
     def on_train_end(self, trainer: Any) -> None:
-        """Called at the end of training."""
+        """Call at the end of training."""
 
     def on_epoch_start(self, trainer: Any, model: EnergyBasedModel) -> None:
-        """Called at the start of each epoch."""
+        """Call at the start of each epoch."""
 
     def on_epoch_end(
         self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
-        """Called at the end of each epoch."""
+        """Call at the end of each epoch."""
 
     def on_batch_start(
         self, trainer: Any, model: EnergyBasedModel, batch: Tensor
     ) -> None:
-        """Called before processing each batch."""
+        """Call before processing each batch."""
 
-    def on_batch_end(self, trainer: Any, model: EnergyBasedModel, loss: float) -> None:
-        """Called after processing each batch."""
+    def on_batch_end(
+        self, trainer: Any, model: EnergyBasedModel, loss: float
+    ) -> None:
+        """Call after processing each batch."""
 
-    def on_validation_start(self, trainer: Any, model: EnergyBasedModel) -> None:
-        """Called before validation."""
+    def on_validation_start(
+        self, trainer: Any, model: EnergyBasedModel
+    ) -> None:
+        """Call before validation."""
 
     def on_validation_end(
         self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
-        """Called after validation."""
+        """Call after validation."""
 
 
 class CallbackList:
@@ -131,7 +135,9 @@ class LoggingCallback(Callback):
             epoch_time=f"{epoch_time:.1f}s",
         )
 
-    def on_batch_end(self, trainer: Any, model: EnergyBasedModel, loss: float) -> None:
+    def on_batch_end(
+        self, trainer: Any, model: EnergyBasedModel, loss: float
+    ) -> None:
         """Log batch statistics."""
         self.step_count += 1
 
@@ -253,9 +259,9 @@ class CheckpointCallback(Callback):
         if self.save_best and self.monitor in metrics:
             current_value = metrics[self.monitor]
 
-            is_better = (self.mode == "min" and current_value < self.best_value) or (
-                self.mode == "max" and current_value > self.best_value
-            )
+            is_better = (
+                self.mode == "min" and current_value < self.best_value
+            ) or (self.mode == "max" and current_value > self.best_value)
 
             if is_better:
                 self.best_value = current_value
@@ -368,13 +374,19 @@ class VisualizationCallback(Callback):
                 )
 
                 if self.save_dir:
-                    path = self.save_dir / f"samples_epoch_{trainer.current_epoch}.png"
+                    path = (
+                        self.save_dir
+                        / f"samples_epoch_{trainer.current_epoch}.png"
+                    )
                     visualize_samples(samples, save_path=path)
 
             # Visualize filters for RBMs
             if hasattr(model, "W"):
                 if self.save_dir:
-                    path = self.save_dir / f"filters_epoch_{trainer.current_epoch}.png"
+                    path = (
+                        self.save_dir
+                        / f"filters_epoch_{trainer.current_epoch}.png"
+                    )
                     visualize_filters(model.W, save_path=path)
 
 
@@ -414,7 +426,9 @@ class LearningRateSchedulerCallback(Callback):
 class WarmupCallback(Callback):
     """Callback for learning rate warmup."""
 
-    def __init__(self, warmup_steps: int, start_lr: float = 1e-6, end_lr: float = 1e-3):
+    def __init__(
+        self, warmup_steps: int, start_lr: float = 1e-6, end_lr: float = 1e-3
+    ):
         """Initialize warmup callback.
 
         Args:

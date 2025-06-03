@@ -24,8 +24,8 @@ class MetricValue:
     current: float = 0.0
     mean: float = 0.0
     std: float = 0.0
-    min: float = float('inf')
-    max: float = float('-inf')
+    min: float = float("inf")
+    max: float = float("-inf")
     count: int = 0
 
     def update(self, value: float) -> None:
@@ -41,7 +41,10 @@ class MetricValue:
         else:
             delta = value - self.mean
             self.mean += delta / self.count
-            self.std = np.sqrt(((self.count - 1) * self.std**2 + delta * (value - self.mean)) / self.count)
+            self.std = np.sqrt(
+                ((self.count - 1) * self.std**2 + delta * (value - self.mean))
+                / self.count
+            )
             self.min = min(self.min, value)
             self.max = max(self.max, value)
 
@@ -57,7 +60,9 @@ class MetricsTracker:
         """
         self.window_size = window_size
         self.metrics: dict[str, MetricValue] = defaultdict(MetricValue)
-        self.history: dict[str, deque[float]] = defaultdict(lambda: deque(maxlen=window_size))
+        self.history: dict[str, deque[float]] = defaultdict(
+            lambda: deque(maxlen=window_size)
+        )
 
     def update(self, metrics: dict[str, float]) -> None:
         """Update metrics with new values.
@@ -97,12 +102,12 @@ class MetricsTracker:
         stats = {}
         for name, metric in self.metrics.items():
             stats[name] = {
-                'current': metric.current,
-                'mean': metric.mean,
-                'std': metric.std,
-                'min': metric.min,
-                'max': metric.max,
-                'count': metric.count,
+                "current": metric.current,
+                "mean": metric.mean,
+                "std": metric.std,
+                "min": metric.min,
+                "max": metric.max,
+                "count": metric.count,
             }
         return stats
 
@@ -129,10 +134,7 @@ class ModelEvaluator:
 
     @torch.no_grad()
     def reconstruction_error(
-        self,
-        data: Tensor,
-        num_steps: int = 1,
-        metric: str = 'mse'
+        self, data: Tensor, num_steps: int = 1, metric: str = "mse"
     ) -> Tensor:
         """Compute reconstruction error.
 
@@ -152,9 +154,9 @@ class ModelEvaluator:
         recon = self.model.reconstruct(data, num_steps=num_steps)
 
         # Compute error
-        if metric == 'mse':
+        if metric == "mse":
             error = (data - recon).pow(2).mean(dim=tuple(range(1, data.dim())))
-        elif metric == 'mae':
+        elif metric == "mae":
             error = (data - recon).abs().mean(dim=tuple(range(1, data.dim())))
         else:
             raise ValueError(f"Unknown metric: {metric}")
@@ -163,10 +165,7 @@ class ModelEvaluator:
 
     @torch.no_grad()
     def log_likelihood(
-        self,
-        data: Tensor,
-        log_z: float | None = None,
-        num_samples: int = 100
+        self, data: Tensor, log_z: float | None = None, num_samples: int = 100
     ) -> tuple[Tensor, Tensor | None]:
         """Estimate log-likelihood of data.
 
@@ -189,15 +188,16 @@ class ModelEvaluator:
         free_energy = self.model.free_energy(data)
 
         # Generate importance samples
-        if hasattr(self.model, 'sample_fantasy_particles'):
+        if hasattr(self.model, "sample_fantasy_particles"):
             samples = self.model.sample_fantasy_particles(
-                num_samples=num_samples,
-                num_steps=1000
+                num_samples=num_samples, num_steps=1000
             )
             sample_energies = self.model.free_energy(samples)
 
             # Simple importance sampling estimate
-            log_z_estimate = torch.logsumexp(-sample_energies, dim=0) - np.log(num_samples)
+            log_z_estimate = torch.logsumexp(-sample_energies, dim=0) - np.log(
+                num_samples
+            )
             log_prob = -free_energy - log_z_estimate
 
             # Estimate standard error
@@ -211,9 +211,7 @@ class ModelEvaluator:
 
     @torch.no_grad()
     def energy_gap(
-        self,
-        data: Tensor,
-        num_model_samples: int = 100
+        self, data: Tensor, num_model_samples: int = 100
     ) -> dict[str, float]:
         """Compute energy gap between data and model samples.
 
@@ -229,10 +227,9 @@ class ModelEvaluator:
         data_energy = self.model.free_energy(data)
 
         # Model energy
-        if hasattr(self.model, 'sample_fantasy_particles'):
+        if hasattr(self.model, "sample_fantasy_particles"):
             model_samples = self.model.sample_fantasy_particles(
-                num_samples=num_model_samples,
-                num_steps=1000
+                num_samples=num_model_samples, num_steps=1000
             )
             model_energy = self.model.free_energy(model_samples)
         else:
@@ -240,18 +237,16 @@ class ModelEvaluator:
             model_energy = data_energy  # Placeholder
 
         return {
-            'data_energy_mean': data_energy.mean().item(),
-            'data_energy_std': data_energy.std().item(),
-            'model_energy_mean': model_energy.mean().item(),
-            'model_energy_std': model_energy.std().item(),
-            'energy_gap': (model_energy.mean() - data_energy.mean()).item(),
+            "data_energy_mean": data_energy.mean().item(),
+            "data_energy_std": data_energy.std().item(),
+            "model_energy_mean": model_energy.mean().item(),
+            "model_energy_std": model_energy.std().item(),
+            "energy_gap": (model_energy.mean() - data_energy.mean()).item(),
         }
 
     @torch.no_grad()
     def sample_quality_metrics(
-        self,
-        real_data: Tensor,
-        generated_data: Tensor
+        self, real_data: Tensor, generated_data: Tensor
     ) -> dict[str, float]:
         """Compute sample quality metrics.
 
@@ -271,23 +266,25 @@ class ModelEvaluator:
         real_std = real_data.std(dim=0)
         gen_std = generated_data.std(dim=0)
 
-        metrics['mean_error'] = (real_mean - gen_mean).abs().mean().item()
-        metrics['std_error'] = (real_std - gen_std).abs().mean().item()
+        metrics["mean_error"] = (real_mean - gen_mean).abs().mean().item()
+        metrics["std_error"] = (real_std - gen_std).abs().mean().item()
 
         # Correlation comparison
         if real_data.dim() == 2:
             real_corr = torch.corrcoef(real_data.T)
             gen_corr = torch.corrcoef(generated_data.T)
-            metrics['corr_error'] = (real_corr - gen_corr).abs().mean().item()
+            metrics["corr_error"] = (real_corr - gen_corr).abs().mean().item()
 
         # Simple discriminability test
         # Train a linear classifier to distinguish real from generated
-        from torch.nn import functional as F
+        from torch.nn import functional as F  # noqa: N812
 
-        labels = torch.cat([
-            torch.ones(real_data.shape[0]),
-            torch.zeros(generated_data.shape[0])
-        ])
+        labels = torch.cat(
+            [
+                torch.ones(real_data.shape[0]),
+                torch.zeros(generated_data.shape[0]),
+            ]
+        )
         data = torch.cat([real_data, generated_data])
 
         # Shuffle
@@ -316,7 +313,7 @@ class ModelEvaluator:
             accuracy = (preds == labels).float().mean().item()
 
         # If samples are good, accuracy should be close to 0.5 (random)
-        metrics['discriminability'] = abs(accuracy - 0.5) * 2
+        metrics["discriminability"] = abs(accuracy - 0.5) * 2
 
         return metrics
 
@@ -351,7 +348,7 @@ class TrainingDynamicsAnalyzer:
         if metric not in self.history or len(self.history[metric]) < 10:
             return None
 
-        values = self.history[metric][-self.window_size:]
+        values = self.history[metric][-self.window_size :]
 
         # Fit exponential decay: y = a * exp(b * x)
         # log(y) = log(a) + b * x
@@ -362,8 +359,8 @@ class TrainingDynamicsAnalyzer:
         if np.all(y > 0):
             log_y = np.log(y)
             # Linear regression in log space
-            A = np.vstack([x, np.ones(len(x))]).T
-            b, log_a = np.linalg.lstsq(A, log_y, rcond=None)[0]
+            design = np.vstack([x, np.ones(len(x))]).T
+            b, log_a = np.linalg.lstsq(design, log_y, rcond=None)[0]
             return b
 
         return None
@@ -381,7 +378,7 @@ class TrainingDynamicsAnalyzer:
         if metric not in self.history or len(self.history[metric]) < 10:
             return None
 
-        values = np.array(self.history[metric][-self.window_size:])
+        values = np.array(self.history[metric][-self.window_size :])
 
         # Compute successive differences
         diffs = np.diff(values)
@@ -397,9 +394,7 @@ class TrainingDynamicsAnalyzer:
         return 0.0
 
     def plateau_detection(
-        self,
-        metric: str,
-        threshold: float = 1e-4
+        self, metric: str, threshold: float = 1e-4
     ) -> tuple[bool, int | None]:
         """Detect if metric has plateaued.
 
@@ -414,10 +409,12 @@ class TrainingDynamicsAnalyzer:
         if metric not in self.history or len(self.history[metric]) < 10:
             return False, None
 
-        values = self.history[metric][-self.window_size:]
+        values = self.history[metric][-self.window_size :]
 
         # Check variance in recent values
-        recent_std = np.std(values[-20:]) if len(values) >= 20 else np.std(values)
+        recent_std = (
+            np.std(values[-20:]) if len(values) >= 20 else np.std(values)
+        )
 
         if recent_std < threshold:
             # Find when plateau started
@@ -434,11 +431,13 @@ class TrainingDynamicsAnalyzer:
 
         for metric in self.history:
             summary[metric] = {
-                'final_value': self.history[metric][-1] if self.history[metric] else None,
-                'convergence_rate': self.convergence_rate(metric),
-                'oscillation_score': self.oscillation_score(metric),
-                'is_plateau': self.plateau_detection(metric)[0],
-                'total_steps': len(self.history[metric]),
+                "final_value": self.history[metric][-1]
+                if self.history[metric]
+                else None,
+                "convergence_rate": self.convergence_rate(metric),
+                "oscillation_score": self.oscillation_score(metric),
+                "is_plateau": self.plateau_detection(metric)[0],
+                "total_steps": len(self.history[metric]),
             }
 
         return summary

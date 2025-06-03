@@ -24,7 +24,7 @@ class TestBinaryTransform:
 
     def test_threshold_method(self) -> None:
         """Test threshold binarization."""
-        transform = BinaryTransform(method='threshold', threshold=0.5)
+        transform = BinaryTransform(method="threshold", threshold=0.5)
 
         # Test with known values
         x = torch.tensor([0.3, 0.5, 0.7, 0.0, 1.0])
@@ -41,7 +41,7 @@ class TestBinaryTransform:
 
     def test_bernoulli_method(self) -> None:
         """Test Bernoulli binarization."""
-        transform = BinaryTransform(method='bernoulli')
+        transform = BinaryTransform(method="bernoulli")
 
         # Test with probabilities
         torch.manual_seed(42)
@@ -59,7 +59,7 @@ class TestBinaryTransform:
 
     def test_median_method(self) -> None:
         """Test median binarization."""
-        transform = BinaryTransform(method='median')
+        transform = BinaryTransform(method="median")
 
         # Test with known values
         x = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
@@ -77,7 +77,7 @@ class TestBinaryTransform:
     def test_invalid_method(self) -> None:
         """Test error on invalid method."""
         with pytest.raises(ValueError, match="Unknown binarization method"):
-            transform = BinaryTransform(method='invalid')
+            transform = BinaryTransform(method="invalid")
             transform(torch.randn(10))
 
 
@@ -86,7 +86,7 @@ class TestAddNoise:
 
     def test_gaussian_noise(self) -> None:
         """Test Gaussian noise addition."""
-        transform = AddNoise(noise_type='gaussian', noise_level=0.1, clip=True)
+        transform = AddNoise(noise_type="gaussian", noise_level=0.1, clip=True)
 
         # Test with zeros
         x = torch.zeros(1000, 10)
@@ -101,7 +101,9 @@ class TestAddNoise:
         assert result.max() <= 1.0
 
         # Test without clipping
-        transform_no_clip = AddNoise(noise_type='gaussian', noise_level=0.5, clip=False)
+        transform_no_clip = AddNoise(
+            noise_type="gaussian", noise_level=0.5, clip=False
+        )
         x = torch.full((100,), 0.5)
         result = transform_no_clip(x)
         # Some values should be outside [0, 1]
@@ -109,7 +111,7 @@ class TestAddNoise:
 
     def test_uniform_noise(self) -> None:
         """Test uniform noise addition."""
-        transform = AddNoise(noise_type='uniform', noise_level=0.2, clip=True)
+        transform = AddNoise(noise_type="uniform", noise_level=0.2, clip=True)
 
         # Test with constant value
         x = torch.full((1000,), 0.5)
@@ -124,7 +126,7 @@ class TestAddNoise:
 
     def test_salt_pepper_noise(self) -> None:
         """Test salt and pepper noise."""
-        transform = AddNoise(noise_type='salt_pepper', noise_level=0.1)
+        transform = AddNoise(noise_type="salt_pepper", noise_level=0.1)
 
         # Test with mid-range values
         torch.manual_seed(42)
@@ -142,7 +144,7 @@ class TestAddNoise:
 
     def test_invalid_noise_type(self) -> None:
         """Test error on invalid noise type."""
-        transform = AddNoise(noise_type='invalid')
+        transform = AddNoise(noise_type="invalid")
 
         with pytest.raises(ValueError, match="Unknown noise type"):
             transform(torch.randn(10))
@@ -218,7 +220,7 @@ class TestEnergyDataset:
         base_dataset = TensorDataset(data)
 
         # Add binarization transform
-        transform = BinaryTransform(method='threshold')
+        transform = BinaryTransform(method="threshold")
         energy_dataset = EnergyDataset(base_dataset, transform=transform)
 
         # Check transform is applied
@@ -278,9 +280,9 @@ class TestSyntheticDataset:
         dataset = SyntheticDataset(
             n_samples=1000,
             n_features=100,
-            pattern='random',
+            pattern="random",
             sparsity=0.3,
-            seed=42
+            seed=42,
         )
 
         assert len(dataset) == 1000
@@ -301,10 +303,7 @@ class TestSyntheticDataset:
     def test_structured_pattern(self) -> None:
         """Test structured data generation."""
         dataset = SyntheticDataset(
-            n_samples=100,
-            n_features=100,
-            pattern='structured',
-            seed=42
+            n_samples=100, n_features=100, pattern="structured", seed=42
         )
 
         data = dataset.data
@@ -323,10 +322,7 @@ class TestSyntheticDataset:
     def test_correlated_pattern(self) -> None:
         """Test correlated data generation."""
         dataset = SyntheticDataset(
-            n_samples=200,
-            n_features=50,
-            pattern='correlated',
-            seed=42
+            n_samples=200, n_features=50, pattern="correlated", seed=42
         )
 
         data = dataset.data
@@ -346,13 +342,13 @@ class TestSyntheticDataset:
     def test_invalid_pattern(self) -> None:
         """Test error on invalid pattern."""
         with pytest.raises(ValueError, match="Unknown pattern"):
-            SyntheticDataset(pattern='invalid')
+            SyntheticDataset(pattern="invalid")
 
 
 class TestMNISTDatasets:
     """Test MNIST dataset functions."""
 
-    @patch('torchvision.datasets.MNIST')
+    @patch("torchvision.datasets.MNIST")
     def test_get_mnist_datasets(self, mock_mnist) -> None:
         """Test MNIST dataset loading."""
         # Mock dataset
@@ -364,11 +360,11 @@ class TestMNISTDatasets:
 
         # Get datasets
         train, val, test = get_mnist_datasets(
-            data_dir='./data',
+            data_dir="./data",
             binary=True,
             flatten=True,
             train_val_split=0.8,
-            download=False
+            download=False,
         )
 
         # Check calls
@@ -376,14 +372,14 @@ class TestMNISTDatasets:
 
         # Check splits
         # Note: actual split done by random_split, so we check the mock was set up
-        assert mock_mnist.call_args_list[0][1]['train'] is True
-        assert mock_mnist.call_args_list[1][1]['train'] is False
+        assert mock_mnist.call_args_list[0][1]["train"] is True
+        assert mock_mnist.call_args_list[1][1]["train"] is False
 
         # Check transforms were set
-        transform = mock_mnist.call_args_list[0][1]['transform']
+        transform = mock_mnist.call_args_list[0][1]["transform"]
         assert transform is not None
 
-    @patch('torchvision.datasets.FashionMNIST')
+    @patch("torchvision.datasets.FashionMNIST")
     def test_get_fashion_mnist_datasets(self, mock_fashion) -> None:
         """Test Fashion-MNIST dataset loading."""
         # Mock dataset
@@ -393,17 +389,14 @@ class TestMNISTDatasets:
 
         # Get datasets
         train, val, test = get_fashion_mnist_datasets(
-            data_dir='./data',
-            binary=False,
-            flatten=False,
-            download=True
+            data_dir="./data", binary=False, flatten=False, download=True
         )
 
         # Check calls
         assert mock_fashion.call_count == 2
 
         # Check download flag passed
-        assert mock_fashion.call_args_list[0][1]['download'] is True
+        assert mock_fashion.call_args_list[0][1]["download"] is True
 
 
 class TestDataLoaderCreation:
@@ -428,7 +421,7 @@ class TestDataLoaderCreation:
             batch_size=16,
             num_workers=0,
             pin_memory=False,
-            shuffle_train=True
+            shuffle_train=True,
         )
 
         # Check train loader
@@ -451,8 +444,7 @@ class TestDataLoaderCreation:
         train_dataset = TensorDataset(torch.randn(50, 10))
 
         train_loader, val_loader, test_loader = create_data_loaders(
-            train_dataset=train_dataset,
-            batch_size=32
+            train_dataset=train_dataset, batch_size=32
         )
 
         assert train_loader is not None
@@ -466,35 +458,37 @@ class TestDataStatistics:
     def test_compute_data_statistics(self) -> None:
         """Test computing dataset statistics."""
         # Create known data
-        data = torch.tensor([
-            [1.0, 2.0, 3.0],
-            [4.0, 5.0, 6.0],
-            [7.0, 8.0, 9.0],
-            [10.0, 11.0, 12.0]
-        ])
+        data = torch.tensor(
+            [
+                [1.0, 2.0, 3.0],
+                [4.0, 5.0, 6.0],
+                [7.0, 8.0, 9.0],
+                [10.0, 11.0, 12.0],
+            ]
+        )
         dataset = TensorDataset(data)
         loader = DataLoader(dataset, batch_size=2)
 
         stats = compute_data_statistics(loader)
 
         # Check computed statistics
-        assert 'mean' in stats
-        assert 'std' in stats
-        assert 'min' in stats
-        assert 'max' in stats
-        assert 'n_samples' in stats
+        assert "mean" in stats
+        assert "std" in stats
+        assert "min" in stats
+        assert "max" in stats
+        assert "n_samples" in stats
 
         # Check values
         expected_mean = torch.tensor([5.5, 6.5, 7.5])
-        assert torch.allclose(stats['mean'], expected_mean)
+        assert torch.allclose(stats["mean"], expected_mean)
 
         expected_min = torch.tensor([1.0, 2.0, 3.0])
-        assert torch.allclose(stats['min'], expected_min)
+        assert torch.allclose(stats["min"], expected_min)
 
         expected_max = torch.tensor([10.0, 11.0, 12.0])
-        assert torch.allclose(stats['max'], expected_max)
+        assert torch.allclose(stats["max"], expected_max)
 
-        assert stats['n_samples'] == 4
+        assert stats["n_samples"] == 4
 
     def test_compute_data_statistics_with_labels(self) -> None:
         """Test statistics computation with labeled data."""
@@ -506,10 +500,12 @@ class TestDataStatistics:
         stats = compute_data_statistics(loader)
 
         # Should compute stats only for data, not labels
-        assert stats['mean'].shape == (20,)
-        assert stats['n_samples'] == 50
+        assert stats["mean"].shape == (20,)
+        assert stats["n_samples"] == 50
 
-    @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+    @pytest.mark.skipif(
+        not torch.cuda.is_available(), reason="CUDA not available"
+    )
     def test_compute_data_statistics_cuda(self) -> None:
         """Test statistics computation on CUDA."""
         data = torch.randn(30, 10)
@@ -520,8 +516,8 @@ class TestDataStatistics:
         stats = compute_data_statistics(loader, device=device)
 
         # Results should be on CPU (moved back)
-        assert stats['mean'].device.type == "cpu"
-        assert stats['std'].device.type == "cpu"
+        assert stats["mean"].device.type == "cpu"
+        assert stats["std"].device.type == "cpu"
 
 
 class TestEdgeCases:
@@ -548,8 +544,8 @@ class TestEdgeCases:
     def test_transform_chaining(self) -> None:
         """Test chaining multiple transforms."""
         # Create transform pipeline
-        binarize = BinaryTransform(method='threshold')
-        add_noise = AddNoise(noise_type='gaussian', noise_level=0.1)
+        binarize = BinaryTransform(method="threshold")
+        add_noise = AddNoise(noise_type="gaussian", noise_level=0.1)
 
         # Manual chaining
         def chained_transform(x):
@@ -562,4 +558,4 @@ class TestEdgeCases:
 
         # Should be mostly binary with some noise
         assert result.min() >= -0.5  # Some negative due to noise
-        assert result.max() <= 1.5   # Some above 1 due to noise
+        assert result.max() <= 1.5  # Some above 1 due to noise

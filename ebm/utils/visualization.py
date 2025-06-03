@@ -17,13 +17,14 @@ from torch import Tensor
 
 try:
     import seaborn as sns
+
     HAS_SEABORN = True
 except ImportError:
     HAS_SEABORN = False
 
 
-def setup_style(style: str = 'whitegrid') -> None:
-    """Setup matplotlib style for consistent plots.
+def setup_style(style: str = "whitegrid") -> None:
+    """Set up matplotlib style for consistent plots.
 
     Args:
         style: Style name ('whitegrid', 'darkgrid', 'white', 'dark', 'ticks')
@@ -32,17 +33,21 @@ def setup_style(style: str = 'whitegrid') -> None:
         sns.set_style(style)
         sns.set_context("paper", font_scale=1.2)
     else:
-        plt.style.use('seaborn-v0_8' if 'seaborn-v0_8' in plt.style.available else 'default')
+        plt.style.use(
+            "seaborn-v0_8"
+            if "seaborn-v0_8" in plt.style.available
+            else "default"
+        )
 
 
-def tile_images(
+def tile_images(  # noqa: C901
     images: Tensor | np.ndarray,
     nrows: int | None = None,
     ncols: int | None = None,
     padding: int = 2,
     pad_value: float = 0.0,
     scale_each: bool = False,
-    normalize: bool = True
+    normalize: bool = True,
 ) -> np.ndarray:
     """Tile images into a grid.
 
@@ -106,7 +111,9 @@ def tile_images(
     if padding > 0:
         pad_h = h + 2 * padding
         pad_w = w + 2 * padding
-        padded = np.full((nrows * ncols, c, pad_h, pad_w), pad_value, dtype=images.dtype)
+        padded = np.full(
+            (nrows * ncols, c, pad_h, pad_w), pad_value, dtype=images.dtype
+        )
         padded[:, :, padding:-padding, padding:-padding] = images
         images = padded
         h, w = pad_h, pad_w
@@ -126,10 +133,10 @@ def tile_images(
 def visualize_filters(
     weights: Tensor,
     title: str = "Filters",
-    cmap: str = 'RdBu_r',
+    cmap: str = "RdBu_r",
     save_path: Path | None = None,
     figsize: tuple[int, int] | None = None,
-    **kwargs
+    **kwargs,
 ) -> Figure:
     """Visualize weight filters (e.g., RBM weights).
 
@@ -167,9 +174,9 @@ def visualize_filters(
         figsize = (10, 10)
     fig, ax = plt.subplots(figsize=figsize)
 
-    im = ax.imshow(tiled, cmap=cmap, aspect='auto')
+    im = ax.imshow(tiled, cmap=cmap, aspect="auto")
     ax.set_title(title)
-    ax.axis('off')
+    ax.axis("off")
 
     # Add colorbar
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -177,7 +184,7 @@ def visualize_filters(
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -189,7 +196,7 @@ def visualize_samples(
     ncols: int | None = None,
     save_path: Path | None = None,
     figsize: tuple[int, int] | None = None,
-    **kwargs
+    **kwargs,
 ) -> Figure:
     """Visualize generated samples.
 
@@ -226,25 +233,25 @@ def visualize_samples(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Determine colormap
-    cmap = 'gray' if tiled.ndim == 2 else None
+    cmap = "gray" if tiled.ndim == 2 else None
 
-    ax.imshow(tiled, cmap=cmap, aspect='auto')
+    ax.imshow(tiled, cmap=cmap, aspect="auto")
     ax.set_title(title)
-    ax.axis('off')
+    ax.axis("off")
 
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
 
-def plot_training_curves(
+def plot_training_curves(  # noqa: C901
     history: dict[str, list[dict[str, float]]],
     metrics: list[str] | None = None,
     save_path: Path | None = None,
-    figsize: tuple[int, int] | None = None
+    figsize: tuple[int, int] | None = None,
 ) -> Figure:
     """Plot training curves.
 
@@ -264,10 +271,10 @@ def plot_training_curves(
         for phase_history in history.values():
             if phase_history:
                 all_metrics.update(phase_history[0].keys())
-        metrics = sorted([m for m in all_metrics if not m.startswith('_')])
+        metrics = sorted([m for m in all_metrics if not m.startswith("_")])
 
     # Filter out non-numeric metrics
-    metrics = [m for m in metrics if m not in ['epoch', 'timestamp']]
+    metrics = [m for m in metrics if m not in ["epoch", "timestamp"]]
 
     if not metrics:
         raise ValueError("No metrics to plot")
@@ -291,7 +298,7 @@ def plot_training_curves(
             if not phase_history:
                 continue
 
-            epochs = [h.get('epoch', i) for i, h in enumerate(phase_history)]
+            epochs = [h.get("epoch", i) for i, h in enumerate(phase_history)]
             values = [h.get(metric, np.nan) for h in phase_history]
 
             # Filter out NaN values
@@ -300,10 +307,15 @@ def plot_training_curves(
             values = np.array(values)[valid_idx]
 
             if len(values) > 0:
-                ax.plot(epochs, values, label=phase, marker='o' if len(values) < 50 else None)
+                ax.plot(
+                    epochs,
+                    values,
+                    label=phase,
+                    marker="o" if len(values) < 50 else None,
+                )
 
-        ax.set_xlabel('Epoch')
-        ax.set_ylabel(metric.replace('_', ' ').title())
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel(metric.replace("_", " ").title())
         ax.set_title(metric)
         ax.legend()
         ax.grid(True, alpha=0.3)
@@ -315,7 +327,7 @@ def plot_training_curves(
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -325,7 +337,7 @@ def plot_energy_histogram(
     model_energies: Tensor,
     title: str = "Energy Distribution",
     save_path: Path | None = None,
-    figsize: tuple[int, int] = (8, 6)
+    figsize: tuple[int, int] = (8, 6),
 ) -> Figure:
     """Plot histogram of energies for data vs model samples.
 
@@ -348,20 +360,28 @@ def plot_energy_histogram(
 
     # Plot histograms
     bins = np.linspace(
-        min(data_e.min(), model_e.min()),
-        max(data_e.max(), model_e.max()),
-        50
+        min(data_e.min(), model_e.min()), max(data_e.max(), model_e.max()), 50
     )
 
-    ax.hist(data_e, bins=bins, alpha=0.5, label='Data', density=True)
-    ax.hist(model_e, bins=bins, alpha=0.5, label='Model', density=True)
+    ax.hist(data_e, bins=bins, alpha=0.5, label="Data", density=True)
+    ax.hist(model_e, bins=bins, alpha=0.5, label="Model", density=True)
 
     # Add statistics
-    ax.axvline(data_e.mean(), color='blue', linestyle='--', label=f'Data mean: {data_e.mean():.1f}')
-    ax.axvline(model_e.mean(), color='orange', linestyle='--', label=f'Model mean: {model_e.mean():.1f}')
+    ax.axvline(
+        data_e.mean(),
+        color="blue",
+        linestyle="--",
+        label=f"Data mean: {data_e.mean():.1f}",
+    )
+    ax.axvline(
+        model_e.mean(),
+        color="orange",
+        linestyle="--",
+        label=f"Model mean: {model_e.mean():.1f}",
+    )
 
-    ax.set_xlabel('Energy')
-    ax.set_ylabel('Density')
+    ax.set_xlabel("Energy")
+    ax.set_ylabel("Density")
     ax.set_title(title)
     ax.legend()
     ax.grid(True, alpha=0.3)
@@ -369,7 +389,7 @@ def plot_energy_histogram(
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -380,7 +400,7 @@ def plot_reconstruction_comparison(
     n_examples: int = 10,
     title: str = "Reconstruction Comparison",
     save_path: Path | None = None,
-    figsize: tuple[int, int] | None = None
+    figsize: tuple[int, int] | None = None,
 ) -> Figure:
     """Plot original vs reconstructed samples side by side.
 
@@ -399,10 +419,9 @@ def plot_reconstruction_comparison(
     n_examples = min(n_examples, original.shape[0])
 
     # Interleave original and reconstructed
-    combined = torch.stack([
-        original[:n_examples],
-        reconstructed[:n_examples]
-    ], dim=1).reshape(2 * n_examples, *original.shape[1:])
+    combined = torch.stack(
+        [original[:n_examples], reconstructed[:n_examples]], dim=1
+    ).reshape(2 * n_examples, *original.shape[1:])
 
     # Create tiled image
     tiled = tile_images(combined, nrows=2, ncols=n_examples)
@@ -412,19 +431,19 @@ def plot_reconstruction_comparison(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    cmap = 'gray' if tiled.ndim == 2 else None
-    ax.imshow(tiled, cmap=cmap, aspect='auto')
+    cmap = "gray" if tiled.ndim == 2 else None
+    ax.imshow(tiled, cmap=cmap, aspect="auto")
     ax.set_title(title)
-    ax.axis('off')
+    ax.axis("off")
 
     # Add labels
-    ax.text(0.25, -0.05, 'Original', transform=ax.transAxes, ha='center')
-    ax.text(0.75, -0.05, 'Reconstructed', transform=ax.transAxes, ha='center')
+    ax.text(0.25, -0.05, "Original", transform=ax.transAxes, ha="center")
+    ax.text(0.75, -0.05, "Reconstructed", transform=ax.transAxes, ha="center")
 
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
 
     return fig
 
@@ -433,7 +452,7 @@ def create_animation(
     frames: list[Tensor],
     fps: int = 10,
     save_path: Path | None = None,
-    title: str = "Animation"
+    title: str = "Animation",
 ) -> Any:
     """Create animation from a sequence of frames.
 
@@ -459,28 +478,27 @@ def create_animation(
     # Create figure
     fig, ax = plt.subplots()
     ax.set_title(title)
-    ax.axis('off')
+    ax.axis("off")
 
     # Determine colormap
-    cmap = 'gray' if frames_np[0].ndim == 2 else None
+    cmap = "gray" if frames_np[0].ndim == 2 else None
 
     # Create animation
-    im = ax.imshow(frames_np[0], cmap=cmap, aspect='auto')
+    im = ax.imshow(frames_np[0], cmap=cmap, aspect="auto")
 
     def update(i):
         im.set_array(frames_np[i])
         return [im]
 
     anim = animation.FuncAnimation(
-        fig, update, frames=len(frames_np),
-        interval=1000/fps, blit=True
+        fig, update, frames=len(frames_np), interval=1000 / fps, blit=True
     )
 
     if save_path:
-        if save_path.suffix == '.gif':
-            anim.save(save_path, writer='pillow', fps=fps)
+        if save_path.suffix == ".gif":
+            anim.save(save_path, writer="pillow", fps=fps)
         else:
-            anim.save(save_path, writer='ffmpeg', fps=fps)
+            anim.save(save_path, writer="ffmpeg", fps=fps)
 
     plt.close(fig)
 

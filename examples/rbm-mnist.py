@@ -64,9 +64,13 @@ def parse_args():
     parser.add_argument(
         "--epochs", type=int, default=50, help="Number of training epochs"
     )
-    parser.add_argument("--batch-size", type=int, default=100, help="Batch size")
+    parser.add_argument(
+        "--batch-size", type=int, default=100, help="Batch size"
+    )
     parser.add_argument("--lr", type=float, default=0.01, help="Learning rate")
-    parser.add_argument("--momentum", type=float, default=0.9, help="SGD momentum")
+    parser.add_argument(
+        "--momentum", type=float, default=0.9, help="SGD momentum"
+    )
     parser.add_argument(
         "--weight-decay", type=float, default=0.0001, help="Weight decay"
     )
@@ -79,29 +83,48 @@ def parse_args():
         choices=["cd", "pcd", "pt", "tap"],
         help="Sampling method",
     )
-    parser.add_argument("--k", type=int, default=1, help="Number of Gibbs steps")
     parser.add_argument(
-        "--num-chains", type=int, default=100, help="Number of persistent chains"
+        "--k", type=int, default=1, help="Number of Gibbs steps"
     )
     parser.add_argument(
-        "--num-temps", type=int, default=10, help="Number of temperatures for PT"
+        "--num-chains",
+        type=int,
+        default=100,
+        help="Number of persistent chains",
+    )
+    parser.add_argument(
+        "--num-temps",
+        type=int,
+        default=10,
+        help="Number of temperatures for PT",
     )
 
     # Other arguments
     parser.add_argument(
-        "--device", type=str, default="auto", help="Device to use (cuda/cpu/auto)"
+        "--device",
+        type=str,
+        default="auto",
+        help="Device to use (cuda/cpu/auto)",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
-    parser.add_argument("--data-dir", type=str, default="./data", help="Data directory")
+    parser.add_argument(
+        "--data-dir", type=str, default="./data", help="Data directory"
+    )
     parser.add_argument(
         "--output-dir", type=str, default="./output", help="Output directory"
     )
-    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
     parser.add_argument(
-        "--visualize", action="store_true", help="Enable visualization during training"
+        "--log-level", type=str, default="INFO", help="Logging level"
     )
     parser.add_argument(
-        "--estimate-logz", action="store_true", help="Estimate log partition function"
+        "--visualize",
+        action="store_true",
+        help="Enable visualization during training",
+    )
+    parser.add_argument(
+        "--estimate-logz",
+        action="store_true",
+        help="Estimate log partition function",
     )
 
     return parser.parse_args()
@@ -142,11 +165,15 @@ def create_sampler(args, model):
     if args.sampler == "cd":
         sampler = ContrastiveDivergence(k=args.k)
     elif args.sampler == "pcd":
-        sampler = PersistentContrastiveDivergence(k=args.k, num_chains=args.num_chains)
+        sampler = PersistentContrastiveDivergence(
+            k=args.k, num_chains=args.num_chains
+        )
     elif args.sampler == "pt":
         sampler = ebm.PTGradientEstimator(num_temps=args.num_temps, k=args.k)
     elif args.sampler == "tap":
-        sampler = ebm.TAPGradientEstimator(num_iter=20, damping=0.5, order="tap2")
+        sampler = ebm.TAPGradientEstimator(
+            num_iter=20, damping=0.5, order="tap2"
+        )
     else:
         raise ValueError(f"Unknown sampler: {args.sampler}")
 
@@ -154,7 +181,7 @@ def create_sampler(args, model):
 
 
 def main() -> None:
-    """Main training script."""
+    """Run the RBM training script."""
     args = parse_args()
 
     # Setup
@@ -283,7 +310,9 @@ def main() -> None:
     # Generate samples
     logger.info("Generating samples...")
     if hasattr(model, "sample_fantasy_particles"):
-        samples = model.sample_fantasy_particles(num_samples=100, num_steps=1000)
+        samples = model.sample_fantasy_particles(
+            num_samples=100, num_steps=1000
+        )
 
         # Visualize samples
         fig = visualize_samples(samples, title="Generated Samples")
@@ -318,7 +347,11 @@ def main() -> None:
 
         with open(output_dir / "ais_diagnostics.json", "w") as f:
             json.dump(
-                {k: v for k, v in diagnostics.items() if not isinstance(v, np.ndarray)},
+                {
+                    k: v
+                    for k, v in diagnostics.items()
+                    if not isinstance(v, np.ndarray)
+                },
                 f,
                 indent=2,
             )
@@ -334,7 +367,9 @@ def main() -> None:
     print(f"Final reconstruction error: {recon_errors.mean():.4f}")
     print(f"Energy gap: {energy_stats['energy_gap']:.2f}")
     if args.estimate_logz:
-        print(f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}")
+        print(
+            f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}"
+        )
     print(f"Results saved to: {output_dir}")
     print("=" * 50)
 

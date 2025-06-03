@@ -26,7 +26,7 @@ def default_rbm_config():
         use_bias=True,
         device="cpu",
         dtype="float32",
-        seed=42
+        seed=42,
     )
 
 
@@ -42,7 +42,7 @@ def small_rbm_config():
         device="cpu",
         dtype="float32",
         seed=42,
-        l2_weight=0.001
+        l2_weight=0.001,
     )
 
 
@@ -58,7 +58,7 @@ def gaussian_rbm_config():
         learn_sigma=True,
         device="cpu",
         dtype="float32",
-        seed=42
+        seed=42,
     )
 
 
@@ -69,10 +69,7 @@ def training_config(tmp_path: Path):
         epochs=10,
         batch_size=32,
         optimizer=OptimizerConfig(
-            name="sgd",
-            lr=0.01,
-            momentum=0.9,
-            weight_decay=0.0001
+            name="sgd", lr=0.01, momentum=0.9, weight_decay=0.0001
         ),
         checkpoint_dir=tmp_path / "checkpoints",
         checkpoint_every=5,
@@ -85,7 +82,7 @@ def training_config(tmp_path: Path):
         mixed_precision=False,
         compile_model=False,
         num_workers=0,
-        pin_memory=False
+        pin_memory=False,
     )
 
 
@@ -93,26 +90,12 @@ def training_config(tmp_path: Path):
 def sampler_configs():
     """Provide various sampler configurations."""
     return {
-        "gibbs": GibbsConfig(
-            num_steps=10,
-            block_gibbs=True
-        ),
-        "cd": CDConfig(
-            num_steps=1,
-            persistent=False
-        ),
-        "pcd": CDConfig(
-            num_steps=1,
-            persistent=True,
-            num_chains=100
-        ),
+        "gibbs": GibbsConfig(num_steps=10, block_gibbs=True),
+        "cd": CDConfig(num_steps=1, persistent=False),
+        "pcd": CDConfig(num_steps=1, persistent=True, num_chains=100),
         "pt": ParallelTemperingConfig(
-            num_temps=5,
-            min_beta=0.5,
-            max_beta=1.0,
-            swap_every=1,
-            num_steps=10
-        )
+            num_temps=5, min_beta=0.5, max_beta=1.0, swap_every=1, num_steps=10
+        ),
     }
 
 
@@ -125,12 +108,10 @@ def config_variations():
         {"weight_init": "xavier_uniform", "bias_init": "normal"},
         {"weight_init": "kaiming_normal", "bias_init": 0.01},
         {"weight_init": "uniform", "bias_init": "zeros"},
-
         # Different architectures
         {"visible_units": 100, "hidden_units": 50},
         {"visible_units": 784, "hidden_units": 128},
         {"visible_units": 1024, "hidden_units": 2048},
-
         # Different regularization
         {"l2_weight": 0.0, "l1_weight": 0.0},
         {"l2_weight": 0.001, "l1_weight": 0.0},
@@ -146,15 +127,12 @@ def invalid_configs():
         # Invalid dimensions
         {"visible_units": 0, "hidden_units": 100},
         {"visible_units": 100, "hidden_units": -1},
-
         # Invalid initialization
         {"weight_init": "invalid_method"},
         {"bias_init": "unknown_init"},
-
         # Invalid dtypes
         {"dtype": "float128"},
         {"dtype": "complex64"},
-
         # Invalid devices
         {"device": "tpu"},
         {"device": "cuda:99"},

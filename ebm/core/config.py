@@ -57,7 +57,9 @@ class BaseConfig(BaseModel, ABC):
                 with open(path) as f:
                     data = yaml.safe_load(f)
             except ImportError as err:
-                raise ImportError("PyYAML required for YAML config files") from err
+                raise ImportError(
+                    "PyYAML required for YAML config files"
+                ) from err
         elif path.suffix == ".json":
             with open(path) as f:
                 data = json.load(f)
@@ -80,7 +82,9 @@ class BaseConfig(BaseModel, ABC):
                 with open(path, "w") as f:
                     yaml.safe_dump(self.dict(), f, default_flow_style=False)
             except ImportError as err:
-                raise ImportError("PyYAML required for YAML config files") from err
+                raise ImportError(
+                    "PyYAML required for YAML config files"
+                ) from err
         else:
             with open(path, "w") as f:
                 json.dump(self.dict(), f, indent=2)
@@ -94,11 +98,17 @@ class ModelConfig(BaseConfig):
     """Base configuration for all models."""
 
     # Device and precision settings
-    device: str | None = Field(None, description="Device to use (cuda/cpu/auto)")
-    dtype: str = Field("float32", description="Data type (float32/float16/bfloat16)")
+    device: str | None = Field(
+        None, description="Device to use (cuda/cpu/auto)"
+    )
+    dtype: str = Field(
+        "float32", description="Data type (float32/float16/bfloat16)"
+    )
 
     # Random seed
-    seed: int | None = Field(None, description="Random seed for reproducibility")
+    seed: int | None = Field(
+        None, description="Random seed for reproducibility"
+    )
 
     @validator("device")
     def validate_device(self, v: str | None) -> str | None:
@@ -127,7 +137,9 @@ class ModelConfig(BaseConfig):
             "fp64",
         }
         if v not in valid_dtypes:
-            raise ValueError(f"Invalid dtype: {v}. Must be one of {valid_dtypes}")
+            raise ValueError(
+                f"Invalid dtype: {v}. Must be one of {valid_dtypes}"
+            )
         return v
 
     @property
@@ -171,7 +183,9 @@ class OptimizerConfig(BaseConfig):
 
     # Learning rate scheduling
     scheduler: str | None = Field(None, description="LR scheduler type")
-    scheduler_params: dict[str, Any] = Field({}, description="Scheduler parameters")
+    scheduler_params: dict[str, Any] = Field(
+        {}, description="Scheduler parameters"
+    )
 
     @validator("name")
     def validate_optimizer(self, v: str) -> str:
@@ -188,24 +202,34 @@ class TrainingConfig(BaseConfig):
     # Basic training parameters
     epochs: int = Field(100, description="Number of epochs", gt=0)
     batch_size: int = Field(64, description="Batch size", gt=0)
-    eval_batch_size: int | None = Field(None, description="Evaluation batch size")
+    eval_batch_size: int | None = Field(
+        None, description="Evaluation batch size"
+    )
 
     # Optimization
     optimizer: OptimizerConfig = Field(
         OptimizerConfig(), description="Optimizer config"
     )
-    grad_clip: float | None = Field(None, description="Gradient clipping value", gt=0)
+    grad_clip: float | None = Field(
+        None, description="Gradient clipping value", gt=0
+    )
 
     # Checkpointing and logging
     checkpoint_dir: Path = Field(
         Path("checkpoints"), description="Checkpoint directory"
     )
-    checkpoint_every: int = Field(10, description="Checkpoint frequency (epochs)", gt=0)
+    checkpoint_every: int = Field(
+        10, description="Checkpoint frequency (epochs)", gt=0
+    )
     log_every: int = Field(100, description="Logging frequency (steps)", gt=0)
 
     # Evaluation
-    eval_every: int = Field(1, description="Evaluation frequency (epochs)", gt=0)
-    eval_samples: int = Field(1000, description="Number of evaluation samples", gt=0)
+    eval_every: int = Field(
+        1, description="Evaluation frequency (epochs)", gt=0
+    )
+    eval_samples: int = Field(
+        1000, description="Number of evaluation samples", gt=0
+    )
 
     # Early stopping
     early_stopping: bool = Field(False, description="Enable early stopping")
@@ -215,8 +239,12 @@ class TrainingConfig(BaseConfig):
     )
 
     # Advanced features
-    mixed_precision: bool = Field(False, description="Use automatic mixed precision")
-    compile_model: bool = Field(False, description="Use torch.compile (PyTorch 2.0+)")
+    mixed_precision: bool = Field(
+        False, description="Use automatic mixed precision"
+    )
+    compile_model: bool = Field(
+        False, description="Use torch.compile (PyTorch 2.0+)"
+    )
     num_workers: int = Field(0, description="DataLoader workers", ge=0)
     pin_memory: bool = Field(True, description="Pin memory for DataLoader")
 
@@ -242,15 +270,21 @@ class CDConfig(SamplerConfig):
     """Configuration for Contrastive Divergence."""
 
     persistent: bool = Field(False, description="Use persistent CD")
-    num_chains: int | None = Field(None, description="Number of persistent chains")
+    num_chains: int | None = Field(
+        None, description="Number of persistent chains"
+    )
 
 
 class ParallelTemperingConfig(SamplerConfig):
     """Configuration for Parallel Tempering."""
 
     num_temps: int = Field(10, description="Number of temperatures", gt=1)
-    min_beta: float = Field(0.01, description="Minimum inverse temperature", gt=0, le=1)
-    max_beta: float = Field(1.0, description="Maximum inverse temperature", gt=0, le=1)
+    min_beta: float = Field(
+        0.01, description="Minimum inverse temperature", gt=0, le=1
+    )
+    max_beta: float = Field(
+        1.0, description="Maximum inverse temperature", gt=0, le=1
+    )
     swap_every: int = Field(1, description="Swap frequency", gt=0)
 
     @validator("min_beta")
@@ -308,5 +342,7 @@ class GaussianRBMConfig(RBMConfig):
     """Configuration for Gaussian-Bernoulli RBM."""
 
     visible_type: str = Field("gaussian", description="Visible unit type")
-    sigma: float = Field(1.0, description="Standard deviation for Gaussian units", gt=0)
+    sigma: float = Field(
+        1.0, description="Standard deviation for Gaussian units", gt=0
+    )
     learn_sigma: bool = Field(False, description="Learn sigma during training")

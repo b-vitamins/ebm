@@ -31,14 +31,14 @@ class DeviceInfo:
         """Get memory statistics in MB."""
         stats = {}
         if self.total_memory is not None:
-            stats['total_mb'] = self.total_memory / 1024**2
+            stats["total_mb"] = self.total_memory / 1024**2
         if self.allocated_memory is not None:
-            stats['allocated_mb'] = self.allocated_memory / 1024**2
+            stats["allocated_mb"] = self.allocated_memory / 1024**2
         if self.cached_memory is not None:
-            stats['cached_mb'] = self.cached_memory / 1024**2
+            stats["cached_mb"] = self.cached_memory / 1024**2
 
         if self.total_memory and self.allocated_memory:
-            stats['utilization'] = self.allocated_memory / self.total_memory
+            stats["utilization"] = self.allocated_memory / self.total_memory
 
         return stats
 
@@ -67,35 +67,44 @@ class DeviceManager:
     @property
     def is_cuda(self) -> bool:
         """Check if current device is CUDA."""
-        return self._device.type == 'cuda'
+        return self._device.type == "cuda"
 
     @property
     def is_mps(self) -> bool:
         """Check if current device is MPS."""
-        return self._device.type == 'mps'
+        return self._device.type == "mps"
 
     @property
     def is_cpu(self) -> bool:
         """Check if current device is CPU."""
-        return self._device.type == 'cpu'
+        return self._device.type == "cpu"
 
-    def _resolve_device(self, device: str | torch.device | None) -> torch.device:
+    def _resolve_device(
+        self, device: str | torch.device | None
+    ) -> torch.device:
         """Resolve device specification to torch.device."""
-        if device is None or device == 'auto':
+        if device is None or device == "auto":
             # Auto-select best available device
             if torch.cuda.is_available():
-                return torch.device('cuda')
-            if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-                return torch.device('mps')
-            return torch.device('cpu')
+                return torch.device("cuda")
+            if (
+                hasattr(torch.backends, "mps")
+                and torch.backends.mps.is_available()
+            ):
+                return torch.device("mps")
+            return torch.device("cpu")
 
         if isinstance(device, str):
             device = torch.device(device)
 
         # Validate device
-        if device.type == 'cuda' and not torch.cuda.is_available():
-            raise RuntimeError("CUDA device requested but CUDA is not available")
-        if device.type == 'mps' and not (hasattr(torch.backends, 'mps') and torch.backends.mps.is_available()):
+        if device.type == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError(
+                "CUDA device requested but CUDA is not available"
+            )
+        if device.type == "mps" and not (
+            hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
+        ):
             raise RuntimeError("MPS device requested but MPS is not available")
 
         return device
@@ -125,7 +134,9 @@ class DeviceManager:
             pass
 
     @contextmanager
-    def device_placement(self, device: str | torch.device | None = None) -> Iterator[None]:
+    def device_placement(
+        self, device: str | torch.device | None = None
+    ) -> Iterator[None]:
         """Context manager for temporary device placement.
 
         Args:
@@ -211,28 +222,31 @@ class DeviceManager:
 
         lines = [f"Device: {info.name}"]
         if stats:
-            lines.append(f"Memory: {stats.get('allocated_mb', 0):.1f}/{stats.get('total_mb', 0):.1f} MB "
-                        f"({stats.get('utilization', 0)*100:.1f}% used)")
-            if 'cached_mb' in stats:
+            lines.append(
+                f"Memory: {stats.get('allocated_mb', 0):.1f}/{stats.get('total_mb', 0):.1f} MB "
+                f"({stats.get('utilization', 0) * 100:.1f}% used)"
+            )
+            if "cached_mb" in stats:
                 lines.append(f"Cached: {stats['cached_mb']:.1f} MB")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     @staticmethod
     def get_available_devices() -> list[torch.device]:
         """Get list of all available devices."""
-        devices = [torch.device('cpu')]
+        devices = [torch.device("cpu")]
 
         if torch.cuda.is_available():
             for i in range(torch.cuda.device_count()):
-                devices.append(torch.device(f'cuda:{i}'))
+                devices.append(torch.device(f"cuda:{i}"))
 
-        if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-            devices.append(torch.device('mps'))
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            devices.append(torch.device("mps"))
 
         return devices
 
     def __repr__(self) -> str:
+        """Return string representation for debugging."""
         return f"DeviceManager(device={self._device})"
 
 
@@ -245,7 +259,7 @@ def get_device_manager() -> DeviceManager:
     global _global_manager
     if _global_manager is None:
         # Initialize with auto device selection
-        _global_manager = DeviceManager('auto')
+        _global_manager = DeviceManager("auto")
     return _global_manager
 
 
@@ -268,23 +282,19 @@ def to_device(tensor: Tensor, device: torch.device | None = None) -> Tensor:
 
 
 def auto_device(fn):
-    """Decorator to automatically handle device placement.
+    """Automatically place tensors on the configured device."""
 
-    This decorator ensures that all tensor operations in the decorated
-    function use the global device manager's current device.
-    """
     def wrapper(*args, **kwargs):
         get_device_manager()
         # Could add more sophisticated device handling here
         return fn(*args, **kwargs)
+
     return wrapper
 
 
 def memory_efficient(fn):
-    """Decorator to run function with memory optimization.
+    """Run function while clearing device cache."""
 
-    Clears cache before and after function execution.
-    """
     def wrapper(*args, **kwargs):
         manager = get_device_manager()
         manager.clear_cache()
@@ -292,4 +302,5 @@ def memory_efficient(fn):
             return fn(*args, **kwargs)
         finally:
             manager.clear_cache()
+
     return wrapper

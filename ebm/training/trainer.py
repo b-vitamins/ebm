@@ -48,7 +48,7 @@ class Trainer(LoggerMixin):
         model: EnergyBasedModel,
         config: TrainingConfig,
         gradient_estimator: GradientEstimator,
-        callbacks: list[Callback] | None = None
+        callbacks: list[Callback] | None = None,
     ):
         """Initialize trainer.
 
@@ -79,13 +79,15 @@ class Trainer(LoggerMixin):
         # Training state
         self.current_epoch = 0
         self.global_step = 0
-        self.best_metric = float('inf')
+        self.best_metric = float("inf")
 
         # Setup mixed precision if requested
-        self.scaler = torch.cuda.amp.GradScaler() if config.mixed_precision else None
+        self.scaler = (
+            torch.cuda.amp.GradScaler() if config.mixed_precision else None
+        )
 
         # Compile model if requested (PyTorch 2.0+)
-        if config.compile_model and hasattr(torch, 'compile'):
+        if config.compile_model and hasattr(torch, "compile"):
             self.log_info("Compiling model with torch.compile")
             self.model = torch.compile(self.model)
 
@@ -93,29 +95,33 @@ class Trainer(LoggerMixin):
         """Create optimizer from configuration."""
         opt_config = self.config.optimizer
         opt_class = {
-            'adam': torch.optim.Adam,
-            'adamw': torch.optim.AdamW,
-            'sgd': torch.optim.SGD,
-            'rmsprop': torch.optim.RMSprop,
-            'lbfgs': torch.optim.LBFGS,
+            "adam": torch.optim.Adam,
+            "adamw": torch.optim.AdamW,
+            "sgd": torch.optim.SGD,
+            "rmsprop": torch.optim.RMSprop,
+            "lbfgs": torch.optim.LBFGS,
         }[opt_config.name]
 
         # Build optimizer arguments
         opt_args = {
-            'lr': opt_config.lr,
-            'weight_decay': opt_config.weight_decay,
+            "lr": opt_config.lr,
+            "weight_decay": opt_config.weight_decay,
         }
 
-        if opt_config.name in ['adam', 'adamw']:
-            opt_args.update({
-                'betas': opt_config.betas,
-                'eps': opt_config.eps,
-            })
-        elif opt_config.name == 'sgd':
-            opt_args.update({
-                'momentum': opt_config.momentum,
-                'nesterov': opt_config.nesterov,
-            })
+        if opt_config.name in ["adam", "adamw"]:
+            opt_args.update(
+                {
+                    "betas": opt_config.betas,
+                    "eps": opt_config.eps,
+                }
+            )
+        elif opt_config.name == "sgd":
+            opt_args.update(
+                {
+                    "momentum": opt_config.momentum,
+                    "nesterov": opt_config.nesterov,
+                }
+            )
 
         return opt_class(self.model.parameters(), **opt_args)
 
@@ -127,30 +133,32 @@ class Trainer(LoggerMixin):
         scheduler_type = self.config.optimizer.scheduler
         scheduler_params = self.config.optimizer.scheduler_params
 
-        if scheduler_type == 'step':
+        if scheduler_type == "step":
             return torch.optim.lr_scheduler.StepLR(
                 self.optimizer,
-                step_size=scheduler_params.get('step_size', 10),
-                gamma=scheduler_params.get('gamma', 0.1)
+                step_size=scheduler_params.get("step_size", 10),
+                gamma=scheduler_params.get("gamma", 0.1),
             )
-        if scheduler_type == 'cosine':
+        if scheduler_type == "cosine":
             return torch.optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=self.config.epochs,
-                eta_min=scheduler_params.get('eta_min', 0)
+                eta_min=scheduler_params.get("eta_min", 0),
             )
-        if scheduler_type == 'reduce_on_plateau':
+        if scheduler_type == "reduce_on_plateau":
             return torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
-                mode='min',
-                factor=scheduler_params.get('factor', 0.1),
-                patience=scheduler_params.get('patience', 10)
+                mode="min",
+                factor=scheduler_params.get("factor", 0.1),
+                patience=scheduler_params.get("patience", 10),
             )
         self.log_warning(f"Unknown scheduler type: {scheduler_type}")
         return None
 
-    def _setup_callbacks(self, callbacks: list[Callback] | None) -> CallbackList:
-        """Setup default and user callbacks."""
+    def _setup_callbacks(
+        self, callbacks: list[Callback] | None
+    ) -> CallbackList:
+        """Set up default and user callbacks."""
         default_callbacks = [
             MetricsCallback(),
             LoggingCallback(log_every=self.config.log_every),
@@ -161,7 +169,7 @@ class Trainer(LoggerMixin):
             default_callbacks.append(
                 CheckpointCallback(
                     checkpoint_dir=self.config.checkpoint_dir,
-                    save_every=self.config.checkpoint_every
+                    save_every=self.config.checkpoint_every,
                 )
             )
 
@@ -170,7 +178,7 @@ class Trainer(LoggerMixin):
             default_callbacks.append(
                 EarlyStoppingCallback(
                     patience=self.config.patience,
-                    min_delta=self.config.min_delta
+                    min_delta=self.config.min_delta,
                 )
             )
 
@@ -183,7 +191,7 @@ class Trainer(LoggerMixin):
         self,
         train_loader: DataLoader,
         val_loader: DataLoader | None = None,
-        num_epochs: int | None = None
+        num_epochs: int | None = None,
     ) -> dict[str, Any]:
         """Train the model.
 
@@ -204,38 +212,43 @@ class Trainer(LoggerMixin):
             train_batches=len(train_loader),
             val_batches=len(val_loader) if val_loader else 0,
             device=str(self.model.device),
-            optimizer=self.config.optimizer.name
+            optimizer=self.config.optimizer.name,
         )
 
         # Initialize model from data if needed
-        if hasattr(self.model, 'init_from_data'):
+        if hasattr(self.model, "init_from_data"):
             self.log_info("Initializing model from data statistics")
             self.model.init_from_data(train_loader)
 
         # Training loop
-        history = {'train': [], 'val': []}
+        history = {"train": [], "val": []}
 
         try:
             for epoch in range(self.current_epoch, num_epochs):
                 self.current_epoch = epoch
 
                 # Train epoch
-                with log_context(epoch=epoch, phase='train'):
+                with log_context(epoch=epoch, phase="train"):
                     train_metrics = self._train_epoch(train_loader)
-                    history['train'].append(train_metrics)
+                    history["train"].append(train_metrics)
 
                 # Validation
                 if val_loader and (epoch + 1) % self.config.eval_every == 0:
-                    with log_context(epoch=epoch, phase='validation'):
+                    with log_context(epoch=epoch, phase="validation"):
                         val_metrics = self._validate(val_loader)
-                        history['val'].append(val_metrics)
+                        history["val"].append(val_metrics)
                 else:
                     val_metrics = {}
 
                 # Learning rate scheduling
                 if self.scheduler:
-                    if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        metric = val_metrics.get('loss', train_metrics.get('loss', 0))
+                    if isinstance(
+                        self.scheduler,
+                        torch.optim.lr_scheduler.ReduceLROnPlateau,
+                    ):
+                        metric = val_metrics.get(
+                            "loss", train_metrics.get("loss", 0)
+                        )
                         self.scheduler.step(metric)
                     else:
                         self.scheduler.step()
@@ -253,13 +266,13 @@ class Trainer(LoggerMixin):
             "Training completed",
             final_epoch=self.current_epoch,
             total_steps=self.global_step,
-            best_metric=self.best_metric
+            best_metric=self.best_metric,
         )
 
         return {
-            'history': history,
-            'final_metrics': history['train'][-1] if history['train'] else {},
-            'best_metric': self.best_metric,
+            "history": history,
+            "final_metrics": history["train"][-1] if history["train"] else {},
+            "best_metric": self.best_metric,
         }
 
     def _train_epoch(self, train_loader: DataLoader) -> dict[str, float]:
@@ -282,7 +295,7 @@ class Trainer(LoggerMixin):
         pbar = tqdm(
             train_loader,
             desc=f"Epoch {self.current_epoch}",
-            disable=not self.config.get('show_progress', True)
+            disable=not self.config.get("show_progress", True),
         )
 
         epoch_start = time.time()
@@ -314,15 +327,17 @@ class Trainer(LoggerMixin):
 
         # Compute epoch metrics
         epoch_metrics = self.metrics.compute()
-        epoch_metrics['epoch_time'] = time.time() - epoch_start
-        epoch_metrics['lr'] = self.optimizer.param_groups[0]['lr']
+        epoch_metrics["epoch_time"] = time.time() - epoch_start
+        epoch_metrics["lr"] = self.optimizer.param_groups[0]["lr"]
 
         # Callback
         self.callbacks.on_epoch_end(self, self.model, epoch_metrics)
 
         return epoch_metrics
 
-    def _training_step(self, data: torch.Tensor) -> tuple[float, dict[str, float]]:
+    def _training_step(
+        self, data: torch.Tensor
+    ) -> tuple[float, dict[str, float]]:
         """Single training step.
 
         Args:
@@ -336,9 +351,7 @@ class Trainer(LoggerMixin):
         self.optimizer.zero_grad()
 
         # Estimate gradients
-        gradients = self.gradient_estimator.estimate_gradient(
-            self.model, data
-        )
+        gradients = self.gradient_estimator.estimate_gradient(self.model, data)
 
         # Convert to standard PyTorch gradients
         for name, param in self.model.named_parameters():
@@ -348,8 +361,7 @@ class Trainer(LoggerMixin):
         # Gradient clipping
         if self.config.grad_clip:
             torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(),
-                self.config.grad_clip
+                self.model.parameters(), self.config.grad_clip
             )
 
         # Optimization step
@@ -361,9 +373,7 @@ class Trainer(LoggerMixin):
 
         # Compute metrics
         metrics = self.gradient_estimator.compute_metrics(
-            self.model,
-            data,
-            self.gradient_estimator.last_negative_samples
+            self.model, data, self.gradient_estimator.last_negative_samples
         )
 
         # Add gradient norms
@@ -371,10 +381,10 @@ class Trainer(LoggerMixin):
         for param in self.model.parameters():
             if param.grad is not None:
                 total_norm += param.grad.norm().item() ** 2
-        metrics['grad_norm'] = total_norm ** 0.5
+        metrics["grad_norm"] = total_norm**0.5
 
         # Pseudo-loss for tracking
-        loss = metrics.get('energy_gap', 0.0)
+        loss = metrics.get("energy_gap", 0.0)
 
         return loss, metrics
 
@@ -399,17 +409,21 @@ class Trainer(LoggerMixin):
 
             # Compute validation metrics
             # For RBMs, we typically look at reconstruction error
-            if hasattr(self.model, 'reconstruct'):
+            if hasattr(self.model, "reconstruct"):
                 recon = self.model.reconstruct(data)
                 recon_error = (data - recon).pow(2).mean()
 
                 metrics = {
-                    'val_reconstruction_error': recon_error.item(),
-                    'val_free_energy': self.model.free_energy(data).mean().item(),
+                    "val_reconstruction_error": recon_error.item(),
+                    "val_free_energy": self.model.free_energy(data)
+                    .mean()
+                    .item(),
                 }
             else:
                 metrics = {
-                    'val_free_energy': self.model.free_energy(data).mean().item(),
+                    "val_free_energy": self.model.free_energy(data)
+                    .mean()
+                    .item(),
                 }
 
             val_metrics.update(metrics)
@@ -427,20 +441,25 @@ class Trainer(LoggerMixin):
             Path where checkpoint was saved
         """
         if path is None:
-            path = self.config.checkpoint_dir / f"checkpoint_epoch_{self.current_epoch}.pt"
+            path = (
+                self.config.checkpoint_dir
+                / f"checkpoint_epoch_{self.current_epoch}.pt"
+            )
 
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
         checkpoint = {
-            'epoch': self.current_epoch,
-            'global_step': self.global_step,
-            'model_state_dict': self.model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None,
-            'best_metric': self.best_metric,
-            'config': self.config.dict(),
-            'gradient_estimator': self.gradient_estimator.__class__.__name__,
+            "epoch": self.current_epoch,
+            "global_step": self.global_step,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict()
+            if self.scheduler
+            else None,
+            "best_metric": self.best_metric,
+            "config": self.config.dict(),
+            "gradient_estimator": self.gradient_estimator.__class__.__name__,
         }
 
         torch.save(checkpoint, path)
@@ -456,18 +475,18 @@ class Trainer(LoggerMixin):
         """
         checkpoint = torch.load(path, map_location=self.model.device)
 
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        if self.scheduler and checkpoint['scheduler_state_dict']:
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        if self.scheduler and checkpoint["scheduler_state_dict"]:
+            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
 
-        self.current_epoch = checkpoint['epoch']
-        self.global_step = checkpoint['global_step']
-        self.best_metric = checkpoint.get('best_metric', float('inf'))
+        self.current_epoch = checkpoint["epoch"]
+        self.global_step = checkpoint["global_step"]
+        self.best_metric = checkpoint.get("best_metric", float("inf"))
 
         self.log_info(
             f"Loaded checkpoint from {path}",
             epoch=self.current_epoch,
-            step=self.global_step
+            step=self.global_step,
         )

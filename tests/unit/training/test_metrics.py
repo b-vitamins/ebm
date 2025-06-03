@@ -26,29 +26,36 @@ class MockModel(LatentVariableModel):
         self.hbias = torch.nn.Parameter(torch.zeros(n_hidden))
 
     def free_energy(self, v, *, beta=None):
+        """Compute a simple quadratic free energy."""
         # Simple quadratic energy
         return 0.5 * (v**2).sum(dim=-1)
 
     def energy(self, x, *, beta=None, return_parts=False):
+        """Delegate to ``free_energy`` using visible portion."""
         return self.free_energy(x[:, : self.num_visible], beta=beta)
 
     def reconstruct(self, v, num_steps=1):
+        """Return noisy reconstruction of ``v``."""
         # Simple reconstruction with noise
         return v + torch.randn_like(v) * 0.1
 
     def sample_fantasy_particles(self, num_samples, num_steps):
+        """Generate random samples for evaluation."""
         return torch.randn(num_samples, self.num_visible)
 
     def log_probability(self, v, log_z=0.0):
+        """Compute log probability under the model."""
         return -self.free_energy(v) - log_z
 
     def sample_hidden(self, visible, *, beta=None, return_prob=False):
+        """Sample hidden layer given visible units."""
         prob = torch.sigmoid(visible @ self.W.T + self.hbias)
         if return_prob:
             return torch.bernoulli(prob), prob
         return torch.bernoulli(prob)
 
     def sample_visible(self, hidden, *, beta=None, return_prob=False):
+        """Sample visible layer given hidden units."""
         prob = torch.sigmoid(hidden @ self.W + self.vbias)
         if return_prob:
             return torch.bernoulli(prob), prob
@@ -56,10 +63,12 @@ class MockModel(LatentVariableModel):
 
     @property
     def device(self):
+        """Return the model device."""
         return torch.device("cpu")
 
     @property
     def dtype(self):
+        """Return the model dtype."""
         return torch.float32
 
 
@@ -255,12 +264,16 @@ class TestModelEvaluator:
         data = torch.randn(10, 10)
 
         # MSE error
-        error_mse = evaluator.reconstruction_error(data, num_steps=1, metric="mse")
+        error_mse = evaluator.reconstruction_error(
+            data, num_steps=1, metric="mse"
+        )
         assert error_mse.shape == (10,)
         assert torch.all(error_mse >= 0)
 
         # MAE error
-        error_mae = evaluator.reconstruction_error(data, num_steps=1, metric="mae")
+        error_mae = evaluator.reconstruction_error(
+            data, num_steps=1, metric="mae"
+        )
         assert error_mae.shape == (10,)
         assert torch.all(error_mae >= 0)
 
@@ -494,7 +507,9 @@ class TestTrainingDynamicsAnalyzer:
             # Plateaued metric
             plateau = 0.5 + np.random.randn() * 0.0001
 
-            analyzer.update({"loss": loss, "accuracy": acc, "plateau_metric": plateau})
+            analyzer.update(
+                {"loss": loss, "accuracy": acc, "plateau_metric": plateau}
+            )
 
         summary = analyzer.get_summary()
 

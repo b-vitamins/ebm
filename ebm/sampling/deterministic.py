@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as F  # noqa: N812
 from torch import Tensor
 
 from ebm.core.registry import register_sampler
@@ -27,7 +27,9 @@ class MeanFieldSampler(Sampler):
     we iteratively update the mean activations of each layer.
     """
 
-    def __init__(self, num_iter: int = 10, damping: float = 0.0, tol: float = 1e-4):
+    def __init__(
+        self, num_iter: int = 10, damping: float = 0.0, tol: float = 1e-4
+    ):
         """Initialize mean-field sampler.
 
         Args:
@@ -40,7 +42,7 @@ class MeanFieldSampler(Sampler):
         self.damping = damping
         self.tol = tol
 
-    def sample(
+    def sample(  # noqa: C901
         self,
         model: EnergyBasedModel,
         init_state: Tensor,
@@ -141,7 +143,7 @@ class TAPSampler(Sampler):
             if self.order == "tap3":
                 self.W3 = model.W**3
 
-    def sample(
+    def sample(  # noqa: C901
         self,
         model: EnergyBasedModel,
         init_state: Tensor,
@@ -186,16 +188,18 @@ class TAPSampler(Sampler):
 
             if self.order != "naive":
                 # Second-order TAP correction
-                correction_v = F.linear(m_h * (1 - m_h), self.W2.t()) * (0.5 - m_v)
+                correction_v = F.linear(m_h * (1 - m_h), self.W2.t()) * (
+                    0.5 - m_v
+                )
                 field_v += correction_v
 
                 if self.order == "tap3":
                     # Third-order correction
                     h2_var = m_h * (1 - m_h)
                     v2_var = m_v * (1 - m_v)
-                    correction3_v = F.linear(h2_var * (1 - 2 * m_h), self.W3.t()) * (
-                        1 / 3 - 2 * v2_var
-                    )
+                    correction3_v = F.linear(
+                        h2_var * (1 - 2 * m_h), self.W3.t()
+                    ) * (1 / 3 - 2 * v2_var)
                     field_v += correction3_v
 
             m_v_new = torch.sigmoid(field_v)
@@ -212,9 +216,9 @@ class TAPSampler(Sampler):
                     # Third-order correction
                     v2_var = m_v * (1 - m_v)
                     h2_var = m_h * (1 - m_h)
-                    correction3_h = F.linear(v2_var * (1 - 2 * m_v), self.W3) * (
-                        1 / 3 - 2 * h2_var
-                    )
+                    correction3_h = F.linear(
+                        v2_var * (1 - 2 * m_v), self.W3
+                    ) * (1 / 3 - 2 * h2_var)
                     field_h += correction3_h
 
             m_h_new = torch.sigmoid(field_h)
@@ -257,7 +261,9 @@ class TAPSampler(Sampler):
 class TAPGradientEstimator(GradientEstimator):
     """Gradient estimation using TAP approximation."""
 
-    def __init__(self, num_iter: int = 20, damping: float = 0.5, order: str = "tap2"):
+    def __init__(
+        self, num_iter: int = 20, damping: float = 0.5, order: str = "tap2"
+    ):
         """Initialize TAP gradient estimator.
 
         Args:
@@ -325,7 +331,9 @@ class BeliefPropagationSampler(Sampler):
     matrix has special structure.
     """
 
-    def __init__(self, num_iter: int = 50, damping: float = 0.5, tol: float = 1e-4):
+    def __init__(
+        self, num_iter: int = 50, damping: float = 0.5, tol: float = 1e-4
+    ):
         """Initialize BP sampler.
 
         Args:
@@ -370,11 +378,17 @@ class BeliefPropagationSampler(Sampler):
         # Initialize messages (log-space for stability)
         # Messages from visible to hidden
         msg_v_to_h = torch.zeros(
-            batch_size, model.num_visible, model.num_hidden, device=init_state.device
+            batch_size,
+            model.num_visible,
+            model.num_hidden,
+            device=init_state.device,
         )
         # Messages from hidden to visible
         msg_h_to_v = torch.zeros(
-            batch_size, model.num_hidden, model.num_visible, device=init_state.device
+            batch_size,
+            model.num_hidden,
+            model.num_visible,
+            device=init_state.device,
         )
 
         # BP iterations
@@ -390,14 +404,20 @@ class BeliefPropagationSampler(Sampler):
             new_msg_v_to_h = model.W.unsqueeze(0) * torch.tanh(field_v / 2)
 
             # Damping
-            msg_v_to_h = (1 - self.damping) * new_msg_v_to_h + self.damping * msg_v_to_h
+            msg_v_to_h = (
+                1 - self.damping
+            ) * new_msg_v_to_h + self.damping * msg_v_to_h
 
             # Update messages from hidden to visible
             field_h = model.hbias.unsqueeze(0).unsqueeze(-1)
-            field_h = field_h + msg_v_to_h.sum(dim=1, keepdim=True).transpose(-2, -1)
+            field_h = field_h + msg_v_to_h.sum(dim=1, keepdim=True).transpose(
+                -2, -1
+            )
 
             new_msg_h_to_v = model.W.t().unsqueeze(0) * torch.tanh(field_h / 2)
-            msg_h_to_v = (1 - self.damping) * new_msg_h_to_v + self.damping * msg_h_to_v
+            msg_h_to_v = (
+                1 - self.damping
+            ) * new_msg_h_to_v + self.damping * msg_h_to_v
 
             # Check convergence
             if (msg_v_to_h - old_msg_v_to_h).abs().max() < self.tol:

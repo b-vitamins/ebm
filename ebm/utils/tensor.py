@@ -109,42 +109,42 @@ def batch_outer_product(a: Tensor, b: Tensor) -> Tensor:
     return torch.einsum("bi,bj->bij", a, b)
 
 
-def batch_quadratic_form(x: Tensor, A: Tensor) -> Tensor:
+def batch_quadratic_form(x: Tensor, matrix: Tensor) -> Tensor:
     """Compute x^T A x for batched inputs.
 
     Args:
         x: Tensor of shape (batch_size, n)
-        A: Matrix of shape (n, n) or (batch_size, n, n)
+        matrix: Matrix of shape (n, n) or (batch_size, n, n)
 
     Returns
     -------
         Quadratic form values of shape (batch_size,)
     """
-    if A.dim() == 2:
+    if matrix.dim() == 2:
         # Single matrix for all batch elements
-        return torch.einsum("bi,ij,bj->b", x, A, x)
+        return torch.einsum("bi,ij,bj->b", x, matrix, x)
     # Different matrix for each batch element
-    return torch.einsum("bi,bij,bj->b", x, A, x)
+    return torch.einsum("bi,bij,bj->b", x, matrix, x)
 
 
-def batch_mv(A: Tensor, x: Tensor) -> Tensor:
+def batch_mv(matrix: Tensor, x: Tensor) -> Tensor:
     """Batched matrix-vector multiplication.
 
     Args:
-        A: Matrix of shape (n, m) or (batch_size, n, m)
+        matrix: Matrix of shape (n, m) or (batch_size, n, m)
         x: Vector of shape (m,) or (batch_size, m)
 
     Returns
     -------
         Result of shape (n,) or (batch_size, n)
     """
-    if A.dim() == 2 and x.dim() == 1:
-        return torch.mv(A, x)
-    if A.dim() == 2 and x.dim() == 2:
-        return torch.einsum("nm,bm->bn", A, x)
-    if A.dim() == 3 and x.dim() == 1:
-        return torch.einsum("bnm,m->bn", A, x)
-    return torch.einsum("bnm,bm->bn", A, x)
+    if matrix.dim() == 2 and x.dim() == 1:
+        return torch.mv(matrix, x)
+    if matrix.dim() == 2 and x.dim() == 2:
+        return torch.einsum("nm,bm->bn", matrix, x)
+    if matrix.dim() == 3 and x.dim() == 1:
+        return torch.einsum("bnm,m->bn", matrix, x)
+    return torch.einsum("bnm,bm->bn", matrix, x)
 
 
 def shape_for_broadcast(
@@ -254,9 +254,10 @@ def create_padding_mask(
     return mask < lengths.unsqueeze(1)
 
 
-
 @overload
-def split_tensor(tensor: Tensor, split_size: int, dim: int = 0) -> list[Tensor]: ...
+def split_tensor(
+    tensor: Tensor, split_size: int, dim: int = 0
+) -> list[Tensor]: ...
 
 
 @overload
@@ -280,7 +281,9 @@ def split_tensor(
         List of tensor chunks
     """
     if isinstance(split_size_or_sizes, int):
-        return torch.chunk(tensor, tensor.shape[dim] // split_size_or_sizes, dim=dim)
+        return torch.chunk(
+            tensor, tensor.shape[dim] // split_size_or_sizes, dim=dim
+        )
     return torch.split(tensor, split_size_or_sizes, dim=dim)
 
 
