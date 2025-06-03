@@ -17,6 +17,8 @@ from ebm.utils.tensor import log_sum_exp
 
 from .base import AnnealedSampler, GradientEstimator
 
+PROB_THRESHOLD = 0.5
+
 
 @register_sampler("parallel_tempering", aliases=["pt", "replica_exchange"])
 class ParallelTempering(AnnealedSampler):
@@ -89,7 +91,7 @@ class ParallelTempering(AnnealedSampler):
 
         # For binary units, make them actually binary
         if hasattr(model, "_sample_from_prob"):
-            v_init = (v_init > 0.5).to(dtype)
+            v_init = (v_init > PROB_THRESHOLD).to(dtype)
 
         self.chains = v_init
         self.chain_temps = (
@@ -174,7 +176,7 @@ class ParallelTempering(AnnealedSampler):
         batch_size = self.chains.shape[0]
 
         # Randomly choose even or odd pairs
-        if torch.rand(1).item() < 0.5:
+        if torch.rand(1).item() < PROB_THRESHOLD:
             # Even pairs: (0,1), (2,3), ...
             pairs = torch.arange(0, self.num_temps - 1, 2)
         else:

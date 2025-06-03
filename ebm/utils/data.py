@@ -18,6 +18,9 @@ from torchvision import datasets, transforms
 from ebm.core.logging_utils import logger
 from ebm.models.base import EnergyBasedModel
 
+STRIPE_PROB = 0.5
+VERTICAL_PROB = 0.3
+
 
 class BinaryTransform:
     """Transform to binarize data using various methods."""
@@ -330,12 +333,12 @@ class SyntheticDataset(Dataset):
 
             # Add horizontal stripes
             for i in range(0, self.n_features, 10):
-                mask = torch.rand(self.n_samples) < 0.5
+                mask = torch.rand(self.n_samples) < STRIPE_PROB
                 data[mask, i : i + 5] = 1
 
             # Add vertical patterns
             for i in range(self.n_samples):
-                if torch.rand(1) < 0.3:
+                if torch.rand(1) < VERTICAL_PROB:
                     pattern_idx = torch.randperm(self.n_features)[:10]
                     data[i, pattern_idx] = 1
 
@@ -446,16 +449,19 @@ def compute_data_statistics(
     min_x = None
     max_x = None
 
-    for batch in data_loader:
+    for data_batch in data_loader:
         # Handle (data, label) format
-        if isinstance(batch, list | tuple):
-            batch = batch[0]
+        batch_tensor = (
+            data_batch[0]
+            if isinstance(data_batch, list | tuple)
+            else data_batch
+        )
 
-        batch = batch.to(device)
-        n_samples += batch.shape[0]
+        batch_tensor = batch_tensor.to(device)
+        n_samples += batch_tensor.shape[0]
 
         # Flatten batch
-        batch_flat = batch.view(batch.shape[0], -1)
+        batch_flat = batch_tensor.view(batch_tensor.shape[0], -1)
 
         if sum_x is None:
             sum_x = batch_flat.sum(dim=0)

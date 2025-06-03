@@ -332,11 +332,14 @@ class SimpleIS(PartitionFunctionEstimator):
         elif self.proposal == "data" and data_loader is not None:
             # Use data distribution as proposal
             samples = []
-            for batch in data_loader:
-                if isinstance(batch, list | tuple):
-                    batch = batch[0]
-                samples.append(batch)
-                if len(samples) * batch.shape[0] >= self.num_samples:
+            for batch_data in data_loader:
+                data_tensor = (
+                    batch_data[0]
+                    if isinstance(batch_data, list | tuple)
+                    else batch_data
+                )
+                samples.append(data_tensor)
+                if len(samples) * data_tensor.shape[0] >= self.num_samples:
                     break
 
             samples = torch.cat(samples, 0)[: self.num_samples].to(device)

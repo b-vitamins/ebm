@@ -16,6 +16,11 @@ from matplotlib import animation
 from matplotlib.figure import Figure
 from torch import Tensor
 
+GRAY_NDIMS = 2
+IMAGE_NDIM_3 = 3
+IMAGE_NDIM_4 = 4
+MARKER_THRESHOLD = 50
+
 try:
     import seaborn as sns
 
@@ -41,74 +46,35 @@ def setup_style(style: str = "whitegrid") -> None:
         )
 
 
-def tile_images(  # noqa: C901
-    images: Tensor | np.ndarray,
-    nrows: int | None = None,
-    ncols: int | None = None,
-    padding: int = 2,
-    pad_value: float = 0.0,
-    scale_each: bool = False,
-    normalize: bool = True,
-) -> np.ndarray:
-    """Tile images into a grid.
-
-    Args:
-        images: Images of shape (N, H, W) or (N, C, H, W)
-        nrows: Number of rows (auto-computed if None)
-        ncols: Number of columns (auto-computed if None)
-        padding: Padding between images
-        pad_value: Value for padding
-        scale_each: Whether to scale each image independently
-        normalize: Whether to normalize to [0, 1]
-
-    Returns
-    -------
-        Tiled image array
-    """
+def _to_numpy(images: Tensor | np.ndarray) -> np.ndarray:
+    """Convert images to numpy array."""
     if isinstance(images, Tensor):
-        images = images.detach().cpu().numpy()
+        return images.detach().cpu().numpy()
+    return images
 
-    # Handle different image formats
-    if images.ndim == 3:
-        n, h, w = images.shape
-        c = 1
-        images = images[:, np.newaxis]
-    elif images.ndim == 4:
-        n, c, h, w = images.shape
+
+def _normalize(images: np.ndarray, scale_each: bool) -> np.ndarray:
+    if scale_each:
+        for i in range(images.shape[0]):
+            img_min, img_max = images[i].min(), images[i].max()
+            if img_max > img_min:
+                images[i] = (images[i] - img_min) / (img_max - img_min)
     else:
-        raise ValueError(f"Expected 3D or 4D array, got {images.ndim}D")
+        img_min, img_max = images.min(), images.max()
+        if img_max > img_min:
+            images = (images - img_min) / (img_max - img_min)
+    return images
 
-    # Auto-compute grid size
-    if nrows is None and ncols is None:
-        nrows = int(np.ceil(np.sqrt(n)))
-        ncols = int(np.ceil(n / nrows))
-    elif nrows is None:
-        nrows = int(np.ceil(n / ncols))
-    elif ncols is None:
-        ncols = int(np.ceil(n / nrows))
 
-    # Pad if necessary
+def _pad(
+    images: np.ndarray, nrows: int, ncols: int, padding: int, pad_value: float
+) -> np.ndarray:
+    n, c, h, w = images.shape
     n_pad = nrows * ncols - n
     if n_pad > 0:
         padding_shape = (n_pad, c, h, w)
         padding_images = np.full(padding_shape, pad_value, dtype=images.dtype)
         images = np.concatenate([images, padding_images], axis=0)
-
-    # Normalize
-    if normalize:
-        if scale_each:
-            # Scale each image independently
-            for i in range(images.shape[0]):
-                img_min, img_max = images[i].min(), images[i].max()
-                if img_max > img_min:
-                    images[i] = (images[i] - img_min) / (img_max - img_min)
-        else:
-            # Global scaling
-            img_min, img_max = images.min(), images.max()
-            if img_max > img_min:
-                images = (images - img_min) / (img_max - img_min)
-
-    # Add padding
     if padding > 0:
         pad_h = h + 2 * padding
         pad_w = w + 2 * padding
@@ -118,17 +84,52 @@ def tile_images(  # noqa: C901
         padded[:, :, padding:-padding, padding:-padding] = images
         images = padded
         h, w = pad_h, pad_w
+    return images.reshape(nrows, ncols, c, h, w)
 
-    # Reshape into grid
-    images = images.reshape(nrows, ncols, c, h, w)
-    images = images.transpose(0, 3, 1, 4, 2)  # (nrows, h, ncols, w, c)
-    images = images.reshape(nrows * h, ncols * w, c)
 
-    # Squeeze out channel dimension for grayscale
+def tile_images(
+    images: Tensor | np.ndarray,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    padding: int = 2,
+    pad_value: float = 0.0,
+    scale_each: bool = False,
+    normalize: bool = True,
+) -> np.ndarray:
+    """Tile images into a grid."""
+    images_np = _to_numpy(images)
+
+    if images_np.ndim == IMAGE_NDIM_3:
+        n, h, w = images_np.shape
+        c = 1
+        images_np = images_np[:, np.newaxis]
+    elif images_np.ndim == IMAGE_NDIM_4:
+        n, c, h, w = images_np.shape
+    else:
+        raise ValueError(f"Expected 3D or 4D array, got {images_np.ndim}D")
+
+    if nrows is None and ncols is None:
+        nrows = int(np.ceil(np.sqrt(n)))
+        ncols = int(np.ceil(n / nrows))
+    elif nrows is None:
+        nrows = int(np.ceil(n / ncols))
+    elif ncols is None:
+        ncols = int(np.ceil(n / nrows))
+
+    if normalize:
+        images_np = _normalize(images_np, scale_each)
+
+    images_np = _pad(images_np, nrows, ncols, padding, pad_value)
+
+    images_np = images_np.transpose(0, 3, 1, 4, 2)
+    images_np = images_np.reshape(
+        nrows * h + 2 * padding, ncols * w + 2 * padding, c
+    )
+
     if c == 1:
-        images = images.squeeze(-1)
+        images_np = images_np.squeeze(-1)
 
-    return images
+    return images_np
 
 
 def visualize_filters(
@@ -211,7 +212,7 @@ def visualize_samples(
         Matplotlib figure
     """
     # Handle flattened samples
-    if samples.dim() == 2:
+    if samples.dim() == GRAY_NDIMS:
         n, d = samples.shape
         # Try to reshape to square images
         side = int(np.sqrt(d))
@@ -230,7 +231,7 @@ def visualize_samples(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Determine colormap
-    cmap = "gray" if tiled.ndim == 2 else None
+    cmap = "gray" if tiled.ndim == GRAY_NDIMS else None
 
     ax.imshow(tiled, cmap=cmap, aspect="auto")
     ax.set_title(title)
@@ -308,7 +309,7 @@ def plot_training_curves(  # noqa: C901
                     epochs,
                     values,
                     label=phase,
-                    marker="o" if len(values) < 50 else None,
+                    marker="o" if len(values) < MARKER_THRESHOLD else None,
                 )
 
         ax.set_xlabel("Epoch")
@@ -428,7 +429,7 @@ def plot_reconstruction_comparison(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    cmap = "gray" if tiled.ndim == 2 else None
+    cmap = "gray" if tiled.ndim == GRAY_NDIMS else None
     ax.imshow(tiled, cmap=cmap, aspect="auto")
     ax.set_title(title)
     ax.axis("off")
@@ -465,10 +466,9 @@ def create_animation(
     """
     # Prepare frames
     frames_np = []
-    for frame in frames:
-        if isinstance(frame, Tensor):
-            frame = frame.detach().cpu().numpy()
-        frames_np.append(frame)
+    for frm in frames:
+        frm_np = frm.detach().cpu().numpy() if isinstance(frm, Tensor) else frm
+        frames_np.append(frm_np)
 
     # Create figure
     fig, ax = plt.subplots()
@@ -476,7 +476,7 @@ def create_animation(
     ax.axis("off")
 
     # Determine colormap
-    cmap = "gray" if frames_np[0].ndim == 2 else None
+    cmap = "gray" if frames_np[0].ndim == GRAY_NDIMS else None
 
     # Create animation
     im = ax.imshow(frames_np[0], cmap=cmap, aspect="auto")

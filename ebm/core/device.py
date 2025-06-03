@@ -254,23 +254,26 @@ class DeviceManager:
         return f"DeviceManager(device={self._device})"
 
 
-# Global device manager instance
-_global_manager: DeviceManager | None = None
+class _ManagerHolder:
+    """Simple container for the global :class:`DeviceManager`."""
+
+    manager: DeviceManager | None = None
+
+
+_manager_holder = _ManagerHolder()
 
 
 def get_device_manager() -> DeviceManager:
     """Get global device manager instance."""
-    global _global_manager
-    if _global_manager is None:
+    if _manager_holder.manager is None:
         # Initialize with auto device selection
-        _global_manager = DeviceManager("auto")
-    return _global_manager
+        _manager_holder.manager = DeviceManager("auto")
+    return _manager_holder.manager
 
 
 def set_device(device: str | torch.device | None) -> None:
     """Set global device."""
-    global _global_manager
-    _global_manager = DeviceManager(device)
+    _manager_holder.manager = DeviceManager(device)
 
 
 def get_device() -> torch.device:
