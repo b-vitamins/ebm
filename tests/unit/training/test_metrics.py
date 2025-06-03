@@ -18,43 +18,67 @@ from ebm.training.metrics import (
 class MockModel(LatentVariableModel):
     """Mock model for testing metrics."""
 
-    def __init__(self, n_visible=10, n_hidden=5) -> None:
+    def __init__(self, n_visible: int = 10, n_hidden: int = 5) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = torch.nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
         self.vbias = torch.nn.Parameter(torch.zeros(n_visible))
         self.hbias = torch.nn.Parameter(torch.zeros(n_hidden))
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Compute a simple quadratic free energy."""
         # Simple quadratic energy
         return 0.5 * (v**2).sum(dim=-1)
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor:
         """Delegate to ``free_energy`` using visible portion."""
         return self.free_energy(x[:, : self.num_visible], beta=beta)
 
-    def reconstruct(self, v, num_steps=1):
+    def reconstruct(self, v: torch.Tensor, num_steps: int = 1) -> torch.Tensor:
         """Return noisy reconstruction of ``v``."""
         # Simple reconstruction with noise
         return v + torch.randn_like(v) * 0.1
 
-    def sample_fantasy_particles(self, num_samples, num_steps):
+    def sample_fantasy_particles(
+        self, num_samples: int, num_steps: int
+    ) -> torch.Tensor:
         """Generate random samples for evaluation."""
         return torch.randn(num_samples, self.num_visible)
 
-    def log_probability(self, v, log_z=0.0):
+    def log_probability(
+        self, v: torch.Tensor, log_z: float = 0.0
+    ) -> torch.Tensor:
         """Compute log probability under the model."""
         return -self.free_energy(v) - log_z
 
-    def sample_hidden(self, visible, *, beta=None, return_prob=False):
+    def sample_hidden(
+        self,
+        visible: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample hidden layer given visible units."""
         prob = torch.sigmoid(visible @ self.W.T + self.hbias)
         if return_prob:
             return torch.bernoulli(prob), prob
         return torch.bernoulli(prob)
 
-    def sample_visible(self, hidden, *, beta=None, return_prob=False):
+    def sample_visible(
+        self,
+        hidden: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample visible layer given hidden units."""
         prob = torch.sigmoid(hidden @ self.W + self.vbias)
         if return_prob:
@@ -62,12 +86,12 @@ class MockModel(LatentVariableModel):
         return torch.bernoulli(prob)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return the model device."""
         return torch.device("cpu")
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return the model dtype."""
         return torch.float32
 

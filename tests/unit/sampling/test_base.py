@@ -189,12 +189,12 @@ class TestGibbsSampler:
         model = Mock(spec=LatentVariableModel)
         counter = 0
 
-        def mock_sample_hidden(v, **kwargs):
+        def mock_sample_hidden(v: torch.Tensor, **kwargs: Any) -> torch.Tensor:
             nonlocal counter
             counter += 1
             return torch.rand_like(v) + counter * 0.01
 
-        def mock_sample_visible(h, **kwargs):
+        def mock_sample_visible(h: torch.Tensor, **kwargs: Any) -> torch.Tensor:
             return torch.rand_like(h) + counter * 0.01
 
         model.sample_hidden.side_effect = mock_sample_hidden

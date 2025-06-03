@@ -20,14 +20,20 @@ from ebm.utils.tensor import batch_outer_product
 class MockLatentModel(LatentVariableModel):
     """Mock latent variable model for testing."""
 
-    def __init__(self, n_visible=20, n_hidden=10) -> None:
+    def __init__(self, n_visible: int = 20, n_hidden: int = 10) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
         self.vbias = nn.Parameter(torch.zeros(n_visible))
         self.hbias = nn.Parameter(torch.zeros(n_hidden))
 
-    def sample_hidden(self, visible, *, beta=None, return_prob=False):
+    def sample_hidden(
+        self,
+        visible: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample hidden units from visible layer."""
         pre_h = visible @ self.W.T + self.hbias
         if beta is not None:
@@ -39,7 +45,13 @@ class MockLatentModel(LatentVariableModel):
             return sample_h, prob_h
         return sample_h
 
-    def sample_visible(self, hidden, *, beta=None, return_prob=False):
+    def sample_visible(
+        self,
+        hidden: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_prob: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Sample visible units from hidden layer."""
         pre_v = hidden @ self.W + self.vbias
         if beta is not None:
@@ -51,7 +63,9 @@ class MockLatentModel(LatentVariableModel):
             return sample_v, prob_v
         return sample_v
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: torch.Tensor | None = None
+    ) -> torch.Tensor:
         """Compute free energy of visible units."""
         pre_h = v @ self.W.T + self.hbias
         if beta is not None:
@@ -63,21 +77,27 @@ class MockLatentModel(LatentVariableModel):
         return -v_term - h_term
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return device of model parameters."""
         return self.W.device
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return dtype of model parameters."""
         return self.W.dtype
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: torch.Tensor | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor:
         """Return constant energy (not used in CD)."""
         # Not used in CD
         return torch.zeros(x.shape[0])
 
-    def named_parameters(self):
+    def named_parameters(self) -> list[tuple[str, nn.Parameter]]:
         """Return model parameters as name-parameter pairs."""
         return [("W", self.W), ("vbias", self.vbias), ("hbias", self.hbias)]
 

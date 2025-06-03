@@ -1,6 +1,7 @@
 """Unit tests for partition function estimation."""
 
 import math
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -15,6 +16,9 @@ from ebm.inference.partition import (
     SimpleIS,
 )
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
+
+if TYPE_CHECKING:  # pragma: no cover - type-checking imports
+    from ebm.models.rbm.base import RBMAISAdapter
 
 
 class MockRBM(LatentVariableModel):
@@ -88,7 +92,7 @@ class MockRBM(LatentVariableModel):
             v = self.sample_visible(h)
         return v
 
-    def ais_adapter(self) -> "RBMAISAdapter":
+    def ais_adapter(self) -> RBMAISAdapter:
         """Create AIS adapter."""
         from ebm.models.rbm.base import RBMAISAdapter
 
