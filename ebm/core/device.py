@@ -33,11 +33,11 @@ class DeviceInfo:
         """Get memory statistics in MB."""
         stats = {}
         if self.total_memory is not None:
-            stats["total_mb"] = self.total_memory / 1024**2
+            stats["total_mb"] = self.total_memory / (1.024 * 1_000_000)
         if self.allocated_memory is not None:
-            stats["allocated_mb"] = self.allocated_memory / 1024**2
+            stats["allocated_mb"] = self.allocated_memory / (1.024 * 1_000_000)
         if self.cached_memory is not None:
-            stats["cached_mb"] = self.cached_memory / 1024**2
+            stats["cached_mb"] = self.cached_memory / (1.024 * 1_000_000)
 
         if self.total_memory and self.allocated_memory:
             stats["utilization"] = self.allocated_memory / self.total_memory
@@ -88,7 +88,7 @@ class DeviceManager:
         if device is None or device == "auto":
             # Auto-select best available device
             if torch.cuda.is_available():
-                return torch.device("cuda")
+                return torch.device("cuda:0")
             if (
                 hasattr(torch.backends, "mps")
                 and torch.backends.mps.is_available()
@@ -104,6 +104,9 @@ class DeviceManager:
             raise RuntimeError(
                 "CUDA device requested but CUDA is not available"
             )
+        if device.type == "cuda" and device.index is not None:
+            if device.index >= torch.cuda.device_count():
+                raise RuntimeError("CUDA device index out of range")
         if device.type == "mps" and not (
             hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
         ):

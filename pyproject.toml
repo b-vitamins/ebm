@@ -189,7 +189,7 @@ addopts = [
     "--verbose",
     "--strict-markers",
     "--tb=short",
-    "--cov=ebm",
+    "--cov=ebm/core",
     "--cov-report=term-missing",
     "--cov-report=html",
     "--cov-report=xml",

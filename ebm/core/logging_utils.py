@@ -85,8 +85,8 @@ class LogConfig:
             structlog.processors.UnicodeDecoder(),
         ]
 
-        # Add metric processor if enabled
-        if self.metrics:
+        # Add metric processor if enabled and not using structured JSON output
+        if self.metrics and not self.structured:
             processors.append(MetricProcessor())
 
         # Configure output format
@@ -127,9 +127,12 @@ class LogConfig:
         logging.basicConfig(
             level=self.level,
             handlers=handlers,
-            format="%(message)s"
-            if self.structured
-            else "%(asctime)s [%(levelname)s] %(message)s",
+            format=(
+                "%(message)s"
+                if self.structured
+                else "%(asctime)s [%(levelname)s] %(message)s"
+            ),
+            force=True,
         )
 
         return structlog.get_logger()
@@ -145,11 +148,20 @@ class MetricProcessor:
         metrics = {}
 
         # Look for common metric patterns
+        metric_keys = {
+            "loss",
+            "accuracy",
+            "learning_rate",
+            "batch_size",
+            "grad_norm",
+        }
         for key, value in list(event_dict.items()):
-            if key.endswith(("_loss", "_error", "_accuracy", "_score")):
-                if isinstance(value, int | float):
-                    metrics[key] = value
-                    event_dict.pop(key)
+            if (
+                key in metric_keys
+                or key.endswith(("_loss", "_error", "_accuracy", "_score"))
+            ) and isinstance(value, (int, float)):
+                metrics[key] = value
+                event_dict.pop(key)
             elif key in {"epoch", "step", "iteration", "batch"}:
                 metrics[key] = value
 
@@ -251,25 +263,26 @@ def log_function_call(
 
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            logger.debug("Calling %s", func.__name__, args=args, kwargs=kwargs)
+            logger.debug(
+                f"Calling {func.__name__}", args=args, kwargs=kwargs
+            )
             start_time = time.perf_counter()
 
             try:
                 result = func(*args, **kwargs)
             except Exception as exc:
                 duration = time.perf_counter() - start_time
-                logger.exception(
-                    "Failed %s",
-                    func.__name__,
+                logger.error(
+                    f"Failed {func.__name__}",
                     duration=duration,
                     error=str(exc),
+                    exc_info=True,
                 )
                 raise
             else:
                 duration = time.perf_counter() - start_time
                 logger.debug(
-                    "Completed %s",
-                    func.__name__,
+                    f"Completed {func.__name__}",
                     duration=duration,
                     result_type=type(result).__name__,
                 )
