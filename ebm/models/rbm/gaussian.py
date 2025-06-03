@@ -343,14 +343,17 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
         count = 0
 
         with torch.no_grad():
-            for batch in data_loader:
-                if isinstance(batch, list | tuple):
-                    batch = batch[0]
-                batch = self.to_device(batch)
+            for data_batch in data_loader:
+                batch_tensor = (
+                    data_batch[0]
+                    if isinstance(data_batch, list | tuple)
+                    else data_batch
+                )
+                batch_tensor = self.to_device(batch_tensor)
 
-                sum_x += batch.sum(dim=0)
-                sum_x_sq += (batch**2).sum(dim=0)
-                count += batch.shape[0]
+                sum_x += batch_tensor.sum(dim=0)
+                sum_x_sq += (batch_tensor**2).sum(dim=0)
+                count += batch_tensor.shape[0]
 
         # Compute mean and std
         mean = sum_x / count

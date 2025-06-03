@@ -15,6 +15,9 @@ from torch import Tensor
 
 from ebm.core.types_ import Device, DType, Shape, TensorLike
 
+MAT_DIM_2 = 2
+MAT_DIM_3 = 3
+
 
 def ensure_tensor(
     x: TensorLike, dtype: DType | None = None, device: Device | None = None
@@ -120,7 +123,7 @@ def batch_quadratic_form(x: Tensor, matrix: Tensor) -> Tensor:
     -------
         Quadratic form values of shape (batch_size,)
     """
-    if matrix.dim() == 2:
+    if matrix.dim() == MAT_DIM_2:
         # Single matrix for all batch elements
         return torch.einsum("bi,ij,bj->b", x, matrix, x)
     # Different matrix for each batch element
@@ -138,11 +141,11 @@ def batch_mv(matrix: Tensor, x: Tensor) -> Tensor:
     -------
         Result of shape (n,) or (batch_size, n)
     """
-    if matrix.dim() == 2 and x.dim() == 1:
+    if matrix.dim() == MAT_DIM_2 and x.dim() == 1:
         return torch.mv(matrix, x)
-    if matrix.dim() == 2 and x.dim() == 2:
+    if matrix.dim() == MAT_DIM_2 and x.dim() == MAT_DIM_2:
         return torch.einsum("nm,bm->bn", matrix, x)
-    if matrix.dim() == 3 and x.dim() == 1:
+    if matrix.dim() == MAT_DIM_3 and x.dim() == 1:
         return torch.einsum("bnm,m->bn", matrix, x)
     return torch.einsum("bnm,bm->bn", matrix, x)
 

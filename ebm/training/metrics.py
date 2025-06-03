@@ -16,6 +16,11 @@ from torch import Tensor
 
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
+CORR_DIM = 2
+MIN_HISTORY_LEN = 10
+PLATEAU_STD_WINDOW = 20
+THRESH_MULTIPLIER = 10
+
 
 @dataclass
 class MetricValue:
@@ -270,7 +275,7 @@ class ModelEvaluator:
         metrics["std_error"] = (real_std - gen_std).abs().mean().item()
 
         # Correlation comparison
-        if real_data.dim() == 2:
+        if real_data.dim() == CORR_DIM:
             real_corr = torch.corrcoef(real_data.T)
             gen_corr = torch.corrcoef(generated_data.T)
             metrics["corr_error"] = (real_corr - gen_corr).abs().mean().item()
@@ -345,7 +350,10 @@ class TrainingDynamicsAnalyzer:
         -------
             Convergence rate (negative = converging)
         """
-        if metric not in self.history or len(self.history[metric]) < 10:
+        if (
+            metric not in self.history
+            or len(self.history[metric]) < MIN_HISTORY_LEN
+        ):
             return None
 
         values = self.history[metric][-self.window_size :]
@@ -375,7 +383,10 @@ class TrainingDynamicsAnalyzer:
         -------
             Oscillation score (0 = no oscillation, 1 = high oscillation)
         """
-        if metric not in self.history or len(self.history[metric]) < 10:
+        if (
+            metric not in self.history
+            or len(self.history[metric]) < MIN_HISTORY_LEN
+        ):
             return None
 
         values = np.array(self.history[metric][-self.window_size :])
@@ -406,20 +417,25 @@ class TrainingDynamicsAnalyzer:
         -------
             (is_plateau, steps_in_plateau)
         """
-        if metric not in self.history or len(self.history[metric]) < 10:
+        if (
+            metric not in self.history
+            or len(self.history[metric]) < MIN_HISTORY_LEN
+        ):
             return False, None
 
         values = self.history[metric][-self.window_size :]
 
         # Check variance in recent values
         recent_std = (
-            np.std(values[-20:]) if len(values) >= 20 else np.std(values)
+            np.std(values[-PLATEAU_STD_WINDOW:])
+            if len(values) >= PLATEAU_STD_WINDOW
+            else np.std(values)
         )
 
         if recent_std < threshold:
             # Find when plateau started
             for i in range(len(values) - 1, -1, -1):
-                if abs(values[i] - values[-1]) > threshold * 10:
+                if abs(values[i] - values[-1]) > threshold * THRESH_MULTIPLIER:
                     return True, len(values) - i - 1
             return True, len(values)
 

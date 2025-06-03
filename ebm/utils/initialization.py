@@ -17,6 +17,8 @@ from torch import Tensor, nn
 
 from ebm.core.types_ import InitStrategy
 
+MATRIX_DIM = 2
+
 
 class InitMethod(str, Enum):
     """Enumeration of initialization methods."""
@@ -57,6 +59,76 @@ class Initializer:
         self.kwargs = kwargs
         self._init_fn = self._resolve_init_fn()
 
+    def _resolve_from_string(self, method: str) -> Callable[[Tensor], None]:
+        """Resolve a string method name to an initialization function."""
+        method = method.lower()
+
+        mapping: dict[str, Callable[[Tensor], None]] = {
+            InitMethod.ZEROS: nn.init.zeros_,
+            "zero": nn.init.zeros_,
+            InitMethod.ONES: nn.init.ones_,
+            "one": nn.init.ones_,
+            InitMethod.CONSTANT: lambda t: nn.init.constant_(
+                t, self.kwargs.get("val", 0.0)
+            ),
+            InitMethod.NORMAL: lambda t: nn.init.normal_(
+                t,
+                mean=self.kwargs.get("mean", 0.0),
+                std=self.kwargs.get("std", 0.01),
+            ),
+            InitMethod.UNIFORM: lambda t: nn.init.uniform_(
+                t,
+                a=self.kwargs.get("a", -0.1),
+                b=self.kwargs.get("b", 0.1),
+            ),
+            InitMethod.XAVIER_UNIFORM: lambda t: nn.init.xavier_uniform_(
+                t, gain=self.kwargs.get("gain", 1.0)
+            ),
+            InitMethod.XAVIER_NORMAL: lambda t: nn.init.xavier_normal_(
+                t, gain=self.kwargs.get("gain", 1.0)
+            ),
+            InitMethod.KAIMING_UNIFORM: lambda t: nn.init.kaiming_uniform_(
+                t,
+                a=self.kwargs.get("a", 0),
+                mode=self.kwargs.get("mode", "fan_in"),
+                nonlinearity=self.kwargs.get("nonlinearity", "leaky_relu"),
+            ),
+            InitMethod.HE_UNIFORM: lambda t: nn.init.kaiming_uniform_(
+                t,
+                a=self.kwargs.get("a", 0),
+                mode=self.kwargs.get("mode", "fan_in"),
+                nonlinearity=self.kwargs.get("nonlinearity", "leaky_relu"),
+            ),
+            InitMethod.KAIMING_NORMAL: lambda t: nn.init.kaiming_normal_(
+                t,
+                a=self.kwargs.get("a", 0),
+                mode=self.kwargs.get("mode", "fan_in"),
+                nonlinearity=self.kwargs.get("nonlinearity", "leaky_relu"),
+            ),
+            InitMethod.HE_NORMAL: lambda t: nn.init.kaiming_normal_(
+                t,
+                a=self.kwargs.get("a", 0),
+                mode=self.kwargs.get("mode", "fan_in"),
+                nonlinearity=self.kwargs.get("nonlinearity", "leaky_relu"),
+            ),
+            InitMethod.ORTHOGONAL: lambda t: nn.init.orthogonal_(
+                t, gain=self.kwargs.get("gain", 1.0)
+            ),
+            InitMethod.SPARSE: lambda t: nn.init.sparse_(
+                t,
+                sparsity=self.kwargs.get("sparsity", 0.1),
+                std=self.kwargs.get("std", 0.01),
+            ),
+            InitMethod.EYE: self._eye_init,
+            InitMethod.DIRAC: lambda t: nn.init.dirac_(
+                t, groups=self.kwargs.get("groups", 1)
+            ),
+        }
+
+        if method in mapping:
+            return mapping[method]
+        raise ValueError(f"Unknown initialization method: {method}")
+
     def _resolve_init_fn(self) -> Callable[[Tensor], None]:  # noqa: C901
         """Resolve initialization method to a callable."""
         # Handle direct callables
@@ -82,71 +154,7 @@ class Initializer:
 
         # Handle string methods
         if isinstance(self.method, str):
-            method = self.method.lower()
-
-            # Basic methods
-            if method in {InitMethod.ZEROS, "zero"}:
-                return nn.init.zeros_
-            if method in {InitMethod.ONES, "one"}:
-                return nn.init.ones_
-            if method == InitMethod.CONSTANT:
-                val = self.kwargs.get("val", 0.0)
-                return lambda t: nn.init.constant_(t, val)
-
-            # Normal distribution
-            if method == InitMethod.NORMAL:
-                mean = self.kwargs.get("mean", 0.0)
-                std = self.kwargs.get("std", 0.01)
-                return lambda t: nn.init.normal_(t, mean=mean, std=std)
-
-            # Uniform distribution
-            if method == InitMethod.UNIFORM:
-                a = self.kwargs.get("a", -0.1)
-                b = self.kwargs.get("b", 0.1)
-                return lambda t: nn.init.uniform_(t, a=a, b=b)
-
-            # Xavier/Glorot initialization
-            if method == InitMethod.XAVIER_UNIFORM:
-                gain = self.kwargs.get("gain", 1.0)
-                return lambda t: nn.init.xavier_uniform_(t, gain=gain)
-            if method == InitMethod.XAVIER_NORMAL:
-                gain = self.kwargs.get("gain", 1.0)
-                return lambda t: nn.init.xavier_normal_(t, gain=gain)
-
-            # Kaiming/He initialization
-            if method in {InitMethod.KAIMING_UNIFORM, InitMethod.HE_UNIFORM}:
-                a = self.kwargs.get("a", 0)
-                mode = self.kwargs.get("mode", "fan_in")
-                nonlinearity = self.kwargs.get("nonlinearity", "leaky_relu")
-                return lambda t: nn.init.kaiming_uniform_(
-                    t, a=a, mode=mode, nonlinearity=nonlinearity
-                )
-            if method in {InitMethod.KAIMING_NORMAL, InitMethod.HE_NORMAL}:
-                a = self.kwargs.get("a", 0)
-                mode = self.kwargs.get("mode", "fan_in")
-                nonlinearity = self.kwargs.get("nonlinearity", "leaky_relu")
-                return lambda t: nn.init.kaiming_normal_(
-                    t, a=a, mode=mode, nonlinearity=nonlinearity
-                )
-
-            # Special methods
-            if method == InitMethod.ORTHOGONAL:
-                gain = self.kwargs.get("gain", 1.0)
-                return lambda t: nn.init.orthogonal_(t, gain=gain)
-
-            if method == InitMethod.SPARSE:
-                sparsity = self.kwargs.get("sparsity", 0.1)
-                std = self.kwargs.get("std", 0.01)
-                return lambda t: nn.init.sparse_(t, sparsity=sparsity, std=std)
-
-            if method == InitMethod.EYE:
-                return self._eye_init
-
-            if method == InitMethod.DIRAC:
-                groups = self.kwargs.get("groups", 1)
-                return lambda t: nn.init.dirac_(t, groups=groups)
-
-            raise ValueError(f"Unknown initialization method: {method}")
+            return self._resolve_from_string(self.method)
 
         raise TypeError(
             f"Invalid initialization method type: {type(self.method)}"
@@ -156,7 +164,7 @@ class Initializer:
         """Initialize as identity matrix (or as close as possible)."""
         with torch.no_grad():
             tensor.zero_()
-            if tensor.dim() == 2:
+            if tensor.dim() == MATRIX_DIM:
                 # Regular matrix
                 n = min(tensor.shape)
                 tensor[:n, :n] = torch.eye(
@@ -232,7 +240,7 @@ def get_fan_in_and_fan_out(tensor: Tensor) -> tuple[int, int]:
         Tuple of (fan_in, fan_out)
     """
     dimensions = tensor.dim()
-    if dimensions < 2:
+    if dimensions < MATRIX_DIM:
         raise ValueError(
             "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
         )
@@ -241,7 +249,7 @@ def get_fan_in_and_fan_out(tensor: Tensor) -> tuple[int, int]:
     num_output_fmaps = tensor.size(0)
     receptive_field_size = 1
 
-    if dimensions > 2:
+    if dimensions > MATRIX_DIM:
         # For convolutional layers
         for s in tensor.shape[2:]:
             receptive_field_size *= s
@@ -373,7 +381,7 @@ def init_from_data_statistics(
             ):
                 # Initialize to scaled data mean
                 tensor.copy_(data_mean * scale)
-            elif data_std is not None and len(tensor.shape) >= 2:
+            elif data_std is not None and len(tensor.shape) >= MATRIX_DIM:
                 # Initialize weights based on data variance
                 fan_in, fan_out = get_fan_in_and_fan_out(tensor)
                 std = data_std.mean() * scale / math.sqrt(fan_in)

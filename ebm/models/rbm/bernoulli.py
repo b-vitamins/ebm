@@ -341,12 +341,15 @@ class CenteredBernoulliRBM(BernoulliRBM):
             )
             count = 0
 
-            for batch in data_loader:
-                if isinstance(batch, list | tuple):
-                    batch = batch[0]
-                batch = self.to_device(batch)
-                sum_v += batch.sum(dim=0)
-                count += batch.shape[0]
+            for data_batch in data_loader:
+                batch_tensor = (
+                    data_batch[0]
+                    if isinstance(data_batch, list | tuple)
+                    else data_batch
+                )
+                batch_tensor = self.to_device(batch_tensor)
+                sum_v += batch_tensor.sum(dim=0)
+                count += batch_tensor.shape[0]
 
             mean_v = sum_v / count
             self.v_offset.copy_(mean_v)

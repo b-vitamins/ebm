@@ -18,6 +18,8 @@ from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 from .base import GradientEstimator, Sampler
 
+PROB_THRESHOLD = 0.5
+
 
 @register_sampler("mean_field", aliases=["mf", "naive_mf"])
 class MeanFieldSampler(Sampler):
@@ -96,7 +98,7 @@ class MeanFieldSampler(Sampler):
         self.state.num_steps += i + 1
 
         # Return binary samples based on mean activations
-        return (m_v > 0.5).to(m_v.dtype)
+        return (m_v > PROB_THRESHOLD).to(m_v.dtype)
 
 
 @register_sampler("tap", aliases=["thouless_anderson_palmer"])

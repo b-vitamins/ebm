@@ -10,10 +10,13 @@ This script demonstrates:
 """
 
 import argparse
+import logging
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from torch.utils.data import DataLoader
 
 import ebm
 from ebm import (
@@ -38,6 +41,8 @@ from ebm import (
 )
 from ebm.core.config import ModelConfig
 from ebm.models.base import EnergyBasedModel
+
+WARMUP_THRESHOLD = 0.001
 
 
 def parse_args() -> argparse.Namespace:
@@ -130,6 +135,134 @@ def parse_args() -> argparse.Namespace:
     )
 
     return parser.parse_args()
+
+
+def build_training_config(
+    args: argparse.Namespace, output_dir: Path
+) -> TrainingConfig:
+    """Create the training configuration."""
+    optimizer_config = OptimizerConfig(
+        name="sgd",
+        lr=args.lr,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay,
+        scheduler="cosine",
+        scheduler_params={"eta_min": args.lr * 0.01},
+    )
+
+    return TrainingConfig(
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        optimizer=optimizer_config,
+        checkpoint_dir=output_dir / "checkpoints",
+        checkpoint_every=10,
+        eval_every=5,
+        log_every=100,
+        early_stopping=True,
+        patience=10,
+    )
+
+
+def build_callbacks(
+    args: argparse.Namespace, train_loader: DataLoader, output_dir: Path
+) -> list:
+    """Build callbacks for training."""
+    callbacks: list = []
+    if args.lr > WARMUP_THRESHOLD:
+        callbacks.append(
+            WarmupCallback(
+                warmup_steps=len(train_loader), start_lr=1e-4, end_lr=args.lr
+            )
+        )
+    if args.visualize:
+        callbacks.append(
+            VisualizationCallback(
+                visualize_every=5,
+                num_samples=100,
+                save_dir=output_dir / "visualizations",
+            )
+        )
+    return callbacks
+
+
+def evaluate_and_visualize(
+    model: EnergyBasedModel,
+    test_loader: DataLoader,
+    device: torch.device,
+    output_dir: Path,
+    args: argparse.Namespace,
+    logger: logging.Logger,
+) -> None:
+    """Evaluate the trained model and generate visualizations."""
+    evaluator = ModelEvaluator(model)
+
+    test_batch = next(iter(test_loader))[:100].to(device)
+    recon_errors = evaluator.reconstruction_error(test_batch, num_steps=10)
+    logger.info(
+        "Reconstruction error",
+        mean=float(recon_errors.mean()),
+        std=float(recon_errors.std()),
+    )
+
+    energy_stats = evaluator.energy_gap(test_batch, num_model_samples=100)
+    logger.info("Energy statistics", **energy_stats)
+
+    if hasattr(model, "sample_fantasy_particles"):
+        samples = model.sample_fantasy_particles(
+            num_samples=100, num_steps=1000
+        )
+        fig = visualize_samples(samples, title="Generated Samples")
+        fig.savefig(output_dir / "generated_samples.png")
+        plt.close(fig)
+
+        test_energies = model.free_energy(test_batch)
+        sample_energies = model.free_energy(samples)
+        fig = plot_energy_histogram(test_energies, sample_energies)
+        fig.savefig(output_dir / "energy_histogram.png")
+        plt.close(fig)
+
+    fig = visualize_filters(model.W, title="Learned Filters")
+    fig.savefig(output_dir / "filters.png")
+    plt.close(fig)
+
+    if args.estimate_logz:
+        logger.info("Estimating partition function...")
+        ais_estimator = AISEstimator(model, num_temps=10000, num_chains=100)
+        log_z, diagnostics = ais_estimator.estimate(return_diagnostics=True)
+        logger.info(
+            "Log partition function",
+            log_Z=float(log_z),
+            log_Z_std=float(diagnostics["log_Z_std"]),
+            ESS=diagnostics["effective_sample_size"],
+        )
+        import json
+
+        with (output_dir / "ais_diagnostics.json").open("w") as f:
+            json.dump(
+                {
+                    k: v
+                    for k, v in diagnostics.items()
+                    if not isinstance(v, np.ndarray)
+                },
+                f,
+                indent=2,
+            )
+
+    logger.info("Training completed successfully!")
+
+    print("\n" + "=" * 50)
+    print("TRAINING SUMMARY")
+    print("=" * 50)
+    print(f"Model: {args.model} RBM with {args.hidden} hidden units")
+    print(f"Sampler: {args.sampler} (k={args.k})")
+    print(f"Final reconstruction error: {recon_errors.mean():.4f}")
+    print(f"Energy gap: {energy_stats['energy_gap']:.2f}")
+    if args.estimate_logz:
+        print(
+            f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}"
+        )
+    print(f"Results saved to: {output_dir}")
+    print("=" * 50)
 
 
 def create_model(
@@ -232,48 +365,9 @@ def main() -> None:
     logger.info("Creating sampler", sampler=args.sampler)
     gradient_estimator = create_sampler(args, model)
 
-    # Training configuration
-    optimizer_config = OptimizerConfig(
-        name="sgd",
-        lr=args.lr,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-        scheduler="cosine",
-        scheduler_params={"eta_min": args.lr * 0.01},
-    )
+    training_config = build_training_config(args, output_dir)
 
-    training_config = TrainingConfig(
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        optimizer=optimizer_config,
-        checkpoint_dir=output_dir / "checkpoints",
-        checkpoint_every=10,
-        eval_every=5,
-        log_every=100,
-        early_stopping=True,
-        patience=10,
-    )
-
-    # Setup callbacks
-    callbacks = []
-
-    # Add warmup
-    if args.lr > 0.001:
-        callbacks.append(
-            WarmupCallback(
-                warmup_steps=len(train_loader), start_lr=1e-4, end_lr=args.lr
-            )
-        )
-
-    # Add visualization
-    if args.visualize:
-        callbacks.append(
-            VisualizationCallback(
-                visualize_every=5,
-                num_samples=100,
-                save_dir=output_dir / "visualizations",
-            )
-        )
+    callbacks = build_callbacks(args, train_loader, output_dir)
 
     # Create trainer
     trainer = Trainer(
@@ -298,90 +392,7 @@ def main() -> None:
     fig.savefig(output_dir / "training_curves.png")
     plt.close(fig)
 
-    # Evaluate model
-    logger.info("Evaluating model...")
-    evaluator = ModelEvaluator(model)
-
-    # Reconstruction error
-    test_batch = next(iter(test_loader))[:100].to(device)
-    recon_errors = evaluator.reconstruction_error(test_batch, num_steps=10)
-    logger.info(
-        "Reconstruction error",
-        mean=float(recon_errors.mean()),
-        std=float(recon_errors.std()),
-    )
-
-    # Energy gap
-    energy_stats = evaluator.energy_gap(test_batch, num_model_samples=100)
-    logger.info("Energy statistics", **energy_stats)
-
-    # Generate samples
-    logger.info("Generating samples...")
-    if hasattr(model, "sample_fantasy_particles"):
-        samples = model.sample_fantasy_particles(
-            num_samples=100, num_steps=1000
-        )
-
-        # Visualize samples
-        fig = visualize_samples(samples, title="Generated Samples")
-        fig.savefig(output_dir / "generated_samples.png")
-        plt.close(fig)
-
-        # Plot energy histogram
-        test_energies = model.free_energy(test_batch)
-        sample_energies = model.free_energy(samples)
-        fig = plot_energy_histogram(test_energies, sample_energies)
-        fig.savefig(output_dir / "energy_histogram.png")
-        plt.close(fig)
-
-    # Visualize filters
-    logger.info("Visualizing filters...")
-    fig = visualize_filters(model.W, title="Learned Filters")
-    fig.savefig(output_dir / "filters.png")
-    plt.close(fig)
-
-    # Estimate partition function
-    if args.estimate_logz:
-        logger.info("Estimating partition function...")
-        ais_estimator = AISEstimator(model, num_temps=10000, num_chains=100)
-        log_z, diagnostics = ais_estimator.estimate(return_diagnostics=True)
-        logger.info(
-            "Log partition function",
-            log_Z=float(log_z),
-            log_Z_std=float(diagnostics["log_Z_std"]),
-            ESS=diagnostics["effective_sample_size"],
-        )
-
-        # Save diagnostics
-        import json
-
-        with (output_dir / "ais_diagnostics.json").open("w") as f:
-            json.dump(
-                {
-                    k: v
-                    for k, v in diagnostics.items()
-                    if not isinstance(v, np.ndarray)
-                },
-                f,
-                indent=2,
-            )
-
-    logger.info("Training completed successfully!")
-
-    # Print summary
-    print("\n" + "=" * 50)
-    print("TRAINING SUMMARY")
-    print("=" * 50)
-    print(f"Model: {args.model} RBM with {args.hidden} hidden units")
-    print(f"Sampler: {args.sampler} (k={args.k})")
-    print(f"Final reconstruction error: {recon_errors.mean():.4f}")
-    print(f"Energy gap: {energy_stats['energy_gap']:.2f}")
-    if args.estimate_logz:
-        print(
-            f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}"
-        )
-    print(f"Results saved to: {output_dir}")
-    print("=" * 50)
+    evaluate_and_visualize(model, test_loader, device, output_dir, args, logger)
 
 
 if __name__ == "__main__":
