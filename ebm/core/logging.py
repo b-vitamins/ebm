@@ -12,10 +12,10 @@ from __future__ import annotations
 import logging
 import sys
 import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional, Union
 
 import structlog
 from structlog.types import EventDict, WrappedLogger
@@ -45,12 +45,12 @@ def add_logger_name(logger: WrappedLogger, method_name: str, event_dict: EventDi
 
 class LogConfig:
     """Configuration for logging system."""
-    
+
     def __init__(
         self,
-        level: Union[str, int] = "INFO",
+        level: str | int = "INFO",
         console: bool = True,
-        file: Optional[Union[str, Path]] = None,
+        file: str | Path | None = None,
         structured: bool = True,
         colors: bool = True,
         metrics: bool = True,
@@ -61,7 +61,7 @@ class LogConfig:
         self.structured = structured
         self.colors = colors and RICH_AVAILABLE
         self.metrics = metrics
-        
+
     def setup(self) -> structlog.BoundLogger:
         """Configure and return logger instance."""
         # Configure structlog processors
@@ -76,11 +76,11 @@ class LogConfig:
             structlog.processors.format_exc_info,
             structlog.processors.UnicodeDecoder(),
         ]
-        
+
         # Add metric processor if enabled
         if self.metrics:
             processors.append(MetricProcessor())
-        
+
         # Configure output format
         if self.structured:
             processors.append(structlog.processors.JSONRenderer())
@@ -89,7 +89,7 @@ class LogConfig:
                 processors.append(structlog.dev.ConsoleRenderer(colors=True))
             else:
                 processors.append(structlog.dev.ConsoleRenderer(colors=False))
-        
+
         # Configure structlog
         structlog.configure(
             processors=processors,
@@ -97,10 +97,10 @@ class LogConfig:
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
-        
+
         # Configure standard logging
         handlers = []
-        
+
         if self.console:
             if self.colors and RICH_AVAILABLE:
                 console_handler = RichHandler(
@@ -111,69 +111,69 @@ class LogConfig:
             else:
                 console_handler = logging.StreamHandler(sys.stderr)
             handlers.append(console_handler)
-        
+
         if self.file:
             self.file.parent.mkdir(parents=True, exist_ok=True)
             file_handler = logging.FileHandler(self.file)
             handlers.append(file_handler)
-        
+
         logging.basicConfig(
             level=self.level,
             handlers=handlers,
             format="%(message)s" if self.structured else "%(asctime)s [%(levelname)s] %(message)s",
         )
-        
+
         return structlog.get_logger()
 
 
 class MetricProcessor:
     """Processor that extracts and formats metrics from log events."""
-    
+
     def __call__(self, logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
         """Extract metrics from event dict."""
         metrics = {}
-        
+
         # Look for common metric patterns
         for key, value in list(event_dict.items()):
             if key.endswith(('_loss', '_error', '_accuracy', '_score')):
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     metrics[key] = value
                     event_dict.pop(key)
             elif key in {'epoch', 'step', 'iteration', 'batch'}:
                 metrics[key] = value
-        
+
         if metrics:
             event_dict['metrics'] = metrics
-            
+
         return event_dict
 
 
 class LoggerMixin:
     """Mixin class that provides logging functionality."""
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._logger = None
-        
+
     @property
     def logger(self) -> structlog.BoundLogger:
         """Get logger instance for this class."""
         if self._logger is None:
             self._logger = structlog.get_logger(self.__class__.__name__)
         return self._logger
-    
+
     def log_debug(self, message: str, **kwargs) -> None:
         """Log debug message."""
         self.logger.debug(message, **kwargs)
-        
+
     def log_info(self, message: str, **kwargs) -> None:
         """Log info message."""
         self.logger.info(message, **kwargs)
-        
+
     def log_warning(self, message: str, **kwargs) -> None:
         """Log warning message."""
         self.logger.warning(message, **kwargs)
-        
+
     def log_error(self, message: str, **kwargs) -> None:
         """Log error message."""
         self.logger.error(message, **kwargs)
@@ -182,7 +182,7 @@ class LoggerMixin:
 @contextmanager
 def log_context(**kwargs) -> Iterator[None]:
     """Context manager that adds context to all logs within the block.
-    
+
     Example:
         with log_context(epoch=1, phase='training'):
             logger.info('Starting batch', batch=0)
@@ -199,7 +199,7 @@ def log_context(**kwargs) -> Iterator[None]:
 @contextmanager
 def log_duration(logger: structlog.BoundLogger, message: str, **kwargs) -> Iterator[None]:
     """Context manager that logs the duration of a block.
-    
+
     Example:
         with log_duration(logger, 'Training epoch'):
             train_one_epoch()
@@ -213,12 +213,12 @@ def log_duration(logger: structlog.BoundLogger, message: str, **kwargs) -> Itera
         logger.info(message, duration=duration, **kwargs)
 
 
-def log_function_call(logger: Optional[structlog.BoundLogger] = None):
+def log_function_call(logger: structlog.BoundLogger | None = None):
     """Decorator that logs function calls with arguments and return values.
-    
+
     Args:
         logger: Logger instance to use. If None, creates one based on function module.
-        
+
     Example:
         @log_function_call()
         def train_model(epochs: int, lr: float) -> float:
@@ -228,12 +228,12 @@ def log_function_call(logger: Optional[structlog.BoundLogger] = None):
         nonlocal logger
         if logger is None:
             logger = structlog.get_logger(func.__module__)
-            
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             logger.debug(f"Calling {func.__name__}", args=args, kwargs=kwargs)
             start_time = time.perf_counter()
-            
+
             try:
                 result = func(*args, **kwargs)
                 duration = time.perf_counter() - start_time
@@ -252,21 +252,21 @@ def log_function_call(logger: Optional[structlog.BoundLogger] = None):
                     exc_info=True
                 )
                 raise
-                
+
         return wrapper
     return decorator
 
 
 def setup_logging(
-    level: Union[str, int] = "INFO",
+    level: str | int = "INFO",
     console: bool = True,
-    file: Optional[Union[str, Path]] = None,
+    file: str | Path | None = None,
     structured: bool = False,
     colors: bool = True,
     metrics: bool = True,
 ) -> structlog.BoundLogger:
     """Setup logging for the entire application.
-    
+
     Args:
         level: Logging level
         console: Whether to log to console
@@ -274,7 +274,7 @@ def setup_logging(
         structured: Whether to use structured (JSON) logging
         colors: Whether to use colored output (requires rich)
         metrics: Whether to enable metric extraction
-        
+
     Returns:
         Configured logger instance
     """
@@ -316,7 +316,7 @@ def error(message: str, **kwargs) -> None:
 
 def metrics(message: str, **metric_values) -> None:
     """Log metrics with automatic formatting.
-    
+
     Example:
         metrics("Training", epoch=1, loss=0.123, accuracy=0.95)
     """

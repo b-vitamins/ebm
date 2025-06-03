@@ -1,15 +1,17 @@
 """Inference methods for energy-based models."""
 
 from .partition import (
+    AISEstimator,
+    BridgeSampling,
     PartitionFunctionEstimator,
-    AISEstimator, BridgeSampling,
-    SimpleIS, RatioEstimator
+    RatioEstimator,
+    SimpleIS,
 )
 
 __all__ = [
     # Base class
     "PartitionFunctionEstimator",
-    
+
     # Estimators
     "AISEstimator", "BridgeSampling",
     "SimpleIS", "RatioEstimator",

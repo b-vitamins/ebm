@@ -8,27 +8,24 @@ from __future__ import annotations
 
 from abc import ABC
 from pathlib import Path
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, TypeVar
 
 import torch
 from pydantic import BaseModel, Field, validator
-from pydantic.dataclasses import dataclass
-
-from .types import Device, DType, InitStrategy
 
 T = TypeVar('T', bound='BaseConfig')
 
 
 class BaseConfig(BaseModel, ABC):
     """Base configuration class with common functionality.
-    
+
     All configuration classes should inherit from this to get:
     - Automatic validation
     - JSON/YAML serialization
     - Immutability (frozen)
     - Type conversion
     """
-    
+
     class Config:
         """Pydantic configuration."""
         frozen = True  # Make configs immutable
@@ -39,18 +36,18 @@ class BaseConfig(BaseModel, ABC):
             torch.device: str,
             Path: str,
         }
-    
+
     @classmethod
-    def from_dict(cls: Type[T], config_dict: Dict[str, Any]) -> T:
+    def from_dict(cls: type[T], config_dict: dict[str, Any]) -> T:
         """Create configuration from dictionary."""
         return cls(**config_dict)
-    
+
     @classmethod
-    def from_file(cls: Type[T], path: Union[str, Path]) -> T:
+    def from_file(cls: type[T], path: str | Path) -> T:
         """Load configuration from JSON or YAML file."""
         import json
         path = Path(path)
-        
+
         if path.suffix in {'.yaml', '.yml'}:
             try:
                 import yaml
@@ -63,15 +60,15 @@ class BaseConfig(BaseModel, ABC):
                 data = json.load(f)
         else:
             raise ValueError(f"Unsupported config file type: {path.suffix}")
-            
+
         return cls.from_dict(data)
-    
-    def save(self, path: Union[str, Path]) -> None:
+
+    def save(self, path: str | Path) -> None:
         """Save configuration to file."""
         import json
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         if path.suffix in {'.yaml', '.yml'}:
             try:
                 import yaml
@@ -82,7 +79,7 @@ class BaseConfig(BaseModel, ABC):
         else:
             with open(path, 'w') as f:
                 json.dump(self.dict(), f, indent=2)
-    
+
     def with_updates(self: T, **kwargs: Any) -> T:
         """Create a new config with updated fields."""
         return self.__class__(**{**self.dict(), **kwargs})
@@ -90,16 +87,16 @@ class BaseConfig(BaseModel, ABC):
 
 class ModelConfig(BaseConfig):
     """Base configuration for all models."""
-    
+
     # Device and precision settings
-    device: Optional[str] = Field(None, description="Device to use (cuda/cpu/auto)")
+    device: str | None = Field(None, description="Device to use (cuda/cpu/auto)")
     dtype: str = Field("float32", description="Data type (float32/float16/bfloat16)")
-    
+
     # Random seed
-    seed: Optional[int] = Field(None, description="Random seed for reproducibility")
-    
+    seed: int | None = Field(None, description="Random seed for reproducibility")
+
     @validator('device')
-    def validate_device(cls, v: Optional[str]) -> Optional[str]:
+    def validate_device(cls, v: str | None) -> str | None:
         """Validate and normalize device string."""
         if v is None or v == 'auto':
             return 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -107,7 +104,7 @@ class ModelConfig(BaseConfig):
             if not v.startswith('cuda:'):
                 raise ValueError(f"Invalid device: {v}")
         return v
-    
+
     @validator('dtype')
     def validate_dtype(cls, v: str) -> str:
         """Validate data type string."""
@@ -120,12 +117,12 @@ class ModelConfig(BaseConfig):
         if v not in valid_dtypes:
             raise ValueError(f"Invalid dtype: {v}. Must be one of {valid_dtypes}")
         return v
-    
+
     @property
     def torch_device(self) -> torch.device:
         """Get torch device object."""
         return torch.device(self.device or 'cpu')
-    
+
     @property
     def torch_dtype(self) -> torch.dtype:
         """Get torch dtype object."""
@@ -140,23 +137,23 @@ class ModelConfig(BaseConfig):
 
 class OptimizerConfig(BaseConfig):
     """Configuration for optimizers."""
-    
+
     name: str = Field("adam", description="Optimizer name")
     lr: float = Field(1e-3, description="Learning rate", gt=0)
     weight_decay: float = Field(0.0, description="Weight decay", ge=0)
-    
+
     # Adam-specific
     betas: Tuple[float, float] = Field((0.9, 0.999), description="Adam betas")
     eps: float = Field(1e-8, description="Adam epsilon", gt=0)
-    
+
     # SGD-specific
     momentum: float = Field(0.0, description="SGD momentum", ge=0)
     nesterov: bool = Field(False, description="Use Nesterov momentum")
-    
+
     # Learning rate scheduling
-    scheduler: Optional[str] = Field(None, description="LR scheduler type")
-    scheduler_params: Dict[str, Any] = Field({}, description="Scheduler parameters")
-    
+    scheduler: str | None = Field(None, description="LR scheduler type")
+    scheduler_params: dict[str, Any] = Field({}, description="Scheduler parameters")
+
     @validator('name')
     def validate_optimizer(cls, v: str) -> str:
         """Validate optimizer name."""
@@ -168,36 +165,36 @@ class OptimizerConfig(BaseConfig):
 
 class TrainingConfig(BaseConfig):
     """Configuration for training loop."""
-    
+
     # Basic training parameters
     epochs: int = Field(100, description="Number of epochs", gt=0)
     batch_size: int = Field(64, description="Batch size", gt=0)
-    eval_batch_size: Optional[int] = Field(None, description="Evaluation batch size")
-    
+    eval_batch_size: int | None = Field(None, description="Evaluation batch size")
+
     # Optimization
     optimizer: OptimizerConfig = Field(OptimizerConfig(), description="Optimizer config")
-    grad_clip: Optional[float] = Field(None, description="Gradient clipping value", gt=0)
-    
+    grad_clip: float | None = Field(None, description="Gradient clipping value", gt=0)
+
     # Checkpointing and logging
     checkpoint_dir: Path = Field(Path("checkpoints"), description="Checkpoint directory")
     checkpoint_every: int = Field(10, description="Checkpoint frequency (epochs)", gt=0)
     log_every: int = Field(100, description="Logging frequency (steps)", gt=0)
-    
+
     # Evaluation
     eval_every: int = Field(1, description="Evaluation frequency (epochs)", gt=0)
     eval_samples: int = Field(1000, description="Number of evaluation samples", gt=0)
-    
+
     # Early stopping
     early_stopping: bool = Field(False, description="Enable early stopping")
     patience: int = Field(10, description="Early stopping patience", gt=0)
     min_delta: float = Field(1e-4, description="Minimum improvement for early stopping", gt=0)
-    
+
     # Advanced features
     mixed_precision: bool = Field(False, description="Use automatic mixed precision")
     compile_model: bool = Field(False, description="Use torch.compile (PyTorch 2.0+)")
     num_workers: int = Field(0, description="DataLoader workers", ge=0)
     pin_memory: bool = Field(True, description="Pin memory for DataLoader")
-    
+
     @property
     def eval_batch_size_actual(self) -> int:
         """Get actual evaluation batch size."""
@@ -206,33 +203,33 @@ class TrainingConfig(BaseConfig):
 
 class SamplerConfig(BaseConfig):
     """Base configuration for samplers."""
-    
+
     num_steps: int = Field(1, description="Number of sampling steps", gt=0)
-    
-    
+
+
 class GibbsConfig(SamplerConfig):
     """Configuration for Gibbs sampling."""
-    
+
     block_gibbs: bool = Field(True, description="Use block Gibbs sampling")
-    
-    
+
+
 class CDConfig(SamplerConfig):
     """Configuration for Contrastive Divergence."""
-    
+
     persistent: bool = Field(False, description="Use persistent CD")
-    num_chains: Optional[int] = Field(None, description="Number of persistent chains")
-    
-    
+    num_chains: int | None = Field(None, description="Number of persistent chains")
+
+
 class ParallelTemperingConfig(SamplerConfig):
     """Configuration for Parallel Tempering."""
-    
+
     num_temps: int = Field(10, description="Number of temperatures", gt=1)
     min_beta: float = Field(0.01, description="Minimum inverse temperature", gt=0, le=1)
     max_beta: float = Field(1.0, description="Maximum inverse temperature", gt=0, le=1)
     swap_every: int = Field(1, description="Swap frequency", gt=0)
-    
+
     @validator('min_beta')
-    def validate_beta_range(cls, v: float, values: Dict[str, Any]) -> float:
+    def validate_beta_range(cls, v: float, values: dict[str, Any]) -> float:
         """Ensure min_beta < max_beta."""
         if 'max_beta' in values and v >= values['max_beta']:
             raise ValueError("min_beta must be less than max_beta")
@@ -242,22 +239,22 @@ class ParallelTemperingConfig(SamplerConfig):
 # Model-specific configurations
 class RBMConfig(ModelConfig):
     """Configuration for Restricted Boltzmann Machines."""
-    
+
     visible_units: int = Field(..., description="Number of visible units", gt=0)
     hidden_units: int = Field(..., description="Number of hidden units", gt=0)
-    
+
     # Initialization
     weight_init: str = Field("xavier_normal", description="Weight initialization method")
-    bias_init: Union[str, float] = Field(0.0, description="Bias initialization")
-    
+    bias_init: str | float = Field(0.0, description="Bias initialization")
+
     # Architecture variants
     use_bias: bool = Field(True, description="Use bias terms")
     centered: bool = Field(False, description="Use centered RBM variant")
-    
+
     # Regularization
     l2_weight: float = Field(0.0, description="L2 weight regularization", ge=0)
     l1_weight: float = Field(0.0, description="L1 weight regularization", ge=0)
-    
+
     @validator('weight_init')
     def validate_init_method(cls, v: str) -> str:
         """Validate initialization method."""
@@ -273,7 +270,7 @@ class RBMConfig(ModelConfig):
 
 class GaussianRBMConfig(RBMConfig):
     """Configuration for Gaussian-Bernoulli RBM."""
-    
+
     visible_type: str = Field("gaussian", description="Visible unit type")
     sigma: float = Field(1.0, description="Standard deviation for Gaussian units", gt=0)
     learn_sigma: bool = Field(False, description="Learn sigma during training")

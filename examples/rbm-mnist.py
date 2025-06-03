@@ -12,27 +12,35 @@ This script demonstrates:
 import argparse
 from pathlib import Path
 
-import torch
 import matplotlib.pyplot as plt
 
 import ebm
 from ebm import (
-    RBMConfig, TrainingConfig, OptimizerConfig,
-    BernoulliRBM, GaussianBernoulliRBM,
-    ContrastiveDivergence, PersistentContrastiveDivergence,
-    ParallelTempering, TAPSampler,
-    Trainer, VisualizationCallback, WarmupCallback,
-    AISEstimator, ModelEvaluator,
-    get_mnist_datasets, create_data_loaders,
-    visualize_filters, visualize_samples,
-    plot_training_curves, plot_energy_histogram
+    AISEstimator,
+    BernoulliRBM,
+    ContrastiveDivergence,
+    GaussianBernoulliRBM,
+    ModelEvaluator,
+    OptimizerConfig,
+    PersistentContrastiveDivergence,
+    RBMConfig,
+    Trainer,
+    TrainingConfig,
+    VisualizationCallback,
+    WarmupCallback,
+    create_data_loaders,
+    get_mnist_datasets,
+    plot_energy_histogram,
+    plot_training_curves,
+    visualize_filters,
+    visualize_samples,
 )
 
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Train RBM on MNIST")
-    
+
     # Model arguments
     parser.add_argument('--model', type=str, default='bernoulli',
                         choices=['bernoulli', 'centered', 'gaussian'],
@@ -41,7 +49,7 @@ def parse_args():
                         help='Number of hidden units')
     parser.add_argument('--weight-init', type=str, default='xavier_normal',
                         help='Weight initialization method')
-    
+
     # Training arguments
     parser.add_argument('--epochs', type=int, default=50,
                         help='Number of training epochs')
@@ -53,7 +61,7 @@ def parse_args():
                         help='SGD momentum')
     parser.add_argument('--weight-decay', type=float, default=0.0001,
                         help='Weight decay')
-    
+
     # Sampler arguments
     parser.add_argument('--sampler', type=str, default='pcd',
                         choices=['cd', 'pcd', 'pt', 'tap'],
@@ -64,7 +72,7 @@ def parse_args():
                         help='Number of persistent chains')
     parser.add_argument('--num-temps', type=int, default=10,
                         help='Number of temperatures for PT')
-    
+
     # Other arguments
     parser.add_argument('--device', type=str, default='auto',
                         help='Device to use (cuda/cpu/auto)')
@@ -80,7 +88,7 @@ def parse_args():
                         help='Enable visualization during training')
     parser.add_argument('--estimate-logz', action='store_true',
                         help='Estimate log partition function')
-    
+
     return parser.parse_args()
 
 
@@ -110,7 +118,7 @@ def create_model(args):
             model = ebm.CenteredBernoulliRBM(config)
         else:
             model = BernoulliRBM(config)
-    
+
     return model, config
 
 
@@ -136,18 +144,18 @@ def create_sampler(args, model):
         )
     else:
         raise ValueError(f"Unknown sampler: {args.sampler}")
-    
+
     return sampler
 
 
 def main():
     """Main training script."""
     args = parse_args()
-    
+
     # Setup
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Setup logging
     ebm.setup_logging(
         level=args.log_level,
@@ -155,12 +163,12 @@ def main():
     )
     logger = ebm.logger
     logger.info("Starting RBM training", args=vars(args))
-    
+
     # Set device
     ebm.set_device(args.device)
     device = ebm.get_device()
     logger.info(f"Using device: {device}")
-    
+
     # Load data
     logger.info("Loading MNIST dataset...")
     train_dataset, val_dataset, test_dataset = get_mnist_datasets(
@@ -168,27 +176,27 @@ def main():
         binary=(args.model != 'gaussian'),
         flatten=True
     )
-    
+
     train_loader, val_loader, test_loader = create_data_loaders(
         train_dataset, val_dataset, test_dataset,
         batch_size=args.batch_size,
         num_workers=4,
         pin_memory=True
     )
-    
+
     # Create model
     logger.info("Creating model...")
     model, model_config = create_model(args)
     param_summary = model.parameter_summary()
-    logger.info(f"Model created", **param_summary)
-    
+    logger.info("Model created", **param_summary)
+
     # Initialize from data
     model.init_from_data(train_loader)
-    
+
     # Create sampler
     logger.info(f"Creating {args.sampler} sampler...")
     gradient_estimator = create_sampler(args, model)
-    
+
     # Training configuration
     optimizer_config = OptimizerConfig(
         name='sgd',
@@ -198,7 +206,7 @@ def main():
         scheduler='cosine',
         scheduler_params={'eta_min': args.lr * 0.01}
     )
-    
+
     training_config = TrainingConfig(
         epochs=args.epochs,
         batch_size=args.batch_size,
@@ -210,10 +218,10 @@ def main():
         early_stopping=True,
         patience=10
     )
-    
+
     # Setup callbacks
     callbacks = []
-    
+
     # Add warmup
     if args.lr > 0.001:
         callbacks.append(WarmupCallback(
@@ -221,7 +229,7 @@ def main():
             start_lr=1e-4,
             end_lr=args.lr
         ))
-    
+
     # Add visualization
     if args.visualize:
         callbacks.append(VisualizationCallback(
@@ -229,7 +237,7 @@ def main():
             num_samples=100,
             save_dir=output_dir / 'visualizations'
         ))
-    
+
     # Create trainer
     trainer = Trainer(
         model=model,
@@ -237,35 +245,35 @@ def main():
         gradient_estimator=gradient_estimator,
         callbacks=callbacks
     )
-    
+
     # Train model
     logger.info("Starting training...")
     history = trainer.fit(train_loader, val_loader)
-    
+
     # Save final model
     final_checkpoint = output_dir / 'final_model.pt'
     model.save_checkpoint(final_checkpoint)
     logger.info(f"Saved final model to {final_checkpoint}")
-    
+
     # Plot training curves
     logger.info("Plotting training curves...")
     fig = plot_training_curves(history['history'])
     fig.savefig(output_dir / 'training_curves.png')
     plt.close(fig)
-    
+
     # Evaluate model
     logger.info("Evaluating model...")
     evaluator = ModelEvaluator(model)
-    
+
     # Reconstruction error
     test_batch = next(iter(test_loader))[:100].to(device)
     recon_errors = evaluator.reconstruction_error(test_batch, num_steps=10)
     logger.info(f"Reconstruction error: {recon_errors.mean():.4f} ± {recon_errors.std():.4f}")
-    
+
     # Energy gap
     energy_stats = evaluator.energy_gap(test_batch, num_model_samples=100)
     logger.info("Energy statistics", **energy_stats)
-    
+
     # Generate samples
     logger.info("Generating samples...")
     if hasattr(model, 'sample_fantasy_particles'):
@@ -273,25 +281,25 @@ def main():
             num_samples=100,
             num_steps=1000
         )
-        
+
         # Visualize samples
         fig = visualize_samples(samples, title="Generated Samples")
         fig.savefig(output_dir / 'generated_samples.png')
         plt.close(fig)
-        
+
         # Plot energy histogram
         test_energies = model.free_energy(test_batch)
         sample_energies = model.free_energy(samples)
         fig = plot_energy_histogram(test_energies, sample_energies)
         fig.savefig(output_dir / 'energy_histogram.png')
         plt.close(fig)
-    
+
     # Visualize filters
     logger.info("Visualizing filters...")
     fig = visualize_filters(model.W, title="Learned Filters")
     fig.savefig(output_dir / 'filters.png')
     plt.close(fig)
-    
+
     # Estimate partition function
     if args.estimate_logz:
         logger.info("Estimating partition function...")
@@ -301,15 +309,15 @@ def main():
             f"Log partition function: {log_z:.2f} ± {diagnostics['log_Z_std']:.2f}",
             ESS=diagnostics['effective_sample_size']
         )
-        
+
         # Save diagnostics
         import json
         with open(output_dir / 'ais_diagnostics.json', 'w') as f:
-            json.dump({k: v for k, v in diagnostics.items() 
+            json.dump({k: v for k, v in diagnostics.items()
                       if not isinstance(v, np.ndarray)}, f, indent=2)
-    
+
     logger.info("Training completed successfully!")
-    
+
     # Print summary
     print("\n" + "="*50)
     print("TRAINING SUMMARY")
