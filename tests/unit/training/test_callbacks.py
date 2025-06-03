@@ -2,6 +2,7 @@
 
 import json
 import time
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import torch
@@ -32,7 +33,7 @@ class MockTrainer:
         self.callbacks = Mock()
         self.callbacks._should_stop = False
 
-    def save_checkpoint(self, path):
+    def save_checkpoint(self, path: Path) -> Path:
         """Mock checkpoint saving."""
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save({"epoch": self.current_epoch}, path)
@@ -47,7 +48,7 @@ class MockModel(EnergyBasedModel):
         self.vbias = torch.randn(20)
         self.hbias = torch.randn(10)
 
-    def named_parameters(self):
+    def named_parameters(self) -> list[tuple[str, torch.nn.Parameter]]:
         """Return parameters with names for the mock model."""
         return [
             ("W", torch.nn.Parameter(self.W)),
@@ -55,29 +56,39 @@ class MockModel(EnergyBasedModel):
             ("hbias", torch.nn.Parameter(self.hbias)),
         ]
 
-    def parameters(self):
+    def parameters(self) -> list[torch.nn.Parameter]:
         """Return list of model parameters."""
         return [p for _, p in self.named_parameters()]
 
-    def sample_fantasy_particles(self, num_samples, num_steps):
+    def sample_fantasy_particles(
+        self, num_samples: int, num_steps: int
+    ) -> torch.Tensor:
         """Generate random fantasy particles."""
         return torch.randn(num_samples, 20)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return the device of the model."""
         return torch.device("cpu")
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return the dtype of the model."""
         return torch.float32
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: float | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor:
         """Return zero energy for all inputs."""
         return torch.zeros(x.shape[0])
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: float | None = None
+    ) -> torch.Tensor:
         """Return zero free energy for all inputs."""
         return torch.zeros(v.shape[0])
 
@@ -150,7 +161,9 @@ class TestCallbackList:
 
         # Callback with only some methods
         class PartialCallback:
-            def on_epoch_start(self, trainer, model) -> None:
+            def on_epoch_start(
+                self, trainer: MockTrainer, model: MockModel
+            ) -> None:
                 self.called = True
 
         partial_cb = PartialCallback()
@@ -185,7 +198,7 @@ class TestLoggingCallback:
         assert callback.epoch_start_time is None
 
     @patch("ebm.training.callbacks.logger")
-    def test_epoch_logging(self, mock_logger) -> None:
+    def test_epoch_logging(self, mock_logger: Mock) -> None:
         """Test epoch start/end logging."""
         callback = LoggingCallback()
         trainer = MockTrainer()
@@ -209,7 +222,7 @@ class TestLoggingCallback:
         assert "loss=0.5000, accuracy=0.9500" in end_call[1]["metrics"]
 
     @patch("ebm.training.callbacks.logger")
-    def test_batch_logging(self, mock_logger) -> None:
+    def test_batch_logging(self, mock_logger: Mock) -> None:
         """Test batch logging."""
         callback = LoggingCallback(log_every=2)
         trainer = MockTrainer()
@@ -232,7 +245,7 @@ class TestLoggingCallback:
         assert log_call[1]["loss"] == 0.4
 
     @patch("ebm.training.callbacks.logger")
-    def test_gradient_logging(self, mock_logger) -> None:
+    def test_gradient_logging(self, mock_logger: Mock) -> None:
         """Test gradient statistics logging."""
         callback = LoggingCallback(log_every=1, log_gradients=True)
         trainer = MockTrainer()
@@ -251,7 +264,7 @@ class TestLoggingCallback:
         assert log_call[1]["grad_norm_mean"] > 0
 
     @patch("ebm.training.callbacks.logger")
-    def test_weight_logging(self, mock_logger) -> None:
+    def test_weight_logging(self, mock_logger: Mock) -> None:
         """Test weight statistics logging."""
         callback = LoggingCallback(log_every=1, log_weights=True)
         trainer = MockTrainer()
@@ -301,7 +314,7 @@ class TestMetricsCallback:
         assert callback.val_metrics[0]["val_loss"] == 0.4
         assert callback.val_metrics[0]["epoch"] == 1
 
-    def test_save_metrics(self, tmp_path) -> None:
+    def test_save_metrics(self, tmp_path: Path) -> None:
         """Test saving metrics to file."""
         save_path = tmp_path / "metrics.json"
         callback = MetricsCallback(save_path=save_path)
@@ -330,7 +343,7 @@ class TestMetricsCallback:
 class TestCheckpointCallback:
     """Test CheckpointCallback."""
 
-    def test_initialization(self, tmp_path) -> None:
+    def test_initialization(self, tmp_path: Path) -> None:
         """Test checkpoint callback initialization."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -347,7 +360,7 @@ class TestCheckpointCallback:
         assert callback.mode == "min"
         assert callback.best_value == float("inf")
 
-    def test_regular_checkpointing(self, tmp_path) -> None:
+    def test_regular_checkpointing(self, tmp_path: Path) -> None:
         """Test regular epoch checkpointing."""
         callback = CheckpointCallback(checkpoint_dir=tmp_path, save_every=2)
         trainer = MockTrainer()
@@ -369,7 +382,7 @@ class TestCheckpointCallback:
         assert (tmp_path / "checkpoint_epoch_2.pt").exists()
 
     @patch("ebm.training.callbacks.logger")
-    def test_best_model_saving(self, mock_logger, tmp_path) -> None:
+    def test_best_model_saving(self, mock_logger: Mock, tmp_path: Path) -> None:
         """Test best model checkpointing."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -401,7 +414,7 @@ class TestCheckpointCallback:
         # Check logging
         assert mock_logger.info.call_count == 2  # Called for epochs 1 and 3
 
-    def test_mode_max(self, tmp_path) -> None:
+    def test_mode_max(self, tmp_path: Path) -> None:
         """Test monitoring with mode='max'."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -472,7 +485,7 @@ class TestEarlyStoppingCallback:
         assert callback.patience_counter == 2
 
     @patch("ebm.training.callbacks.logger")
-    def test_early_stopping_trigger(self, mock_logger) -> None:
+    def test_early_stopping_trigger(self, mock_logger: Mock) -> None:
         """Test early stopping trigger."""
         callback = EarlyStoppingCallback(patience=2, monitor="loss", mode="min")
         trainer = MockTrainer()
@@ -519,7 +532,7 @@ class TestEarlyStoppingCallback:
 class TestVisualizationCallback:
     """Test VisualizationCallback."""
 
-    def test_initialization(self, tmp_path) -> None:
+    def test_initialization(self, tmp_path: Path) -> None:
         """Test visualization callback initialization."""
         callback = VisualizationCallback(
             visualize_every=5, num_samples=32, save_dir=tmp_path
@@ -533,7 +546,10 @@ class TestVisualizationCallback:
     @patch("ebm.utils.visualization.visualize_samples")
     @patch("ebm.utils.visualization.visualize_filters")
     def test_visualization_generation(
-        self, mock_vis_filters, mock_vis_samples, tmp_path
+        self,
+        mock_vis_filters: Mock,
+        mock_vis_samples: Mock,
+        tmp_path: Path,
     ) -> None:
         """Test visualization generation."""
         callback = VisualizationCallback(
@@ -576,7 +592,7 @@ class TestLearningRateSchedulerCallback:
     def test_initialization(self) -> None:
         """Test LR scheduler callback initialization."""
 
-        def schedule_fn(epoch, step):
+        def schedule_fn(epoch: int, step: int) -> float:
             return 0.1 * (0.9**epoch)
 
         callback = LearningRateSchedulerCallback(
@@ -589,7 +605,7 @@ class TestLearningRateSchedulerCallback:
     def test_epoch_update(self) -> None:
         """Test LR update at epoch start."""
 
-        def schedule_fn(epoch, step):
+        def schedule_fn(epoch: int, step: int) -> float:
             return 0.1 * (0.5**epoch)
 
         callback = LearningRateSchedulerCallback(
@@ -616,7 +632,7 @@ class TestLearningRateSchedulerCallback:
     def test_step_update(self) -> None:
         """Test LR update at batch start."""
 
-        def schedule_fn(epoch, step):
+        def schedule_fn(epoch: int, step: int) -> float:
             return 0.1 / (1 + 0.01 * step)
 
         callback = LearningRateSchedulerCallback(

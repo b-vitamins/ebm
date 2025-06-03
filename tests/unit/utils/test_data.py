@@ -349,7 +349,7 @@ class TestMNISTDatasets:
     """Test MNIST dataset functions."""
 
     @patch("torchvision.datasets.MNIST")
-    def test_get_mnist_datasets(self, mock_mnist) -> None:
+    def test_get_mnist_datasets(self, mock_mnist: Mock) -> None:
         """Test MNIST dataset loading."""
         # Mock dataset
         mock_data = torch.randn(100, 1, 28, 28)
@@ -380,7 +380,7 @@ class TestMNISTDatasets:
         assert transform is not None
 
     @patch("torchvision.datasets.FashionMNIST")
-    def test_get_fashion_mnist_datasets(self, mock_fashion) -> None:
+    def test_get_fashion_mnist_datasets(self, mock_fashion: Mock) -> None:
         """Test Fashion-MNIST dataset loading."""
         # Mock dataset
         mock_dataset = MagicMock()
@@ -548,7 +548,7 @@ class TestEdgeCases:
         add_noise = AddNoise(noise_type="gaussian", noise_level=0.1)
 
         # Manual chaining
-        def chained_transform(x):
+        def chained_transform(x: torch.Tensor) -> torch.Tensor:
             x = binarize(x)
             return add_noise(x)
 

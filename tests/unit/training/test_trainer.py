@@ -1,5 +1,7 @@
 """Unit tests for the Trainer class."""
 
+from pathlib import Path
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -7,7 +9,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from ebm.core.config import OptimizerConfig, TrainingConfig
+from ebm.core.config import ModelConfig, OptimizerConfig, TrainingConfig
 from ebm.models.base import EnergyBasedModel
 from ebm.sampling.base import GradientEstimator
 from ebm.training.callbacks import Callback, CallbackList
@@ -17,7 +19,7 @@ from ebm.training.trainer import Trainer
 class MockModel(EnergyBasedModel):
     """Mock model for testing."""
 
-    def __init__(self, n_features=10) -> None:
+    def __init__(self, n_features: int = 10) -> None:
         self.n_features = n_features
         self.param1 = nn.Parameter(torch.randn(n_features, n_features))
         self.param2 = nn.Parameter(torch.randn(n_features))
@@ -27,49 +29,55 @@ class MockModel(EnergyBasedModel):
     def _build_model(self) -> None:
         pass
 
-    def energy(self, x, *, beta=None, return_parts=False):
+    def energy(
+        self,
+        x: torch.Tensor,
+        *,
+        beta: float | None = None,
+        return_parts: bool = False,
+    ) -> torch.Tensor:
         """Compute a simple quadratic energy."""
         return torch.sum(x**2, dim=-1)
 
-    def free_energy(self, v, *, beta=None):
+    def free_energy(
+        self, v: torch.Tensor, *, beta: float | None = None
+    ) -> torch.Tensor:
         """Return free energy equal to energy."""
         return self.energy(v, beta=beta)
 
     @property
-    def device(self):
+    def device(self) -> torch.device:
         """Return the device used for parameters."""
         return self._device
 
     @property
-    def dtype(self):
+    def dtype(self) -> torch.dtype:
         """Return the dtype used for parameters."""
         return self._dtype
 
-    def parameters(self):
+    def parameters(self) -> list[nn.Parameter]:
         """Return model parameters."""
         return [self.param1, self.param2]
 
-    def named_parameters(self):
+    def named_parameters(self) -> list[tuple[str, nn.Parameter]]:
         """Return named parameters."""
         return [("param1", self.param1), ("param2", self.param2)]
 
-    def state_dict(self):
+    def state_dict(self) -> dict[str, nn.Parameter]:
         """Return state dictionary of model."""
         return {"param1": self.param1, "param2": self.param2}
 
-    def load_state_dict(self, state_dict) -> None:
+    def load_state_dict(self, state_dict: dict[str, nn.Parameter]) -> None:
         """Load parameters from a state dictionary."""
         self.param1.data = state_dict["param1"].data
         self.param2.data = state_dict["param2"].data
 
-    def init_from_data(self, data_loader) -> None:
+    def init_from_data(self, data_loader: DataLoader) -> None:
         """Mock data initialization."""
 
     @classmethod
-    def get_config_class(cls):
+    def get_config_class(cls) -> type[ModelConfig]:
         """Return the configuration class for this mock model."""
-        from ebm.core.config import ModelConfig
-
         return ModelConfig
 
 
@@ -77,7 +85,7 @@ class TestTrainer:
     """Test Trainer class."""
 
     @pytest.fixture
-    def training_config(self, tmp_path):
+    def training_config(self, tmp_path: Path) -> TrainingConfig:
         """Create training configuration."""
         return TrainingConfig(
             epochs=5,
@@ -93,7 +101,7 @@ class TestTrainer:
         )
 
     @pytest.fixture
-    def mock_gradient_estimator(self):
+    def mock_gradient_estimator(self) -> GradientEstimator:
         """Create mock gradient estimator."""
         estimator = Mock(spec=GradientEstimator)
         estimator.estimate_gradient.return_value = {
@@ -110,14 +118,16 @@ class TestTrainer:
         return estimator
 
     @pytest.fixture
-    def simple_data_loader(self):
+    def simple_data_loader(self) -> DataLoader:
         """Create simple data loader."""
         data = torch.randn(100, 10)
         dataset = TensorDataset(data)
         return DataLoader(dataset, batch_size=32, shuffle=True)
 
     def test_initialization(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test trainer initialization."""
         model = MockModel()
@@ -139,7 +149,7 @@ class TestTrainer:
         assert trainer.optimizer.param_groups[0]["lr"] == 0.01
         assert trainer.optimizer.param_groups[0]["momentum"] == 0.9
 
-    def test_optimizer_creation(self, training_config) -> None:
+    def test_optimizer_creation(self, training_config: TrainingConfig) -> None:
         """Test different optimizer configurations."""
         model = MockModel()
         estimator = Mock(spec=GradientEstimator)
@@ -160,7 +170,7 @@ class TestTrainer:
         trainer = Trainer(model, training_config, estimator)
         assert isinstance(trainer.optimizer, torch.optim.RMSprop)
 
-    def test_scheduler_creation(self, training_config) -> None:
+    def test_scheduler_creation(self, training_config: TrainingConfig) -> None:
         """Test learning rate scheduler creation."""
         model = MockModel()
         estimator = Mock(spec=GradientEstimator)
@@ -187,7 +197,9 @@ class TestTrainer:
         assert trainer.scheduler is None
 
     def test_callback_setup(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test callback initialization."""
         model = MockModel()
@@ -215,7 +227,9 @@ class TestTrainer:
         assert "CheckpointCallback" in callback_types  # checkpoint_every > 0
 
     def test_training_step(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test single training step."""
         model = MockModel()
@@ -238,7 +252,9 @@ class TestTrainer:
         assert "grad_norm" in metrics
         assert metrics["grad_norm"] > 0
 
-    def test_gradient_clipping(self, mock_gradient_estimator) -> None:
+    def test_gradient_clipping(
+        self, mock_gradient_estimator: GradientEstimator
+    ) -> None:
         """Test gradient clipping."""
         model = MockModel()
         config = TrainingConfig(
@@ -269,7 +285,10 @@ class TestTrainer:
         assert total_norm <= 1.0 * 1.1  # Allow small numerical error
 
     def test_train_epoch(
-        self, training_config, mock_gradient_estimator, simple_data_loader
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test training for one epoch."""
         model = MockModel()
@@ -294,7 +313,10 @@ class TestTrainer:
         assert trainer.global_step == expected_batches
 
     def test_validation(
-        self, training_config, mock_gradient_estimator, simple_data_loader
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test validation."""
         model = MockModel()
@@ -314,7 +336,10 @@ class TestTrainer:
         assert model.reconstruct.called
 
     def test_fit_method(
-        self, training_config, mock_gradient_estimator, simple_data_loader
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test complete training loop."""
         model = MockModel()
@@ -344,7 +369,9 @@ class TestTrainer:
         assert len(result["history"]["train"]) == 2
 
     def test_early_stopping(
-        self, mock_gradient_estimator, simple_data_loader
+        self,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test early stopping functionality."""
         model = MockModel()
@@ -361,7 +388,7 @@ class TestTrainer:
         # Mock early stopping trigger
         trainer.callbacks.should_stop = False
 
-        def stop_after_3_epochs(*args, **kwargs) -> None:
+        def stop_after_3_epochs(*args: Any, **kwargs: Any) -> None:
             if trainer.current_epoch >= 2:
                 trainer.callbacks._should_stop = True
 
@@ -374,7 +401,10 @@ class TestTrainer:
         assert len(result["history"]["train"]) == 3
 
     def test_checkpoint_save_load(
-        self, training_config, mock_gradient_estimator, tmp_path
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
+        tmp_path: Path,
     ) -> None:
         """Test checkpoint saving and loading."""
         model = MockModel()
@@ -412,7 +442,9 @@ class TestTrainer:
         not hasattr(torch, "compile"), reason="torch.compile not available"
     )
     def test_model_compilation(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test model compilation with torch.compile."""
         model = MockModel()
@@ -425,7 +457,9 @@ class TestTrainer:
 
             mock_compile.assert_called_once_with(model)
 
-    def test_mixed_precision(self, mock_gradient_estimator) -> None:
+    def test_mixed_precision(
+        self, mock_gradient_estimator: GradientEstimator
+    ) -> None:
         """Test mixed precision training."""
         if not torch.cuda.is_available():
             pytest.skip("CUDA not available for mixed precision test")
@@ -445,7 +479,10 @@ class TestTrainer:
         assert isinstance(trainer.scaler, torch.cuda.amp.GradScaler)
 
     def test_interrupt_handling(
-        self, training_config, mock_gradient_estimator, simple_data_loader
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test handling of keyboard interrupt."""
         model = MockModel()
@@ -455,7 +492,7 @@ class TestTrainer:
         original_train_epoch = trainer._train_epoch
         call_count = 0
 
-        def interrupt_after_one(*args, **kwargs):
+        def interrupt_after_one(*args: Any, **kwargs: Any) -> dict[str, float]:
             nonlocal call_count
             call_count += 1
             if call_count > 1:
@@ -481,7 +518,9 @@ class TestTrainerEdgeCases:
     """Test edge cases for Trainer."""
 
     def test_empty_data_loader(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test training with empty data loader."""
         model = MockModel()
@@ -496,7 +535,9 @@ class TestTrainerEdgeCases:
         assert trainer.global_step == 0
 
     def test_single_batch(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test training with single batch."""
         model = MockModel()
@@ -511,7 +552,9 @@ class TestTrainerEdgeCases:
         assert trainer.global_step == 1
 
     def test_different_batch_formats(
-        self, training_config, mock_gradient_estimator
+        self,
+        training_config: TrainingConfig,
+        mock_gradient_estimator: GradientEstimator,
     ) -> None:
         """Test handling different batch formats."""
         model = MockModel()
@@ -531,7 +574,9 @@ class TestTrainerEdgeCases:
         mock_gradient_estimator.estimate_gradient.assert_called()
 
     def test_scheduler_with_validation_metric(
-        self, mock_gradient_estimator, simple_data_loader
+        self,
+        mock_gradient_estimator: GradientEstimator,
+        simple_data_loader: DataLoader,
     ) -> None:
         """Test ReduceLROnPlateau scheduler."""
         model = MockModel()

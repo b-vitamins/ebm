@@ -54,7 +54,7 @@ class TestInitializer:
         assert torch.all(tensor == 0)
 
         # Callable method
-        def custom_init(t) -> None:
+        def custom_init(t: torch.Tensor) -> None:
             t.fill_(42.0)
 
         init = Initializer(custom_init)
