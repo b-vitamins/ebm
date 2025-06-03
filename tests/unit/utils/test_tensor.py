@@ -513,7 +513,7 @@ class TestTensorStatistics:
         stats = TensorStatistics()
 
         # Large values
-        stats.update(torch.tensor([1e8, 1e8 + 1, 1e8 + 2]))
+        stats.update(torch.tensor([1e8, 1e8 + 1, 1e8 + 2], dtype=torch.float64))
 
         # Should compute correct statistics
         assert stats.mean == pytest.approx(1e8 + 1, rel=1e-6)
@@ -521,7 +521,7 @@ class TestTensorStatistics:
 
         # Very small values
         stats2 = TensorStatistics()
-        stats2.update(torch.tensor([1e-8, 2e-8, 3e-8]))
+        stats2.update(torch.tensor([1e-8, 2e-8, 3e-8], dtype=torch.float64))
 
         assert stats2.mean == pytest.approx(2e-8, rel=1e-6)
 

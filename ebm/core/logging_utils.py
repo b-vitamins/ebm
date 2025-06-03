@@ -263,24 +263,25 @@ def log_function_call(
 
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            logger.debug(f"Calling {func.__name__}", args=args, kwargs=kwargs)
+            logger.debug("Calling %s", func.__name__, args=args, kwargs=kwargs)
             start_time = time.perf_counter()
 
             try:
                 result = func(*args, **kwargs)
             except Exception as exc:
                 duration = time.perf_counter() - start_time
-                logger.error(
-                    f"Failed {func.__name__}",
+                logger.exception(
+                    "Failed %s",
+                    func.__name__,
                     duration=duration,
                     error=str(exc),
-                    exc_info=True,
                 )
                 raise
             else:
                 duration = time.perf_counter() - start_time
                 logger.debug(
-                    f"Completed {func.__name__}",
+                    "Completed %s",
+                    func.__name__,
                     duration=duration,
                     result_type=type(result).__name__,
                 )

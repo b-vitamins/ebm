@@ -183,7 +183,8 @@ class TestVisualizeFilters:
         # Check that functions were called
         mock_tight_layout.assert_called_once()
         mock_colorbar.assert_called_once()
-        mock_savefig.assert_called_once()
+        # savefig is only called when a path is provided
+        mock_savefig.assert_not_called()
 
         plt.close(fig)
 
@@ -198,7 +199,7 @@ class TestVisualizeFilters:
 
         # Should fall back to vector visualization
         assert isinstance(fig, Figure)
-        mock_savefig.assert_called_once()
+        mock_savefig.assert_not_called()
 
         plt.close(fig)
 

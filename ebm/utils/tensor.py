@@ -189,14 +189,18 @@ def shape_for_broadcast(
 
     if dim is not None:
         # Preserve specified dimension
-        if dim < len(new_shape) and tensor.shape[0] <= target_shape[dim]:
+        if dim < len(new_shape):
             new_shape[dim] = tensor.shape[0]
+    elif tensor.dim() == 1 and tensor.shape[0] in target_shape:
+        # For 1D tensors try to match the dimension with the same size
+        new_shape[target_shape.index(tensor.shape[0])] = tensor.shape[0]
     else:
-        # Try to match dimensions from the end
+        # Match dimensions from the end
         offset = len(target_shape) - tensor.dim()
         for i, size in enumerate(tensor.shape):
-            if offset + i >= 0 and offset + i < len(target_shape):
-                new_shape[offset + i] = size
+            idx = offset + i
+            if 0 <= idx < len(target_shape):
+                new_shape[idx] = size
 
     return tensor.reshape(new_shape)
 
@@ -273,18 +277,33 @@ def create_padding_mask(
 
 @overload
 def split_tensor(
-    tensor: Tensor, split_size_or_sizes: int, dim: int = 0
+    tensor: Tensor,
+    split_size_or_sizes: int | None = None,
+    *,
+    split_size: int | None = None,
+    split_sizes: Sequence[int] | None = None,
+    dim: int = 0,
 ) -> list[Tensor]: ...
 
 
 @overload
 def split_tensor(
-    tensor: Tensor, split_size_or_sizes: Sequence[int], dim: int = 0
+    tensor: Tensor,
+    split_size_or_sizes: Sequence[int] | None = None,
+    *,
+    split_size: int | None = None,
+    split_sizes: Sequence[int] | None = None,
+    dim: int = 0,
 ) -> list[Tensor]: ...
 
 
 def split_tensor(
-    tensor: Tensor, split_size_or_sizes: int | Sequence[int], dim: int = 0
+    tensor: Tensor,
+    split_size_or_sizes: int | Sequence[int] | None = None,
+    *,
+    split_size: int | None = None,
+    split_sizes: Sequence[int] | None = None,
+    dim: int = 0,
 ) -> list[Tensor]:
     """Split tensor along dimension.
 
@@ -297,9 +316,18 @@ def split_tensor(
     -------
         List of tensor chunks
     """
-    if isinstance(split_size_or_sizes, int):
+    if split_size_or_sizes is not None:
+        if isinstance(split_size_or_sizes, int):
+            return list(torch.split(tensor, split_size_or_sizes, dim=dim))
         return list(torch.split(tensor, split_size_or_sizes, dim=dim))
-    return list(torch.split(tensor, split_size_or_sizes, dim=dim))
+
+    if split_size is not None:
+        return list(torch.split(tensor, split_size, dim=dim))
+
+    if split_sizes is not None:
+        return list(torch.split(tensor, split_sizes, dim=dim))
+
+    raise ValueError("split_size or split_sizes must be provided")
 
 
 def concat_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
@@ -339,6 +367,8 @@ class TensorStatistics:
     def reset(self) -> None:
         """Reset all statistics."""
         self.count = 0
+        self.mean_val = None
+        self.m2 = None
         self.sum = None
         self.sum_sq = None
         self.min = None
@@ -350,36 +380,43 @@ class TensorStatistics:
         Args:
             tensor: New tensor to include in statistics
         """
-        tensor = tensor.detach().float()  # Ensure float for stable computation
+        tensor = tensor.detach().to(dtype=torch.float64)
 
-        if self.count == 0:
-            self.sum = tensor.sum().double()
-            self.sum_sq = (tensor.double() ** 2).sum()
-            self.min = tensor.min()
-            self.max = tensor.max()
-        else:
-            self.sum = self.sum + tensor.sum().double()
-            self.sum_sq = self.sum_sq + (tensor.double() ** 2).sum()
-            self.min = torch.minimum(self.min, tensor.min())
-            self.max = torch.maximum(self.max, tensor.max())
+        for value in tensor.view(-1):
+            val = float(value)
+            if self.count == 0:
+                self.mean_val = val
+                self.sum = val
+                self.sum_sq = val * val
+                self.m2 = 0.0
+                self.min = value
+                self.max = value
+                self.count = 1
+                continue
 
-        self.count += tensor.numel()
+            self.count += 1
+            delta = val - self.mean_val
+            self.mean_val += delta / self.count
+            delta2 = val - self.mean_val
+            self.m2 += delta * delta2
+            self.sum += val
+            self.sum_sq += val * val
+            self.min = torch.minimum(self.min, value)
+            self.max = torch.maximum(self.max, value)
 
     @property
     def mean(self) -> float | None:
         """Get mean value."""
         if self.count == 0:
             return None
-        return float(self.sum / self.count)
+        return float(self.mean_val)
 
     @property
     def std(self) -> float | None:
         """Get standard deviation."""
         if self.count == 0:
             return None
-        mean = self.sum / self.count
-        variance = (self.sum_sq / self.count) - (mean**2)
-        # Ensure non-negative variance due to numerical errors
+        variance = self.m2 / self.count
         variance = max(0.0, float(variance))
         return variance**0.5
 

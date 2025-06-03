@@ -350,6 +350,16 @@ class SyntheticDataset(Dataset):
                     pattern_idx = torch.randperm(self.n_features)[:10]
                     data[i, pattern_idx] = 1
 
+            # Ensure every feature has some variability to avoid zero
+            # variance columns which would lead to NaNs in correlation
+            # calculations
+            for j in range(self.n_features):
+                col = data[:, j]
+                if col.max() == col.min():
+                    # Flip a random element to introduce variation
+                    idx = torch.randint(0, self.n_samples, (1,))
+                    data[idx, j] = 1 - col[0]
+
             # Ensure we have float data for correlation calculation
             return data.float()
 
