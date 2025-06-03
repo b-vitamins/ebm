@@ -9,10 +9,11 @@ from .partition import (
 )
 
 __all__ = [
+    # Estimators
+    "AISEstimator",
+    "BridgeSampling",
     # Base class
     "PartitionFunctionEstimator",
-
-    # Estimators
-    "AISEstimator", "BridgeSampling",
-    "SimpleIS", "RatioEstimator",
+    "RatioEstimator",
+    "SimpleIS",
 ]

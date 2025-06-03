@@ -5,12 +5,14 @@ from .bernoulli import BernoulliRBM, CenteredBernoulliRBM, SparseBernoulliRBM
 from .gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM
 
 __all__ = [
-    # Base classes
-    "RBMBase", "RBMAISAdapter",
-
     # Bernoulli RBMs
-    "BernoulliRBM", "CenteredBernoulliRBM", "SparseBernoulliRBM",
-
+    "BernoulliRBM",
+    "CenteredBernoulliRBM",
     # Gaussian RBMs
-    "GaussianBernoulliRBM", "WhitenedGaussianRBM",
+    "GaussianBernoulliRBM",
+    "RBMAISAdapter",
+    # Base classes
+    "RBMBase",
+    "SparseBernoulliRBM",
+    "WhitenedGaussianRBM",
 ]

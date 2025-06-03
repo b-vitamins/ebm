@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from ..models.base import EnergyBasedModel, LatentVariableModel
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 
 @dataclass
@@ -79,7 +79,8 @@ class MetricsTracker:
         Args:
             window: Window size (uses full history if None)
 
-        Returns:
+        Returns
+        -------
             Dictionary of average values
         """
         result = {}
@@ -140,7 +141,8 @@ class ModelEvaluator:
             num_steps: Number of reconstruction steps
             metric: Error metric ('mse' or 'mae')
 
-        Returns:
+        Returns
+        -------
             Per-sample reconstruction errors
         """
         if not isinstance(self.model, LatentVariableModel):
@@ -173,7 +175,8 @@ class ModelEvaluator:
             log_z: Log partition function (if known)
             num_samples: Number of importance samples (if log_z unknown)
 
-        Returns:
+        Returns
+        -------
             Log-likelihood values and optional standard errors
         """
         # If log_z is provided, exact computation
@@ -203,9 +206,8 @@ class ModelEvaluator:
             se = torch.sqrt(weights.var() / (1 / (weights**2).sum()))
 
             return log_prob, se
-        else:
-            # Fallback: just return negative free energy
-            return -free_energy, None
+        # Fallback: just return negative free energy
+        return -free_energy, None
 
     @torch.no_grad()
     def energy_gap(
@@ -219,7 +221,8 @@ class ModelEvaluator:
             data: Real data samples
             num_model_samples: Number of model samples to generate
 
-        Returns:
+        Returns
+        -------
             Dictionary with energy statistics
         """
         # Data energy
@@ -256,7 +259,8 @@ class ModelEvaluator:
             real_data: Real data samples
             generated_data: Generated samples
 
-        Returns:
+        Returns
+        -------
             Dictionary of quality metrics
         """
         metrics = {}
@@ -340,7 +344,8 @@ class TrainingDynamicsAnalyzer:
         Args:
             metric: Metric name
 
-        Returns:
+        Returns
+        -------
             Convergence rate (negative = converging)
         """
         if metric not in self.history or len(self.history[metric]) < 10:
@@ -369,7 +374,8 @@ class TrainingDynamicsAnalyzer:
         Args:
             metric: Metric name
 
-        Returns:
+        Returns
+        -------
             Oscillation score (0 = no oscillation, 1 = high oscillation)
         """
         if metric not in self.history or len(self.history[metric]) < 10:
@@ -401,7 +407,8 @@ class TrainingDynamicsAnalyzer:
             metric: Metric name
             threshold: Change threshold for plateau detection
 
-        Returns:
+        Returns
+        -------
             (is_plateau, steps_in_plateau)
         """
         if metric not in self.history or len(self.history[metric]) < 10:

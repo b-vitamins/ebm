@@ -4,11 +4,14 @@ from pathlib import Path
 
 import pytest
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
 from ebm.core.config import ModelConfig
-from ebm.models.base import AISInterpolator, EnergyBasedModel, LatentVariableModel
+from ebm.models.base import (
+    AISInterpolator,
+    EnergyBasedModel,
+    LatentVariableModel,
+)
 
 
 class ConcreteEnergyModel(EnergyBasedModel):
@@ -115,7 +118,7 @@ class ConcreteLatentModel(LatentVariableModel):
 class TestEnergyBasedModel:
     """Test EnergyBasedModel base class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test model initialization."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteEnergyModel(config)
@@ -126,7 +129,7 @@ class TestEnergyBasedModel:
         assert hasattr(model, 'weight')
         assert hasattr(model, 'bias')
 
-    def test_device_management(self):
+    def test_device_management(self) -> None:
         """Test device management."""
         config = ModelConfig(device="cpu")
         model = ConcreteEnergyModel(config)
@@ -140,7 +143,7 @@ class TestEnergyBasedModel:
             assert param.device == torch.device("cpu")
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_cuda_initialization(self):
+    def test_cuda_initialization(self) -> None:
         """Test CUDA initialization."""
         config = ModelConfig(device="cuda", dtype="float16")
         model = ConcreteEnergyModel(config)
@@ -153,7 +156,7 @@ class TestEnergyBasedModel:
             assert param.device.type == "cuda"
             assert param.dtype == torch.float16
 
-    def test_prepare_input(self):
+    def test_prepare_input(self) -> None:
         """Test input preparation."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)
@@ -172,7 +175,7 @@ class TestEnergyBasedModel:
             cpu_tensor = model.prepare_input(cuda_tensor)
             assert cpu_tensor.device == torch.device("cpu")
 
-    def test_energy_computation(self):
+    def test_energy_computation(self) -> None:
         """Test energy computation."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteEnergyModel(config)
@@ -197,7 +200,7 @@ class TestEnergyBasedModel:
         assert "total" in parts
         assert torch.allclose(parts["total"], energy)
 
-    def test_log_probability(self):
+    def test_log_probability(self) -> None:
         """Test log probability computation."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)
@@ -214,7 +217,7 @@ class TestEnergyBasedModel:
         log_prob = model.log_probability(x, log_z=log_z)
         assert torch.allclose(log_prob, -energy - log_z)
 
-    def test_save_load_checkpoint(self, tmp_path: Path):
+    def test_save_load_checkpoint(self, tmp_path: Path) -> None:
         """Test checkpoint save/load."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteEnergyModel(config)
@@ -240,7 +243,7 @@ class TestEnergyBasedModel:
         assert torch.allclose(new_model.bias, model.bias)
         assert loaded_metadata == metadata
 
-    def test_from_checkpoint(self, tmp_path: Path):
+    def test_from_checkpoint(self, tmp_path: Path) -> None:
         """Test loading model from checkpoint."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteEnergyModel(config)
@@ -256,7 +259,7 @@ class TestEnergyBasedModel:
         assert torch.allclose(loaded_model.weight, model.weight)
         assert loaded_model.config.device == config.device
 
-    def test_reset_parameters(self):
+    def test_reset_parameters(self) -> None:
         """Test parameter reset."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)
@@ -275,7 +278,7 @@ class TestEnergyBasedModel:
         # Our simple model doesn't have this, so parameters stay the same
         assert torch.allclose(model.weight, torch.ones_like(model.weight))
 
-    def test_parameter_summary(self):
+    def test_parameter_summary(self) -> None:
         """Test parameter summary."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)
@@ -293,7 +296,7 @@ class TestEnergyBasedModel:
         assert summary["trainable_parameters"] == total  # All trainable
         assert summary["non_trainable_parameters"] == 0
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """Test string representation."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteEnergyModel(config)
@@ -307,7 +310,7 @@ class TestEnergyBasedModel:
 class TestLatentVariableModel:
     """Test LatentVariableModel base class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test latent model initialization."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteLatentModel(config)
@@ -316,7 +319,7 @@ class TestLatentVariableModel:
         assert hasattr(model, 'vbias')
         assert hasattr(model, 'hbias')
 
-    def test_sampling_methods(self):
+    def test_sampling_methods(self) -> None:
         """Test sampling visible and hidden units."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteLatentModel(config)
@@ -338,7 +341,7 @@ class TestLatentVariableModel:
         assert v_new.shape == (5, 10)
         assert torch.all((v_new == 0) | (v_new == 1))
 
-    def test_sampling_with_beta(self):
+    def test_sampling_with_beta(self) -> None:
         """Test sampling with temperature parameter."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteLatentModel(config)
@@ -358,7 +361,7 @@ class TestLatentVariableModel:
         entropy2 = -(prob2 * torch.log(prob2 + 1e-8) + (1-prob2) * torch.log(1-prob2 + 1e-8)).mean()
         assert entropy2 < entropy1  # Lower entropy for higher beta
 
-    def test_joint_energy(self):
+    def test_joint_energy(self) -> None:
         """Test joint energy computation."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteLatentModel(config)
@@ -375,7 +378,7 @@ class TestLatentVariableModel:
         energy_concat = model.energy(x)
         assert torch.allclose(energy, energy_concat)
 
-    def test_gibbs_step(self):
+    def test_gibbs_step(self) -> None:
         """Test Gibbs sampling step."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteLatentModel(config)
@@ -395,7 +398,7 @@ class TestLatentVariableModel:
         # Results should be different
         assert not torch.allclose(h_new, h_new2)
 
-    def test_reconstruct(self):
+    def test_reconstruct(self) -> None:
         """Test reconstruction."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         model = ConcreteLatentModel(config)
@@ -417,7 +420,7 @@ class TestLatentVariableModel:
 class TestAISInterpolator:
     """Test AIS interpolator mixin."""
 
-    def test_ais_interpolator_basic(self):
+    def test_ais_interpolator_basic(self) -> None:
         """Test basic AIS interpolator functionality."""
         config = ModelConfig(device="cpu", dtype="float32")
         base_model = ConcreteEnergyModel(config)
@@ -427,7 +430,7 @@ class TestAISInterpolator:
         assert interpolator.base_model is base_model
         assert interpolator.ais_beta == 1.0
 
-    def test_ais_beta_setter(self):
+    def test_ais_beta_setter(self) -> None:
         """Test AIS beta parameter setting."""
         config = ModelConfig(device="cpu", dtype="float32")
         base_model = ConcreteEnergyModel(config)
@@ -444,11 +447,11 @@ class TestAISInterpolator:
         with pytest.raises(ValueError, match="AIS beta must be in"):
             interpolator.ais_beta = 1.5
 
-    def test_interpolated_energy_default(self):
+    def test_interpolated_energy_default(self) -> None:
         """Test default interpolated energy computation."""
         # Need to create a concrete interpolator for testing
         class TestInterpolator(AISInterpolator):
-            def base_log_partition(self):
+            def base_log_partition(self) -> float:
                 return 0.0
 
             def base_energy(self, x):
@@ -482,16 +485,16 @@ class TestAISInterpolator:
 class TestEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_abstract_method_enforcement(self):
+    def test_abstract_method_enforcement(self) -> None:
         """Test that abstract methods must be implemented."""
         config = ModelConfig(device="cpu", dtype="float32")
 
         # Try to create model without implementing abstract methods
         class IncompleteModel(EnergyBasedModel):
-            def _build_model(self):
+            def _build_model(self) -> None:
                 pass
 
-            def energy(self, x, *, beta=None, return_parts=False):
+            def energy(self, x, *, beta=None, return_parts=False) -> None:
                 pass
 
             # Missing: free_energy, get_config_class
@@ -503,7 +506,7 @@ class TestEdgeCases:
         with pytest.raises(NotImplementedError):
             model.free_energy(torch.randn(5, 10))
 
-    def test_device_dtype_consistency(self):
+    def test_device_dtype_consistency(self) -> None:
         """Test device and dtype consistency."""
         config = ModelConfig(device="cpu", dtype="float64")
         model = ConcreteEnergyModel(config)
@@ -517,7 +520,7 @@ class TestEdgeCases:
         x_prepared = model.prepare_input(x_float32)
         assert x_prepared.dtype == torch.float64
 
-    def test_empty_batch(self):
+    def test_empty_batch(self) -> None:
         """Test handling of empty batches."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)
@@ -528,7 +531,7 @@ class TestEdgeCases:
         assert energy.shape == (0,)
         assert energy.numel() == 0
 
-    def test_single_sample(self):
+    def test_single_sample(self) -> None:
         """Test handling of single samples."""
         config = ModelConfig(device="cpu", dtype="float32")
         model = ConcreteEnergyModel(config)

@@ -84,11 +84,10 @@ class LogConfig:
         # Configure output format
         if self.structured:
             processors.append(structlog.processors.JSONRenderer())
+        elif self.colors and RICH_AVAILABLE:
+            processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
-            if self.colors and RICH_AVAILABLE:
-                processors.append(structlog.dev.ConsoleRenderer(colors=True))
-            else:
-                processors.append(structlog.dev.ConsoleRenderer(colors=False))
+            processors.append(structlog.dev.ConsoleRenderer(colors=False))
 
         # Configure structlog
         structlog.configure(
@@ -151,7 +150,7 @@ class MetricProcessor:
 class LoggerMixin:
     """Mixin class that provides logging functionality."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._logger = None
 
@@ -275,7 +274,8 @@ def setup_logging(
         colors: Whether to use colored output (requires rich)
         metrics: Whether to enable metric extraction
 
-    Returns:
+    Returns
+    -------
         Configured logger instance
     """
     config = LogConfig(

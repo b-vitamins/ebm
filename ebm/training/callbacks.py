@@ -16,8 +16,8 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from ..core.logging import logger
-from ..models.base import EnergyBasedModel
+from ebm.core.logging import logger
+from ebm.models.base import EnergyBasedModel
 
 
 class Callback:
@@ -25,41 +25,33 @@ class Callback:
 
     def on_train_begin(self, trainer: Any) -> None:
         """Called at the beginning of training."""
-        pass
 
     def on_train_end(self, trainer: Any) -> None:
         """Called at the end of training."""
-        pass
 
     def on_epoch_start(self, trainer: Any, model: EnergyBasedModel) -> None:
         """Called at the start of each epoch."""
-        pass
 
     def on_epoch_end(
         self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Called at the end of each epoch."""
-        pass
 
     def on_batch_start(
         self, trainer: Any, model: EnergyBasedModel, batch: Tensor
     ) -> None:
         """Called before processing each batch."""
-        pass
 
     def on_batch_end(self, trainer: Any, model: EnergyBasedModel, loss: float) -> None:
         """Called after processing each batch."""
-        pass
 
     def on_validation_start(self, trainer: Any, model: EnergyBasedModel) -> None:
         """Called before validation."""
-        pass
 
     def on_validation_end(
         self, trainer: Any, model: EnergyBasedModel, metrics: dict[str, float]
     ) -> None:
         """Called after validation."""
-        pass
 
 
 class CallbackList:
@@ -86,7 +78,7 @@ class CallbackList:
     def __getattr__(self, name: str):
         """Delegate method calls to all callbacks."""
 
-        def method(*args, **kwargs):
+        def method(*args, **kwargs) -> None:
             for callback in self.callbacks:
                 if hasattr(callback, name):
                     getattr(callback, name)(*args, **kwargs)
@@ -366,7 +358,7 @@ class VisualizationCallback(Callback):
             return
 
         # Import here to avoid circular imports
-        from ..utils.visualization import visualize_filters, visualize_samples
+        from ebm.utils.visualization import visualize_filters, visualize_samples
 
         with torch.no_grad():
             # Generate samples

@@ -11,14 +11,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
-from ..core.config import ModelConfig
-from ..core.device import DeviceManager
-from ..core.logging import LoggerMixin
-from ..core.types import Device
-from ..utils.tensor import ensure_tensor
+from ebm.core.config import ModelConfig
+from ebm.core.device import DeviceManager
+from ebm.core.logging import LoggerMixin
+from ebm.core.types import Device
+from ebm.utils.tensor import ensure_tensor
 
 
 class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
@@ -71,7 +70,6 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
     @abstractmethod
     def _build_model(self) -> None:
         """Build model architecture. Must be implemented by subclasses."""
-        pass
 
     @abstractmethod
     def energy(
@@ -88,10 +86,10 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             beta: Optional inverse temperature for parallel tempering
             return_parts: If True, return dict with energy components
 
-        Returns:
+        Returns
+        -------
             Energy values of shape (batch_size,) or dict of components
         """
-        pass
 
     @abstractmethod
     def free_energy(
@@ -106,10 +104,10 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             v: Visible configurations of shape (batch_size, *visible_dims)
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Free energy values of shape (batch_size,)
         """
-        pass
 
     def log_probability(
         self,
@@ -123,7 +121,8 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             x: Input configurations
             log_z: Log partition function. If None, returns unnormalized log prob.
 
-        Returns:
+        Returns
+        -------
             Log probabilities of shape (batch_size,)
         """
         energy = self.energy(x)
@@ -182,7 +181,8 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             strict: Whether to strictly enforce state dict matching
             map_location: Device to map checkpoint to
 
-        Returns:
+        Returns
+        -------
             Checkpoint metadata
         """
         path = Path(path)
@@ -211,7 +211,8 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             device: Device to load model on
             **config_overrides: Config parameters to override
 
-        Returns:
+        Returns
+        -------
             Loaded model instance
         """
         # Load checkpoint to CPU first
@@ -237,7 +238,6 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
     @abstractmethod
     def get_config_class(cls) -> type[ModelConfig]:
         """Get configuration class for this model."""
-        pass
 
     def reset_parameters(self) -> None:
         """Reset all model parameters to initial values."""
@@ -284,10 +284,10 @@ class LatentVariableModel(EnergyBasedModel, ABC):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled hidden states, optionally with probabilities
         """
-        pass
 
     @abstractmethod
     def sample_visible(
@@ -304,10 +304,10 @@ class LatentVariableModel(EnergyBasedModel, ABC):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled visible states, optionally with probabilities
         """
-        pass
 
     def joint_energy(
         self,
@@ -323,7 +323,8 @@ class LatentVariableModel(EnergyBasedModel, ABC):
             hidden: Hidden unit values
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Joint energy values
         """
         # Default implementation concatenates and calls energy
@@ -344,7 +345,8 @@ class LatentVariableModel(EnergyBasedModel, ABC):
             beta: Optional inverse temperature
             start_from: Whether to start from 'visible' or 'hidden'
 
-        Returns:
+        Returns
+        -------
             New visible and hidden states
         """
         if start_from == 'visible':
@@ -371,7 +373,8 @@ class LatentVariableModel(EnergyBasedModel, ABC):
             num_steps: Number of Gibbs steps
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Reconstructed visible units
         """
         v = visible
@@ -412,7 +415,6 @@ class AISInterpolator(nn.Module):
     @abstractmethod
     def base_log_partition(self) -> float:
         """Compute log partition function of base distribution."""
-        pass
 
     def interpolated_energy(
         self,
@@ -425,7 +427,8 @@ class AISInterpolator(nn.Module):
             x: Input configurations
             beta: AIS interpolation parameter (overrides self.ais_beta)
 
-        Returns:
+        Returns
+        -------
             Interpolated energy values
         """
         if beta is None:
@@ -440,4 +443,3 @@ class AISInterpolator(nn.Module):
     @abstractmethod
     def base_energy(self, x: Tensor) -> Tensor:
         """Compute energy under base distribution."""
-        pass

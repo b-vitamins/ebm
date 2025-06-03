@@ -1,7 +1,7 @@
 """Unit tests for Bernoulli RBM implementations."""
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ebm.core.config import RBMConfig
 from ebm.models.rbm.bernoulli import (
@@ -14,7 +14,7 @@ from ebm.models.rbm.bernoulli import (
 class TestBernoulliRBM:
     """Test standard Bernoulli RBM."""
 
-    def test_initialization(self, small_rbm_config):
+    def test_initialization(self, small_rbm_config) -> None:
         """Test Bernoulli RBM initialization."""
         rbm = BernoulliRBM(small_rbm_config)
 
@@ -22,7 +22,7 @@ class TestBernoulliRBM:
         assert rbm.num_visible == 20
         assert rbm.num_hidden == 10
 
-    def test_activation_functions(self):
+    def test_activation_functions(self) -> None:
         """Test activation functions."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = BernoulliRBM(config)
@@ -37,7 +37,7 @@ class TestBernoulliRBM:
         assert torch.allclose(h_activation, expected)
         assert torch.allclose(v_activation, expected)
 
-    def test_sampling_from_prob(self):
+    def test_sampling_from_prob(self) -> None:
         """Test Bernoulli sampling."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = BernoulliRBM(config)
@@ -60,7 +60,7 @@ class TestBernoulliRBM:
         assert abs(empirical_prob[0, 1].item() - 0.5) < 0.05
         assert abs(empirical_prob[0, 2].item() - 1.0) < 0.05
 
-    def test_log_probability_ratio(self):
+    def test_log_probability_ratio(self) -> None:
         """Test log probability ratio computation."""
         config = RBMConfig(visible_units=5, hidden_units=3, seed=42)
         rbm = BernoulliRBM(config)
@@ -83,7 +83,7 @@ class TestBernoulliRBM:
         expected_beta = beta * (f2 - f1)
         assert torch.allclose(log_ratio_beta, expected_beta)
 
-    def test_score_function(self):
+    def test_score_function(self) -> None:
         """Test score function computation."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = BernoulliRBM(config)
@@ -114,7 +114,7 @@ class TestBernoulliRBM:
         # Check visible score
         assert torch.allclose(scores["visible"], -v.grad, atol=1e-5)
 
-    def test_registry_registration(self):
+    def test_registry_registration(self) -> None:
         """Test that BernoulliRBM is registered."""
         from ebm.core.registry import models
 
@@ -132,7 +132,7 @@ class TestBernoulliRBM:
 class TestCenteredBernoulliRBM:
     """Test centered Bernoulli RBM."""
 
-    def test_initialization(self, small_rbm_config):
+    def test_initialization(self, small_rbm_config) -> None:
         """Test centered RBM initialization."""
         rbm = CenteredBernoulliRBM(small_rbm_config)
 
@@ -148,7 +148,7 @@ class TestCenteredBernoulliRBM:
         assert torch.allclose(rbm.v_offset, torch.full_like(rbm.v_offset, 0.5))
         assert torch.allclose(rbm.h_offset, torch.full_like(rbm.h_offset, 0.5))
 
-    def test_centered_sampling(self):
+    def test_centered_sampling(self) -> None:
         """Test sampling with centering."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = CenteredBernoulliRBM(config)
@@ -170,7 +170,7 @@ class TestCenteredBernoulliRBM:
 
         assert torch.allclose(h_prob, expected_prob, atol=1e-5)
 
-    def test_centered_energy(self):
+    def test_centered_energy(self) -> None:
         """Test energy computation with centering."""
         config = RBMConfig(visible_units=3, hidden_units=2)
         rbm = CenteredBernoulliRBM(config)
@@ -198,7 +198,7 @@ class TestCenteredBernoulliRBM:
 
         assert torch.allclose(energy, expected, atol=1e-5)
 
-    def test_centered_free_energy(self):
+    def test_centered_free_energy(self) -> None:
         """Test free energy with centering."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = CenteredBernoulliRBM(config)
@@ -227,7 +227,7 @@ class TestCenteredBernoulliRBM:
             free_energy_computed = rbm_small.free_energy(v_small[i:i+1])
             assert torch.allclose(free_energy_computed, free_energy_exact, atol=1e-4)
 
-    def test_update_offsets(self):
+    def test_update_offsets(self) -> None:
         """Test offset update mechanism."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = CenteredBernoulliRBM(config)
@@ -251,7 +251,7 @@ class TestCenteredBernoulliRBM:
         assert torch.allclose(rbm.v_offset, expected_v)
         assert torch.allclose(rbm.h_offset, expected_h)
 
-    def test_init_from_data_centered(self, synthetic_binary_data, make_data_loader):
+    def test_init_from_data_centered(self, synthetic_binary_data, make_data_loader) -> None:
         """Test data initialization for centered RBM."""
         config = RBMConfig(visible_units=100, hidden_units=50)
         rbm = CenteredBernoulliRBM(config)
@@ -274,7 +274,7 @@ class TestCenteredBernoulliRBM:
 class TestSparseBernoulliRBM:
     """Test sparse Bernoulli RBM."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test sparse RBM initialization."""
         config = RBMConfig(
             visible_units=20,
@@ -299,7 +299,7 @@ class TestSparseBernoulliRBM:
         assert rbm.hidden_mean.shape == (10,)
         assert torch.allclose(rbm.hidden_mean, torch.full((10,), 0.05))
 
-    def test_sparsity_penalty(self):
+    def test_sparsity_penalty(self) -> None:
         """Test sparsity penalty computation."""
         config = RBMConfig(visible_units=20, hidden_units=10)
         config.sparsity_target = 0.1
@@ -324,7 +324,7 @@ class TestSparseBernoulliRBM:
         expected_mean = 0.9 * 0.1 + 0.1 * batch_mean  # Initial was 0.1
         assert torch.allclose(rbm.hidden_mean, expected_mean, atol=0.01)
 
-    def test_sparse_sampling(self):
+    def test_sparse_sampling(self) -> None:
         """Test sparse sampling with top-k constraint."""
         config = RBMConfig(visible_units=20, hidden_units=10)
         config.sparsity_target = 0.1
@@ -351,7 +351,7 @@ class TestSparseBernoulliRBM:
                 max_inactive_prob = h_prob[i, inactive_indices].max()
                 assert min_active_prob >= max_inactive_prob
 
-    def test_registry_registration(self):
+    def test_registry_registration(self) -> None:
         """Test sparse RBM registration."""
         from ebm.core.registry import models
 
@@ -363,7 +363,7 @@ class TestSparseBernoulliRBM:
 class TestBernoulliRBMProperties:
     """Test mathematical properties of Bernoulli RBMs."""
 
-    def test_energy_gradient(self, simple_bernoulli_rbm):
+    def test_energy_gradient(self, simple_bernoulli_rbm) -> None:
         """Test that energy gradient matches implementation."""
         rbm = simple_bernoulli_rbm
 
@@ -386,7 +386,7 @@ class TestBernoulliRBMProperties:
         expected_h_grad = -(v @ rbm.W.T + rbm.hbias)
         assert torch.allclose(h.grad, expected_h_grad, atol=1e-5)
 
-    def test_partition_function_consistency(self):
+    def test_partition_function_consistency(self) -> None:
         """Test partition function calculation for tiny RBM."""
         # Very small RBM where we can compute Z exactly
         config = RBMConfig(visible_units=2, hidden_units=2)
@@ -418,7 +418,7 @@ class TestBernoulliRBMProperties:
 
         assert abs(total_prob - 1.0) < 1e-5
 
-    def test_conditional_independence(self, simple_bernoulli_rbm):
+    def test_conditional_independence(self, simple_bernoulli_rbm) -> None:
         """Test conditional independence property of RBMs."""
         rbm = simple_bernoulli_rbm
 

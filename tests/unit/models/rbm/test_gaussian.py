@@ -1,7 +1,7 @@
 """Unit tests for Gaussian RBM implementations."""
 
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ebm.core.config import GaussianRBMConfig
 from ebm.models.rbm.gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM
@@ -10,7 +10,7 @@ from ebm.models.rbm.gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM
 class TestGaussianBernoulliRBM:
     """Test Gaussian-Bernoulli RBM."""
 
-    def test_initialization(self, gaussian_rbm_config):
+    def test_initialization(self, gaussian_rbm_config) -> None:
         """Test Gaussian RBM initialization."""
         rbm = GaussianBernoulliRBM(gaussian_rbm_config)
 
@@ -24,7 +24,7 @@ class TestGaussianBernoulliRBM:
         assert isinstance(rbm.log_sigma, nn.Parameter)
         assert rbm.log_sigma.shape == (100,)
 
-    def test_fixed_sigma(self):
+    def test_fixed_sigma(self) -> None:
         """Test Gaussian RBM with fixed sigma."""
         config = GaussianRBMConfig(
             visible_units=20,
@@ -39,7 +39,7 @@ class TestGaussianBernoulliRBM:
         assert torch.allclose(rbm.log_sigma, torch.log(torch.tensor(2.0)))
         assert torch.allclose(rbm.sigma, torch.tensor(2.0))
 
-    def test_sigma_properties(self):
+    def test_sigma_properties(self) -> None:
         """Test sigma and sigma_sq properties."""
         config = GaussianRBMConfig(
             visible_units=10,
@@ -59,7 +59,7 @@ class TestGaussianBernoulliRBM:
         assert torch.allclose(sigma[:3], torch.tensor([1.0, 2.0, 0.5]))
         assert torch.allclose(sigma_sq[:3], torch.tensor([1.0, 4.0, 0.25]))
 
-    def test_activation_functions(self):
+    def test_activation_functions(self) -> None:
         """Test activation functions for Gaussian RBM."""
         config = GaussianRBMConfig(visible_units=10, hidden_units=5)
         rbm = GaussianBernoulliRBM(config)
@@ -74,7 +74,7 @@ class TestGaussianBernoulliRBM:
         v_activation = rbm.visible_activation(pre_activation)
         assert torch.allclose(v_activation, pre_activation)
 
-    def test_sample_visible_gaussian(self):
+    def test_sample_visible_gaussian(self) -> None:
         """Test Gaussian visible unit sampling."""
         config = GaussianRBMConfig(
             visible_units=20,
@@ -110,7 +110,7 @@ class TestGaussianBernoulliRBM:
         assert torch.allclose(empirical_mean, v_mean[0], atol=0.1)
         assert torch.allclose(empirical_std, torch.full((20,), 0.5), atol=0.1)
 
-    def test_sample_visible_with_temperature(self):
+    def test_sample_visible_with_temperature(self) -> None:
         """Test temperature effects on visible sampling."""
         config = GaussianRBMConfig(
             visible_units=10,
@@ -143,7 +143,7 @@ class TestGaussianBernoulliRBM:
         var_low = samples_low.var(dim=0).mean()
         assert var_high > var_low
 
-    def test_joint_energy_gaussian(self):
+    def test_joint_energy_gaussian(self) -> None:
         """Test joint energy computation for Gaussian units."""
         config = GaussianRBMConfig(
             visible_units=3,
@@ -182,7 +182,7 @@ class TestGaussianBernoulliRBM:
         assert "interaction" in parts
         assert torch.allclose(parts["total"], energy)
 
-    def test_free_energy_gaussian(self):
+    def test_free_energy_gaussian(self) -> None:
         """Test free energy for Gaussian units."""
         config = GaussianRBMConfig(
             visible_units=5,
@@ -220,7 +220,7 @@ class TestGaussianBernoulliRBM:
             free_energy_computed = rbm_small.free_energy(v_small[i:i+1])
             assert torch.allclose(free_energy_computed, free_energy_exact, atol=1e-4)
 
-    def test_score_matching_loss(self):
+    def test_score_matching_loss(self) -> None:
         """Test denoising score matching loss."""
         config = GaussianRBMConfig(
             visible_units=20,
@@ -240,7 +240,7 @@ class TestGaussianBernoulliRBM:
         assert loss.item() > 0
         assert torch.isfinite(loss)
 
-    def test_fantasy_particles(self):
+    def test_fantasy_particles(self) -> None:
         """Test fantasy particle generation."""
         config = GaussianRBMConfig(
             visible_units=10,
@@ -281,7 +281,7 @@ class TestGaussianBernoulliRBM:
         assert len(chain) == 11  # Initial + 10 steps
         assert all(s.shape == (5, 10) for s in chain)
 
-    def test_registry_registration(self):
+    def test_registry_registration(self) -> None:
         """Test Gaussian RBM registration."""
         from ebm.core.registry import models
 
@@ -294,7 +294,7 @@ class TestGaussianBernoulliRBM:
 class TestWhitenedGaussianRBM:
     """Test whitened Gaussian RBM."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test whitened RBM initialization."""
         config = GaussianRBMConfig(
             visible_units=20,
@@ -312,7 +312,7 @@ class TestWhitenedGaussianRBM:
         assert rbm.whitening_mean is None
         assert rbm.whitening_std is None
 
-    def test_fit_whitening(self, synthetic_continuous_data, make_data_loader):
+    def test_fit_whitening(self, synthetic_continuous_data, make_data_loader) -> None:
         """Test fitting whitening transformation."""
         config = GaussianRBMConfig(
             visible_units=50,
@@ -349,7 +349,7 @@ class TestWhitenedGaussianRBM:
         if not rbm.learn_sigma:
             assert torch.allclose(rbm.sigma, torch.ones_like(rbm.sigma))
 
-    def test_whitening_transform(self):
+    def test_whitening_transform(self) -> None:
         """Test whitening and unwhitening."""
         config = GaussianRBMConfig(
             visible_units=10,
@@ -376,7 +376,7 @@ class TestWhitenedGaussianRBM:
         v_recovered = rbm.unwhiten(v_white)
         assert torch.allclose(v_recovered, v)
 
-    def test_prepare_input_whitening(self):
+    def test_prepare_input_whitening(self) -> None:
         """Test that prepare_input applies whitening."""
         config = GaussianRBMConfig(visible_units=5, hidden_units=3)
         rbm = WhitenedGaussianRBM(config)
@@ -394,7 +394,7 @@ class TestWhitenedGaussianRBM:
         v_prepared = rbm.prepare_input(v)
         assert torch.allclose(v_prepared, v / 2.0)
 
-    def test_fantasy_particles_whitened(self):
+    def test_fantasy_particles_whitened(self) -> None:
         """Test fantasy particle generation with unwhitening."""
         config = GaussianRBMConfig(
             visible_units=10,
@@ -431,7 +431,7 @@ class TestWhitenedGaussianRBM:
         assert abs(samples.mean() - 5.0) < 1.0
         assert abs(samples.std() - 2.0) < 0.5
 
-    def test_registry_registration(self):
+    def test_registry_registration(self) -> None:
         """Test whitened Gaussian RBM registration."""
         from ebm.core.registry import models
 
@@ -443,7 +443,7 @@ class TestWhitenedGaussianRBM:
 class TestGaussianRBMProperties:
     """Test mathematical properties of Gaussian RBMs."""
 
-    def test_energy_continuous_visible(self):
+    def test_energy_continuous_visible(self) -> None:
         """Test that energy handles continuous visible units correctly."""
         config = GaussianRBMConfig(
             visible_units=5,
@@ -471,7 +471,7 @@ class TestGaussianRBMProperties:
 
         assert energy_near.mean() < energy_far.mean()
 
-    def test_gradient_consistency(self):
+    def test_gradient_consistency(self) -> None:
         """Test gradient consistency for Gaussian units."""
         config = GaussianRBMConfig(
             visible_units=5,
@@ -506,7 +506,7 @@ class TestGaussianRBMProperties:
 
         assert torch.allclose(v.grad, v_grad_numerical, atol=1e-3)
 
-    def test_partition_independence(self):
+    def test_partition_independence(self) -> None:
         """Test that visible partition function depends on sigma."""
         config1 = GaussianRBMConfig(
             visible_units=3,
@@ -545,7 +545,7 @@ class TestGaussianRBMProperties:
 
         assert not torch.allclose(f1, f2)
 
-    def test_learned_sigma_gradient(self):
+    def test_learned_sigma_gradient(self) -> None:
         """Test that sigma can be learned via gradients."""
         config = GaussianRBMConfig(
             visible_units=10,

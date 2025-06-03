@@ -153,7 +153,7 @@ def create_sampler(args, model):
     return sampler
 
 
-def main():
+def main() -> None:
     """Main training script."""
     args = parse_args()
 

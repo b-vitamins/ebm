@@ -13,8 +13,9 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
-from ..core.registry import register_sampler
-from ..models.base import EnergyBasedModel, LatentVariableModel
+from ebm.core.registry import register_sampler
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
+
 from .base import GradientEstimator, Sampler
 
 
@@ -54,7 +55,8 @@ class MeanFieldSampler(Sampler):
             num_steps: Number of iterations (overrides num_iter)
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Mean-field approximation of visible units
         """
         if not isinstance(model, LatentVariableModel):
@@ -156,7 +158,8 @@ class TAPSampler(Sampler):
             return_magnetizations: If True, return mean activations
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Samples (and magnetizations if requested)
         """
         if not isinstance(model, LatentVariableModel):
@@ -275,7 +278,8 @@ class TAPGradientEstimator(GradientEstimator):
             data: Training data
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Parameter gradients
         """
         if not isinstance(model, LatentVariableModel):
@@ -294,7 +298,7 @@ class TAPGradientEstimator(GradientEstimator):
         )
 
         # Compute gradients using magnetizations
-        from ..utils.tensor import batch_outer_product
+        from ebm.utils.tensor import batch_outer_product
 
         gradients = {}
 
@@ -353,7 +357,8 @@ class BeliefPropagationSampler(Sampler):
             num_steps: Number of iterations
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Approximate samples
         """
         if not isinstance(model, LatentVariableModel):

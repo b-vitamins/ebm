@@ -93,7 +93,7 @@ def mock_gradient_estimator():
 def mock_callback():
     """Provide a mock callback for testing."""
     class MockCallback(Callback):
-        def __init__(self):
+        def __init__(self) -> None:
             self.events = []
             self.epoch_metrics = []
             self.should_stop = False
@@ -147,11 +147,10 @@ def mock_sampler():
 
             if self.return_same:
                 return init_state.clone()
-            else:
-                # Return slightly perturbed version
-                noise = torch.randn_like(init_state) * 0.1
-                samples = torch.clamp(init_state + noise, 0, 1)
-                return (samples > 0.5).to(init_state.dtype)
+            # Return slightly perturbed version
+            noise = torch.randn_like(init_state) * 0.1
+            samples = torch.clamp(init_state + noise, 0, 1)
+            return (samples > 0.5).to(init_state.dtype)
 
     return MockSampler
 
@@ -205,7 +204,7 @@ def mock_optimizer():
         optimizer.state = {}
         optimizer.step_count = 0
 
-        def step():
+        def step() -> None:
             optimizer.step_count += 1
 
         optimizer.step.side_effect = step
@@ -224,7 +223,7 @@ def mock_scheduler():
         scheduler.optimizer = optimizer
         scheduler.step_count = 0
 
-        def step(metric=None):
+        def step(metric=None) -> None:
             scheduler.step_count += 1
             # Simulate learning rate decay
             for group in optimizer.param_groups:

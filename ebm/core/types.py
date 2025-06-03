@@ -73,7 +73,8 @@ class EnergyModel(Protocol):
             x: Input configurations of shape (batch_size, *dims)
             beta: Optional inverse temperature for parallel tempering
 
-        Returns:
+        Returns
+        -------
             Energy values of shape (batch_size,) or (batch_size, num_chains)
         """
         ...
@@ -85,7 +86,8 @@ class EnergyModel(Protocol):
             v: Visible configurations of shape (batch_size, *visible_dims)
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Free energy values of shape (batch_size,) or (batch_size, num_chains)
         """
         ...
@@ -105,7 +107,8 @@ class LatentModel(EnergyModel, Protocol):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled hidden states, optionally with probabilities
         """
         ...
@@ -120,7 +123,8 @@ class LatentModel(EnergyModel, Protocol):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled visible states, optionally with probabilities
         """
         ...
@@ -141,7 +145,8 @@ class Sampler(Protocol):
             num_steps: Number of sampling steps
             **kwargs: Additional sampler-specific arguments
 
-        Returns:
+        Returns
+        -------
             Samples of shape (batch_size, *dims)
         """
         ...
@@ -165,7 +170,8 @@ class GradientEstimator(Protocol):
             data: Training data batch
             **kwargs: Estimator-specific arguments
 
-        Returns:
+        Returns
+        -------
             Dictionary mapping parameter names to gradients
         """
         ...

@@ -20,7 +20,7 @@ from ebm.models.base import EnergyBasedModel, LatentVariableModel
 class MockRBM(LatentVariableModel):
     """Mock RBM for testing partition function estimation."""
 
-    def __init__(self, n_visible=5, n_hidden=3):
+    def __init__(self, n_visible=5, n_hidden=3) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = torch.nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
@@ -100,14 +100,14 @@ class MockRBM(LatentVariableModel):
 class TestPartitionFunctionEstimator:
     """Test base PartitionFunctionEstimator class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test base estimator initialization."""
         model = MockRBM()
         estimator = PartitionFunctionEstimator(model)
 
         assert estimator.model is model
 
-    def test_abstract_estimate(self):
+    def test_abstract_estimate(self) -> None:
         """Test that estimate method must be implemented."""
         model = MockRBM()
         estimator = PartitionFunctionEstimator(model)
@@ -119,7 +119,7 @@ class TestPartitionFunctionEstimator:
 class TestAISEstimator:
     """Test AISEstimator class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test AIS estimator initialization."""
         model = MockRBM()
         estimator = AISEstimator(model=model, num_temps=100, num_chains=50)
@@ -131,7 +131,7 @@ class TestAISEstimator:
         assert estimator.betas[0] == 0.0
         assert estimator.betas[-1] == 1.0
 
-    def test_invalid_model_type(self):
+    def test_invalid_model_type(self) -> None:
         """Test error on non-latent model."""
         model = Mock(spec=EnergyBasedModel)
         estimator = AISEstimator(model)
@@ -139,7 +139,7 @@ class TestAISEstimator:
         with pytest.raises(TypeError, match="AIS requires a LatentVariableModel"):
             estimator.estimate()
 
-    def test_basic_estimation(self):
+    def test_basic_estimation(self) -> None:
         """Test basic partition function estimation."""
         model = MockRBM(n_visible=3, n_hidden=2)
 
@@ -160,7 +160,7 @@ class TestAISEstimator:
         # For very small weights, should be close to base
         assert abs(log_z - base_log_z) < 2.0
 
-    def test_estimation_with_diagnostics(self):
+    def test_estimation_with_diagnostics(self) -> None:
         """Test estimation with diagnostic information."""
         model = MockRBM(n_visible=4, n_hidden=3)
 
@@ -188,7 +188,7 @@ class TestAISEstimator:
         assert diagnostics["effective_sample_size"] > 0
         assert diagnostics["effective_sample_size"] <= 10
 
-    def test_custom_base_partition(self):
+    def test_custom_base_partition(self) -> None:
         """Test with custom base partition function."""
         model = MockRBM()
 
@@ -204,7 +204,7 @@ class TestAISEstimator:
         # Should use adapter's base partition
         mock_adapter.base_log_partition.assert_called_once()
 
-    def test_temperature_schedule(self):
+    def test_temperature_schedule(self) -> None:
         """Test that temperature schedule is used correctly."""
         model = MockRBM(n_visible=2, n_hidden=2)
 
@@ -236,7 +236,7 @@ class TestAISEstimator:
 class TestBridgeSampling:
     """Test BridgeSampling class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test bridge sampling initialization."""
         model1 = MockRBM(n_visible=5, n_hidden=3)
         model2 = MockRBM(n_visible=5, n_hidden=3)
@@ -247,7 +247,7 @@ class TestBridgeSampling:
         assert estimator.model2 is model2
         assert estimator.num_samples == 100
 
-    def test_basic_ratio_estimation(self):
+    def test_basic_ratio_estimation(self) -> None:
         """Test basic partition function ratio estimation."""
         # Create two similar models
         model1 = MockRBM(n_visible=4, n_hidden=2)
@@ -270,7 +270,7 @@ class TestBridgeSampling:
         # For slightly different models, ratio should be small
         assert abs(log_ratio) < 5.0
 
-    def test_convergence_detection(self):
+    def test_convergence_detection(self) -> None:
         """Test bridge sampling convergence."""
         model1 = MockRBM(n_visible=3, n_hidden=2)
         model2 = MockRBM(n_visible=3, n_hidden=2)
@@ -293,7 +293,7 @@ class TestBridgeSampling:
             convergence_msg = mock_log.call_args[0][0]
             assert "converged" in convergence_msg
 
-    def test_sample_generation(self):
+    def test_sample_generation(self) -> None:
         """Test that models can generate samples."""
         model1 = Mock(spec=LatentVariableModel)
         model2 = Mock(spec=LatentVariableModel)
@@ -317,7 +317,7 @@ class TestBridgeSampling:
         )
         model2.sample_fantasy_particles.assert_called_once()
 
-    def test_missing_sample_method(self):
+    def test_missing_sample_method(self) -> None:
         """Test error when model lacks sampling method."""
         model1 = MockRBM()
         model2 = Mock(spec=EnergyBasedModel)  # No sample_fantasy_particles
@@ -331,7 +331,7 @@ class TestBridgeSampling:
 class TestSimpleIS:
     """Test SimpleIS class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test simple IS initialization."""
         model = MockRBM()
 
@@ -341,7 +341,7 @@ class TestSimpleIS:
         assert estimator.proposal == "uniform"
         assert estimator.num_samples == 1000
 
-    def test_uniform_proposal(self):
+    def test_uniform_proposal(self) -> None:
         """Test estimation with uniform proposal."""
         model = MockRBM(n_visible=3, n_hidden=2)
 
@@ -361,7 +361,7 @@ class TestSimpleIS:
         # For small RBM, partition function should be reasonable
         assert -10 < log_z < 20
 
-    def test_data_proposal(self):
+    def test_data_proposal(self) -> None:
         """Test estimation with data-based proposal."""
         model = MockRBM(n_visible=5, n_hidden=3)
 
@@ -378,7 +378,7 @@ class TestSimpleIS:
         assert isinstance(std_err, float)
         assert np.isfinite(log_z)
 
-    def test_invalid_proposal(self):
+    def test_invalid_proposal(self) -> None:
         """Test error on invalid proposal type."""
         model = MockRBM()
         estimator = SimpleIS(model, proposal="invalid")
@@ -386,7 +386,7 @@ class TestSimpleIS:
         with pytest.raises(ValueError, match="Unknown proposal"):
             estimator.estimate()
 
-    def test_effective_sample_size(self):
+    def test_effective_sample_size(self) -> None:
         """Test ESS calculation in importance sampling."""
         model = MockRBM(n_visible=4, n_hidden=2)
 
@@ -408,7 +408,7 @@ class TestSimpleIS:
 class TestRatioEstimator:
     """Test RatioEstimator class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test ratio estimator initialization."""
         models = [MockRBM(), MockRBM(), MockRBM()]
 
@@ -418,7 +418,7 @@ class TestRatioEstimator:
         assert estimator.method == "bridge"
         assert estimator.model is models[0]
 
-    def test_pairwise_ratios(self):
+    def test_pairwise_ratios(self) -> None:
         """Test estimation of all pairwise ratios."""
         # Create three models with different scales
         model1 = MockRBM(n_visible=3, n_hidden=2)
@@ -461,7 +461,7 @@ class TestRatioEstimator:
         log_01, se_01 = ratios[(0, 1)]
         assert abs(log_10 + log_01) < 1e-6
 
-    def test_transitivity(self):
+    def test_transitivity(self) -> None:
         """Test transitivity in ratio computation."""
         models = [MockRBM() for _ in range(4)]
 
@@ -488,7 +488,7 @@ class TestRatioEstimator:
             log_21_computed = log_20 - log_10
             assert abs(log_21_computed - 1.0) < 1e-6  # 2.0 - 1.0
 
-    def test_invalid_method(self):
+    def test_invalid_method(self) -> None:
         """Test error on invalid estimation method."""
         models = [MockRBM()]
 
@@ -499,7 +499,7 @@ class TestRatioEstimator:
 class TestEdgeCases:
     """Test edge cases for partition function estimation."""
 
-    def test_empty_model(self):
+    def test_empty_model(self) -> None:
         """Test with model having zero dimensions."""
         model = MockRBM(n_visible=0, n_hidden=0)
 
@@ -509,7 +509,7 @@ class TestEdgeCases:
         with pytest.raises(Exception):  # noqa: B017 - error type not specified
             estimator.estimate(show_progress=False)
 
-    def test_extreme_temperatures(self):
+    def test_extreme_temperatures(self) -> None:
         """Test AIS with extreme temperature range."""
         model = MockRBM()
 
@@ -521,7 +521,7 @@ class TestEdgeCases:
         log_z = estimator.estimate(show_progress=False)
         assert np.isfinite(log_z)
 
-    def test_numerical_stability(self):
+    def test_numerical_stability(self) -> None:
         """Test numerical stability with extreme weights."""
         model = MockRBM()
 
@@ -540,7 +540,7 @@ class TestEdgeCases:
         )  # May overflow but shouldn't be NaN
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_device_consistency(self):
+    def test_device_consistency(self) -> None:
         """Test estimation with CUDA models."""
         model = MockRBM()
 

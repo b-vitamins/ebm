@@ -82,7 +82,8 @@ def create_model(name: str, config: ModelConfig) -> EnergyBasedModel:
         name: Model name (e.g., 'bernoulli_rbm', 'gaussian_rbm')
         config: Model configuration
 
-    Returns:
+    Returns
+    -------
         Instantiated model
     """
     return model_registry.create(name, config=config)
@@ -95,7 +96,8 @@ def create_sampler(name: str, **kwargs) -> Sampler:
         name: Sampler name (e.g., 'cd', 'pcd', 'parallel_tempering')
         **kwargs: Sampler-specific arguments
 
-    Returns:
+    Returns
+    -------
         Instantiated sampler
     """
     return sampler_registry.create(name, **kwargs)
@@ -103,43 +105,69 @@ def create_sampler(name: str, **kwargs) -> Sampler:
 
 # Package metadata
 __all__ = [
-    # Version info
-    "__version__", "__author__", "__license__",
-
-    # Submodules
-    "core", "models", "sampling", "training", "inference", "utils",
-
-    # Core classes
-    "ModelConfig", "TrainingConfig", "OptimizerConfig",
-    "RBMConfig", "GaussianRBMConfig",
-    "DeviceManager", "get_device", "set_device",
-    "setup_logging", "logger",
-
-    # Models
-    "EnergyBasedModel", "LatentVariableModel",
-    "BernoulliRBM", "CenteredBernoulliRBM", "SparseBernoulliRBM",
-    "GaussianBernoulliRBM", "WhitenedGaussianRBM",
-
-    # Samplers
-    "Sampler", "GradientEstimator",
-    "ContrastiveDivergence", "PersistentContrastiveDivergence",
-    "FastPersistentCD", "ParallelTempering", "AnnealedImportanceSampling",
-    "MeanFieldSampler", "TAPSampler",
-
-    # Training
-    "Trainer", "Callback", "CallbackList",
-    "LoggingCallback", "CheckpointCallback", "EarlyStoppingCallback",
-    "VisualizationCallback", "MetricsTracker", "ModelEvaluator",
-
     # Inference
-    "AISEstimator", "BridgeSampling",
-
-    # Utilities
-    "get_mnist_datasets", "get_fashion_mnist_datasets",
-    "create_data_loaders", "compute_data_statistics",
-    "visualize_filters", "visualize_samples",
-    "plot_training_curves", "plot_energy_histogram",
-
+    "AISEstimator",
+    "AnnealedImportanceSampling",
+    "BernoulliRBM",
+    "BridgeSampling",
+    "Callback",
+    "CallbackList",
+    "CenteredBernoulliRBM",
+    "CheckpointCallback",
+    "ContrastiveDivergence",
+    "DeviceManager",
+    "EarlyStoppingCallback",
+    # Models
+    "EnergyBasedModel",
+    "FastPersistentCD",
+    "GaussianBernoulliRBM",
+    "GaussianRBMConfig",
+    "GradientEstimator",
+    "LatentVariableModel",
+    "LoggingCallback",
+    "MeanFieldSampler",
+    "MetricsTracker",
+    # Core classes
+    "ModelConfig",
+    "ModelEvaluator",
+    "OptimizerConfig",
+    "ParallelTempering",
+    "PersistentContrastiveDivergence",
+    "RBMConfig",
+    # Samplers
+    "Sampler",
+    "SparseBernoulliRBM",
+    "TAPSampler",
+    # Training
+    "Trainer",
+    "TrainingConfig",
+    "VisualizationCallback",
+    "WhitenedGaussianRBM",
+    "__author__",
+    "__license__",
+    # Version info
+    "__version__",
+    "compute_data_statistics",
+    # Submodules
+    "core",
+    "create_data_loaders",
     # Convenience functions
-    "create_model", "create_sampler",
+    "create_model",
+    "create_sampler",
+    "get_device",
+    "get_fashion_mnist_datasets",
+    # Utilities
+    "get_mnist_datasets",
+    "inference",
+    "logger",
+    "models",
+    "plot_energy_histogram",
+    "plot_training_curves",
+    "sampling",
+    "set_device",
+    "setup_logging",
+    "training",
+    "utils",
+    "visualize_filters",
+    "visualize_samples",
 ]

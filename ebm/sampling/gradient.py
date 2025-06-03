@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import Any
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
-from ..core.registry import register_sampler
-from ..models.base import EnergyBasedModel, LatentVariableModel
-from ..utils.tensor import batch_outer_product
+from ebm.core.registry import register_sampler
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
+from ebm.utils.tensor import batch_outer_product
+
 from .base import GibbsSampler, GradientEstimator
 
 
@@ -59,7 +59,8 @@ class ContrastiveDivergence(GradientEstimator):
             data: Training data batch
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Dictionary of parameter gradients
         """
         if not isinstance(model, LatentVariableModel):
@@ -152,7 +153,8 @@ class CDSampler(GibbsSampler):
             num_steps: Number of steps (defaults to k)
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Negative samples
         """
         if num_steps is None:
@@ -254,7 +256,8 @@ class FastPersistentCD(PersistentContrastiveDivergence):
             data: Training data
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Parameter gradients
         """
         # Store original parameters

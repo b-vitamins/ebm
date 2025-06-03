@@ -12,10 +12,9 @@ from collections.abc import Callable
 from enum import Enum
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
-from ..core.types import InitStrategy
+from ebm.core.types import InitStrategy
 
 
 class InitMethod(str, Enum):
@@ -85,41 +84,41 @@ class Initializer:
             # Basic methods
             if method in {InitMethod.ZEROS, "zero"}:
                 return nn.init.zeros_
-            elif method in {InitMethod.ONES, "one"}:
+            if method in {InitMethod.ONES, "one"}:
                 return nn.init.ones_
-            elif method == InitMethod.CONSTANT:
+            if method == InitMethod.CONSTANT:
                 val = self.kwargs.get('val', 0.0)
                 return lambda t: nn.init.constant_(t, val)
 
             # Normal distribution
-            elif method == InitMethod.NORMAL:
+            if method == InitMethod.NORMAL:
                 mean = self.kwargs.get('mean', 0.0)
                 std = self.kwargs.get('std', 0.01)
                 return lambda t: nn.init.normal_(t, mean=mean, std=std)
 
             # Uniform distribution
-            elif method == InitMethod.UNIFORM:
+            if method == InitMethod.UNIFORM:
                 a = self.kwargs.get('a', -0.1)
                 b = self.kwargs.get('b', 0.1)
                 return lambda t: nn.init.uniform_(t, a=a, b=b)
 
             # Xavier/Glorot initialization
-            elif method == InitMethod.XAVIER_UNIFORM:
+            if method == InitMethod.XAVIER_UNIFORM:
                 gain = self.kwargs.get('gain', 1.0)
                 return lambda t: nn.init.xavier_uniform_(t, gain=gain)
-            elif method == InitMethod.XAVIER_NORMAL:
+            if method == InitMethod.XAVIER_NORMAL:
                 gain = self.kwargs.get('gain', 1.0)
                 return lambda t: nn.init.xavier_normal_(t, gain=gain)
 
             # Kaiming/He initialization
-            elif method in {InitMethod.KAIMING_UNIFORM, InitMethod.HE_UNIFORM}:
+            if method in {InitMethod.KAIMING_UNIFORM, InitMethod.HE_UNIFORM}:
                 a = self.kwargs.get('a', 0)
                 mode = self.kwargs.get('mode', 'fan_in')
                 nonlinearity = self.kwargs.get('nonlinearity', 'leaky_relu')
                 return lambda t: nn.init.kaiming_uniform_(
                     t, a=a, mode=mode, nonlinearity=nonlinearity
                 )
-            elif method in {InitMethod.KAIMING_NORMAL, InitMethod.HE_NORMAL}:
+            if method in {InitMethod.KAIMING_NORMAL, InitMethod.HE_NORMAL}:
                 a = self.kwargs.get('a', 0)
                 mode = self.kwargs.get('mode', 'fan_in')
                 nonlinearity = self.kwargs.get('nonlinearity', 'leaky_relu')
@@ -128,24 +127,23 @@ class Initializer:
                 )
 
             # Special methods
-            elif method == InitMethod.ORTHOGONAL:
+            if method == InitMethod.ORTHOGONAL:
                 gain = self.kwargs.get('gain', 1.0)
                 return lambda t: nn.init.orthogonal_(t, gain=gain)
 
-            elif method == InitMethod.SPARSE:
+            if method == InitMethod.SPARSE:
                 sparsity = self.kwargs.get('sparsity', 0.1)
                 std = self.kwargs.get('std', 0.01)
                 return lambda t: nn.init.sparse_(t, sparsity=sparsity, std=std)
 
-            elif method == InitMethod.EYE:
+            if method == InitMethod.EYE:
                 return self._eye_init
 
-            elif method == InitMethod.DIRAC:
+            if method == InitMethod.DIRAC:
                 groups = self.kwargs.get('groups', 1)
                 return lambda t: nn.init.dirac_(t, groups=groups)
 
-            else:
-                raise ValueError(f"Unknown initialization method: {method}")
+            raise ValueError(f"Unknown initialization method: {method}")
 
         raise TypeError(f"Invalid initialization method type: {type(self.method)}")
 
@@ -186,7 +184,8 @@ class Initializer:
             device: Device
             requires_grad: Whether parameter requires gradients
 
-        Returns:
+        Returns
+        -------
             Initialized parameter
         """
         tensor = torch.empty(shape, dtype=dtype, device=device)
@@ -206,7 +205,8 @@ class Initializer:
             dtype: Data type
             device: Device
 
-        Returns:
+        Returns
+        -------
             Initialized buffer
         """
         tensor = torch.empty(shape, dtype=dtype, device=device)
@@ -220,7 +220,8 @@ def get_fan_in_and_fan_out(tensor: Tensor) -> tuple[int, int]:
     Args:
         tensor: Tensor to analyze
 
-    Returns:
+    Returns
+    -------
         Tuple of (fan_in, fan_out)
     """
     dimensions = tensor.dim()
@@ -249,7 +250,8 @@ def calculate_gain(nonlinearity: str, param: float | None = None) -> float:
         nonlinearity: Name of the nonlinearity function
         param: Optional parameter for the nonlinearity function
 
-    Returns:
+    Returns
+    -------
         Recommended gain value
     """
     linear_fns = ['linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d',
@@ -257,20 +259,16 @@ def calculate_gain(nonlinearity: str, param: float | None = None) -> float:
 
     if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
         return 1
-    elif nonlinearity == 'tanh':
+    if nonlinearity == 'tanh':
         return 5.0 / 3
-    elif nonlinearity == 'relu':
+    if nonlinearity == 'relu':
         return math.sqrt(2.0)
-    elif nonlinearity == 'leaky_relu':
-        if param is None:
-            negative_slope = 0.01
-        else:
-            negative_slope = param
+    if nonlinearity == 'leaky_relu':
+        negative_slope = 0.01 if param is None else param
         return math.sqrt(2.0 / (1 + negative_slope ** 2))
-    elif nonlinearity == 'selu':
+    if nonlinearity == 'selu':
         return 3.0 / 4
-    else:
-        raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
+    raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
 
 
 def initialize_module(
@@ -342,7 +340,8 @@ def init_from_data_statistics(
         data_std: Standard deviation of the data
         scale: Scaling factor
 
-    Returns:
+    Returns
+    -------
         Initialization function
     """
     def init_fn(tensor: Tensor) -> None:

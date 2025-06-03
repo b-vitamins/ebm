@@ -18,7 +18,7 @@ from ebm.training.metrics import (
 class MockModel(LatentVariableModel):
     """Mock model for testing metrics."""
 
-    def __init__(self, n_visible=10, n_hidden=5):
+    def __init__(self, n_visible=10, n_hidden=5) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = torch.nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
@@ -66,7 +66,7 @@ class MockModel(LatentVariableModel):
 class TestMetricValue:
     """Test MetricValue dataclass."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test metric value initialization."""
         metric = MetricValue()
 
@@ -77,7 +77,7 @@ class TestMetricValue:
         assert metric.max == float("-inf")
         assert metric.count == 0
 
-    def test_single_update(self):
+    def test_single_update(self) -> None:
         """Test updating with single value."""
         metric = MetricValue()
 
@@ -90,7 +90,7 @@ class TestMetricValue:
         assert metric.max == 5.0
         assert metric.count == 1
 
-    def test_multiple_updates(self):
+    def test_multiple_updates(self) -> None:
         """Test updating with multiple values."""
         metric = MetricValue()
 
@@ -105,7 +105,7 @@ class TestMetricValue:
         assert metric.max == 5.0
         assert metric.count == 5
 
-    def test_running_statistics(self):
+    def test_running_statistics(self) -> None:
         """Test running mean and std computation."""
         metric = MetricValue()
 
@@ -126,7 +126,7 @@ class TestMetricValue:
 class TestMetricsTracker:
     """Test MetricsTracker class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test metrics tracker initialization."""
         tracker = MetricsTracker(window_size=50)
 
@@ -134,7 +134,7 @@ class TestMetricsTracker:
         assert len(tracker.metrics) == 0
         assert len(tracker.history) == 0
 
-    def test_update(self):
+    def test_update(self) -> None:
         """Test updating metrics."""
         tracker = MetricsTracker()
 
@@ -153,7 +153,7 @@ class TestMetricsTracker:
         assert len(tracker.history["loss"]) == 1
         assert tracker.history["loss"][0] == 0.5
 
-    def test_window_size_limit(self):
+    def test_window_size_limit(self) -> None:
         """Test that history respects window size."""
         tracker = MetricsTracker(window_size=5)
 
@@ -165,7 +165,7 @@ class TestMetricsTracker:
         assert len(tracker.history["loss"]) == 5
         assert list(tracker.history["loss"]) == [5.0, 6.0, 7.0, 8.0, 9.0]
 
-    def test_get_current(self):
+    def test_get_current(self) -> None:
         """Test getting current metric values."""
         tracker = MetricsTracker()
 
@@ -177,7 +177,7 @@ class TestMetricsTracker:
         assert current["loss"] == 0.4
         assert current["accuracy"] == 0.92
 
-    def test_get_average(self):
+    def test_get_average(self) -> None:
         """Test getting average values."""
         tracker = MetricsTracker()
 
@@ -193,7 +193,7 @@ class TestMetricsTracker:
         avg_window = tracker.get_average(window=3)
         assert avg_window["loss"] == 3.0  # (2+3+4)/3
 
-    def test_get_stats(self):
+    def test_get_stats(self) -> None:
         """Test getting full statistics."""
         tracker = MetricsTracker()
 
@@ -212,7 +212,7 @@ class TestMetricsTracker:
         assert loss_stats["max"] == 9.0
         assert loss_stats["count"] == 10
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         """Test resetting tracker."""
         tracker = MetricsTracker()
 
@@ -224,7 +224,7 @@ class TestMetricsTracker:
         assert len(tracker.metrics) == 0
         assert len(tracker.history) == 0
 
-    def test_compute(self):
+    def test_compute(self) -> None:
         """Test computing final values."""
         tracker = MetricsTracker()
 
@@ -240,14 +240,14 @@ class TestMetricsTracker:
 class TestModelEvaluator:
     """Test ModelEvaluator class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test evaluator initialization."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
 
         assert evaluator.model is model
 
-    def test_reconstruction_error(self):
+    def test_reconstruction_error(self) -> None:
         """Test reconstruction error computation."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -268,7 +268,7 @@ class TestModelEvaluator:
         with pytest.raises(ValueError, match="Unknown metric"):
             evaluator.reconstruction_error(data, metric="invalid")
 
-    def test_reconstruction_error_non_latent_model(self):
+    def test_reconstruction_error_non_latent_model(self) -> None:
         """Test error when model is not LatentVariableModel."""
         model = Mock(spec=EnergyBasedModel)
         evaluator = ModelEvaluator(model)
@@ -280,7 +280,7 @@ class TestModelEvaluator:
         ):
             evaluator.reconstruction_error(data)
 
-    def test_log_likelihood_with_partition(self):
+    def test_log_likelihood_with_partition(self) -> None:
         """Test log-likelihood with known partition function."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -297,7 +297,7 @@ class TestModelEvaluator:
         expected = -model.free_energy(data) - log_z
         assert torch.allclose(log_prob, expected)
 
-    def test_log_likelihood_importance_sampling(self):
+    def test_log_likelihood_importance_sampling(self) -> None:
         """Test log-likelihood estimation with importance sampling."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -310,7 +310,7 @@ class TestModelEvaluator:
         assert std_err is not None
         assert std_err.shape == ()
 
-    def test_energy_gap(self):
+    def test_energy_gap(self) -> None:
         """Test energy gap computation."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -329,7 +329,7 @@ class TestModelEvaluator:
         # (model samples have higher energy than data)
         assert isinstance(gap_stats["energy_gap"], float)
 
-    def test_sample_quality_metrics(self):
+    def test_sample_quality_metrics(self) -> None:
         """Test sample quality metric computation."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -351,7 +351,7 @@ class TestModelEvaluator:
         # Discriminability should be in [0, 1]
         assert 0 <= metrics["discriminability"] <= 1
 
-    def test_sample_quality_high_dim(self):
+    def test_sample_quality_high_dim(self) -> None:
         """Test sample quality metrics with high dimensional data."""
         model = MockModel()
         evaluator = ModelEvaluator(model)
@@ -372,14 +372,14 @@ class TestModelEvaluator:
 class TestTrainingDynamicsAnalyzer:
     """Test TrainingDynamicsAnalyzer class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test analyzer initialization."""
         analyzer = TrainingDynamicsAnalyzer(window_size=50)
 
         assert analyzer.window_size == 50
         assert len(analyzer.history) == 0
 
-    def test_update(self):
+    def test_update(self) -> None:
         """Test updating with metrics."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -390,7 +390,7 @@ class TestTrainingDynamicsAnalyzer:
         assert len(analyzer.history["accuracy"]) == 2
         assert analyzer.history["loss"] == [1.0, 0.9]
 
-    def test_convergence_rate(self):
+    def test_convergence_rate(self) -> None:
         """Test convergence rate estimation."""
         analyzer = TrainingDynamicsAnalyzer(window_size=20)
 
@@ -405,7 +405,7 @@ class TestTrainingDynamicsAnalyzer:
         assert rate < 0  # Negative rate indicates convergence
         assert abs(rate - (-0.1)) < 0.01  # Should be close to -0.1
 
-    def test_convergence_rate_insufficient_data(self):
+    def test_convergence_rate_insufficient_data(self) -> None:
         """Test convergence rate with insufficient data."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -416,7 +416,7 @@ class TestTrainingDynamicsAnalyzer:
         rate = analyzer.convergence_rate("loss")
         assert rate is None
 
-    def test_convergence_rate_non_positive(self):
+    def test_convergence_rate_non_positive(self) -> None:
         """Test convergence rate with non-positive values."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -427,7 +427,7 @@ class TestTrainingDynamicsAnalyzer:
         rate = analyzer.convergence_rate("loss")
         assert rate is None
 
-    def test_oscillation_score(self):
+    def test_oscillation_score(self) -> None:
         """Test oscillation detection."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -450,7 +450,7 @@ class TestTrainingDynamicsAnalyzer:
         score2 = analyzer2.oscillation_score("accuracy")
         assert score2 < 0.2  # Low oscillation
 
-    def test_plateau_detection(self):
+    def test_plateau_detection(self) -> None:
         """Test plateau detection."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -468,7 +468,7 @@ class TestTrainingDynamicsAnalyzer:
         assert steps >= 10
         assert steps <= 15
 
-    def test_plateau_detection_no_plateau(self):
+    def test_plateau_detection_no_plateau(self) -> None:
         """Test plateau detection when no plateau exists."""
         analyzer = TrainingDynamicsAnalyzer()
 
@@ -481,7 +481,7 @@ class TestTrainingDynamicsAnalyzer:
         assert is_plateau is False
         assert steps is None
 
-    def test_get_summary(self):
+    def test_get_summary(self) -> None:
         """Test getting training dynamics summary."""
         analyzer = TrainingDynamicsAnalyzer()
 

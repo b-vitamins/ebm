@@ -28,7 +28,7 @@ from ebm.utils.tensor import (
 class TestBasicUtilities:
     """Test basic tensor utility functions."""
 
-    def test_ensure_tensor(self):
+    def test_ensure_tensor(self) -> None:
         """Test tensor conversion."""
         # From list
         result = ensure_tensor([1, 2, 3])
@@ -61,7 +61,7 @@ class TestBasicUtilities:
             result = ensure_tensor([1, 2, 3], device="cuda")
             assert result.device.type == "cuda"
 
-    def test_safe_log(self):
+    def test_safe_log(self) -> None:
         """Test numerically stable logarithm."""
         # Normal values
         x = torch.tensor([1.0, 2.0, 3.0])
@@ -85,7 +85,7 @@ class TestBasicUtilities:
         result = safe_log(x, eps=1e-5)
         assert result[0] == torch.log(torch.tensor(1e-5))
 
-    def test_safe_sqrt(self):
+    def test_safe_sqrt(self) -> None:
         """Test numerically stable square root."""
         # Normal values
         x = torch.tensor([1.0, 4.0, 9.0])
@@ -104,7 +104,7 @@ class TestBasicUtilities:
         result = safe_sqrt(x)
         assert torch.all(torch.isfinite(result))
 
-    def test_log_sum_exp(self):
+    def test_log_sum_exp(self) -> None:
         """Test log-sum-exp computation."""
         # 1D case
         x = torch.tensor([1.0, 2.0, 3.0])
@@ -138,7 +138,7 @@ class TestBasicUtilities:
 class TestBatchOperations:
     """Test batch tensor operations."""
 
-    def test_batch_outer_product(self):
+    def test_batch_outer_product(self) -> None:
         """Test batch outer product."""
         a = torch.tensor([[1.0, 2.0],
                           [3.0, 4.0]])
@@ -163,7 +163,7 @@ class TestBatchOperations:
         result_single = batch_outer_product(a_single, b_single)
         assert result_single.shape == (1, 10, 20)
 
-    def test_batch_quadratic_form(self):
+    def test_batch_quadratic_form(self) -> None:
         """Test batch quadratic form computation."""
         # Single matrix for all batches
         x = torch.tensor([[1.0, 2.0],
@@ -191,7 +191,7 @@ class TestBatchOperations:
         expected_0 = x[0] @ A[0] @ x[0]
         assert torch.allclose(result[0], expected_0)
 
-    def test_batch_mv(self):
+    def test_batch_mv(self) -> None:
         """Test batched matrix-vector multiplication."""
         # 2D matrix, 1D vector
         A = torch.tensor([[1.0, 2.0],
@@ -235,7 +235,7 @@ class TestBatchOperations:
 class TestShapeManipulation:
     """Test shape manipulation utilities."""
 
-    def test_shape_for_broadcast(self):
+    def test_shape_for_broadcast(self) -> None:
         """Test reshaping for broadcasting."""
         # Basic case
         tensor = torch.randn(5)
@@ -264,7 +264,7 @@ class TestShapeManipulation:
         result = shape_for_broadcast(tensor, (2, 3, 4, 5))
         assert result.shape == (1, 1, 3, 4)
 
-    def test_expand_dims_like(self):
+    def test_expand_dims_like(self) -> None:
         """Test dimension expansion."""
         # Add dimensions
         tensor = torch.randn(5)
@@ -291,7 +291,7 @@ class TestShapeManipulation:
 class TestMasking:
     """Test masking operations."""
 
-    def test_masked_fill_inf(self):
+    def test_masked_fill_inf(self) -> None:
         """Test filling masked positions."""
         tensor = torch.randn(3, 4)
         mask = torch.tensor([[True, False, False, True],
@@ -316,7 +316,7 @@ class TestMasking:
         assert result[0, 0] == 999.0
         assert result[1, 1] == 999.0
 
-    def test_create_causal_mask(self):
+    def test_create_causal_mask(self) -> None:
         """Test causal mask creation."""
         # Small mask
         mask = create_causal_mask(4)
@@ -334,7 +334,7 @@ class TestMasking:
             assert mask_cuda.device.type == "cuda"
             assert mask_cuda.shape == (3, 3)
 
-    def test_create_padding_mask(self):
+    def test_create_padding_mask(self) -> None:
         """Test padding mask creation."""
         # Basic case
         lengths = torch.tensor([3, 2, 4])
@@ -363,7 +363,7 @@ class TestMasking:
 class TestTensorSplitConcat:
     """Test tensor splitting and concatenation."""
 
-    def test_split_tensor(self):
+    def test_split_tensor(self) -> None:
         """Test tensor splitting."""
         # Equal splits
         tensor = torch.randn(12, 5)
@@ -388,7 +388,7 @@ class TestTensorSplitConcat:
         assert len(splits) == 4
         assert all(s.shape == (5, 3) for s in splits)
 
-    def test_concat_tensors(self):
+    def test_concat_tensors(self) -> None:
         """Test tensor concatenation."""
         tensors = [torch.randn(3, 5), torch.randn(2, 5), torch.randn(4, 5)]
 
@@ -405,7 +405,7 @@ class TestTensorSplitConcat:
         result = concat_tensors(tensors, dim=1)
         assert result.shape == (5, 9)
 
-    def test_stack_tensors(self):
+    def test_stack_tensors(self) -> None:
         """Test tensor stacking."""
         tensors = [torch.randn(3, 4) for _ in range(5)]
 
@@ -427,7 +427,7 @@ class TestTensorSplitConcat:
 class TestTensorStatistics:
     """Test TensorStatistics class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test statistics initialization."""
         stats = TensorStatistics()
 
@@ -437,7 +437,7 @@ class TestTensorStatistics:
         assert stats.min is None
         assert stats.max is None
 
-    def test_single_update(self):
+    def test_single_update(self) -> None:
         """Test updating with single tensor."""
         stats = TensorStatistics()
 
@@ -450,7 +450,7 @@ class TestTensorStatistics:
         assert stats.min_value == 1.0
         assert stats.max_value == 5.0
 
-    def test_multiple_updates(self):
+    def test_multiple_updates(self) -> None:
         """Test updating with multiple tensors."""
         stats = TensorStatistics()
 
@@ -464,7 +464,7 @@ class TestTensorStatistics:
         assert stats.min_value == 1.0
         assert stats.max_value == 6.0
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         """Test resetting statistics."""
         stats = TensorStatistics()
 
@@ -477,7 +477,7 @@ class TestTensorStatistics:
         assert stats.sum is None
         assert stats.mean is None
 
-    def test_empty_stats(self):
+    def test_empty_stats(self) -> None:
         """Test properties with no data."""
         stats = TensorStatistics()
 
@@ -486,7 +486,7 @@ class TestTensorStatistics:
         assert stats.min_value is None
         assert stats.max_value is None
 
-    def test_summary(self):
+    def test_summary(self) -> None:
         """Test summary generation."""
         stats = TensorStatistics()
 
@@ -506,7 +506,7 @@ class TestTensorStatistics:
         assert isinstance(summary["mean"], float)
         assert isinstance(summary["std"], float)
 
-    def test_numerical_stability(self):
+    def test_numerical_stability(self) -> None:
         """Test numerical stability with large values."""
         stats = TensorStatistics()
 
@@ -527,7 +527,7 @@ class TestTensorStatistics:
 class TestEdgeCases:
     """Test edge cases for tensor utilities."""
 
-    def test_empty_tensors(self):
+    def test_empty_tensors(self) -> None:
         """Test handling of empty tensors."""
         # Empty tensor operations
         empty = torch.empty(0, 5)
@@ -545,7 +545,7 @@ class TestEdgeCases:
         result = batch_outer_product(a_empty, b_empty)
         assert result.shape == (0, 3, 4)
 
-    def test_scalar_operations(self):
+    def test_scalar_operations(self) -> None:
         """Test operations on scalars."""
         scalar = torch.tensor(3.14)
 
@@ -558,7 +558,7 @@ class TestEdgeCases:
         assert result.dim() == 0
         assert result.item() == pytest.approx(np.sqrt(3.14))
 
-    def test_large_tensors(self):
+    def test_large_tensors(self) -> None:
         """Test with large tensors."""
         # Large tensor operations should work
         large = torch.randn(10000, 100)
@@ -576,7 +576,7 @@ class TestEdgeCases:
         assert 0.9 < stats.std < 1.1  # Should be close to 1 for randn
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_device_consistency(self):
+    def test_device_consistency(self) -> None:
         """Test operations maintain device consistency."""
         # Create CUDA tensors
         x_cuda = torch.randn(5, 5, device="cuda")

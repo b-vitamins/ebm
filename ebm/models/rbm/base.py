@@ -9,14 +9,13 @@ from __future__ import annotations
 from abc import abstractmethod
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
+from torch import Tensor, nn
 
-from ...core.config import RBMConfig
-from ...models.base import AISInterpolator, LatentVariableModel
-from ...utils.initialization import Initializer
-from ...utils.tensor import shape_for_broadcast
+from ebm.core.config import RBMConfig
+from ebm.models.base import AISInterpolator, LatentVariableModel
+from ebm.utils.initialization import Initializer
+from ebm.utils.tensor import shape_for_broadcast
 
 
 class RBMBase(LatentVariableModel):
@@ -97,7 +96,8 @@ class RBMBase(LatentVariableModel):
             beta: Optional inverse temperature
             return_parts: If True, return dict with energy components
 
-        Returns:
+        Returns
+        -------
             Energy values or dict of components
         """
         # Split into visible and hidden
@@ -122,7 +122,8 @@ class RBMBase(LatentVariableModel):
             beta: Optional inverse temperature
             return_parts: If True, return dict with energy components
 
-        Returns:
+        Returns
+        -------
             Energy values or dict of components
         """
         visible = self.prepare_input(visible)
@@ -171,7 +172,8 @@ class RBMBase(LatentVariableModel):
             v: Visible unit values
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Free energy values
         """
         v = self.prepare_input(v)
@@ -189,9 +191,8 @@ class RBMBase(LatentVariableModel):
 
         # Free energy computation
         hidden_term = F.softplus(pre_h).sum(dim=-1)
-        free_energy = -v_bias_term - hidden_term
+        return -v_bias_term - hidden_term
 
-        return free_energy
 
     @abstractmethod
     def hidden_activation(self, pre_activation: Tensor) -> Tensor:
@@ -200,10 +201,10 @@ class RBMBase(LatentVariableModel):
         Args:
             pre_activation: Pre-activation values
 
-        Returns:
+        Returns
+        -------
             Activation probabilities
         """
-        pass
 
     @abstractmethod
     def visible_activation(self, pre_activation: Tensor) -> Tensor:
@@ -212,10 +213,10 @@ class RBMBase(LatentVariableModel):
         Args:
             pre_activation: Pre-activation values
 
-        Returns:
+        Returns
+        -------
             Activation probabilities
         """
-        pass
 
     def sample_hidden(
         self,
@@ -231,7 +232,8 @@ class RBMBase(LatentVariableModel):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled hidden states, optionally with probabilities
         """
         visible = self.prepare_input(visible)
@@ -268,7 +270,8 @@ class RBMBase(LatentVariableModel):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled visible states, optionally with probabilities
         """
         hidden = self.prepare_input(hidden)
@@ -298,10 +301,10 @@ class RBMBase(LatentVariableModel):
         Args:
             prob: Probability values
 
-        Returns:
+        Returns
+        -------
             Sampled values
         """
-        pass
 
     def _split_visible_hidden(self, x: Tensor) -> tuple[Tensor, Tensor]:
         """Split concatenated state into visible and hidden parts.
@@ -309,7 +312,8 @@ class RBMBase(LatentVariableModel):
         Args:
             x: Concatenated state
 
-        Returns:
+        Returns
+        -------
             Tuple of (visible, hidden)
         """
         v = x[..., :self.num_visible]
@@ -354,7 +358,8 @@ class RBMBase(LatentVariableModel):
             v: Visible states
             h: Hidden states
 
-        Returns:
+        Returns
+        -------
             Effective energy values
         """
         base_energy = self.joint_energy(v, h)
@@ -413,7 +418,8 @@ class RBMAISAdapter(AISInterpolator):
         Args:
             x: Concatenated visible and hidden states
 
-        Returns:
+        Returns
+        -------
             Base energy values
         """
         v, h = self.rbm._split_visible_hidden(x)
@@ -435,7 +441,8 @@ class RBMAISAdapter(AISInterpolator):
             x: Concatenated states
             beta: AIS interpolation parameter
 
-        Returns:
+        Returns
+        -------
             Interpolated energy values
         """
         if beta is None:
@@ -453,6 +460,5 @@ class RBMAISAdapter(AISInterpolator):
         h_bias_term = torch.einsum('...h,h->...', h, h_bias)
 
         # Only the interaction term is scaled by beta
-        energy = -(beta * interaction + v_bias_term + h_bias_term)
+        return -(beta * interaction + v_bias_term + h_bias_term)
 
-        return energy

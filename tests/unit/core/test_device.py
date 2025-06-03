@@ -20,7 +20,7 @@ from ebm.core.device import (
 class TestDeviceInfo:
     """Test DeviceInfo dataclass."""
 
-    def test_device_info_creation(self):
+    def test_device_info_creation(self) -> None:
         """Test creating device info."""
         info = DeviceInfo(
             device=torch.device("cuda:0"),
@@ -36,7 +36,7 @@ class TestDeviceInfo:
         assert info.name == "NVIDIA GeForce RTX 3090"
         assert info.compute_capability == (8, 6)
 
-    def test_memory_stats(self):
+    def test_memory_stats(self) -> None:
         """Test memory statistics calculation."""
         info = DeviceInfo(
             device=torch.device("cuda"),
@@ -53,7 +53,7 @@ class TestDeviceInfo:
         assert stats["cached_mb"] == pytest.approx(500 / 1.024, rel=0.01)
         assert stats["utilization"] == pytest.approx(0.25, rel=0.01)
 
-    def test_memory_stats_none_values(self):
+    def test_memory_stats_none_values(self) -> None:
         """Test memory stats with None values."""
         info = DeviceInfo(
             device=torch.device("cpu"),
@@ -67,7 +67,7 @@ class TestDeviceInfo:
 class TestDeviceManager:
     """Test DeviceManager class."""
 
-    def test_cpu_device(self):
+    def test_cpu_device(self) -> None:
         """Test CPU device initialization."""
         manager = DeviceManager("cpu")
 
@@ -77,7 +77,7 @@ class TestDeviceManager:
         assert not manager.is_mps
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_cuda_device(self):
+    def test_cuda_device(self) -> None:
         """Test CUDA device initialization."""
         manager = DeviceManager("cuda")
 
@@ -86,25 +86,25 @@ class TestDeviceManager:
         assert not manager.is_cpu
         assert not manager.is_mps
 
-    def test_auto_device_cpu_only(self):
+    def test_auto_device_cpu_only(self) -> None:
         """Test auto device selection when only CPU available."""
         with patch("torch.cuda.is_available", return_value=False):
             manager = DeviceManager("auto")
             assert manager.device.type == "cpu"
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_auto_device_with_cuda(self):
+    def test_auto_device_with_cuda(self) -> None:
         """Test auto device selection with CUDA available."""
         manager = DeviceManager("auto")
         assert manager.device.type == "cuda"
 
-    def test_invalid_device(self):
+    def test_invalid_device(self) -> None:
         """Test invalid device specification."""
         with patch("torch.cuda.is_available", return_value=False):
             with pytest.raises(RuntimeError, match="CUDA device requested but CUDA is not available"):
                 DeviceManager("cuda")
 
-    def test_device_from_torch_device(self):
+    def test_device_from_torch_device(self) -> None:
         """Test initialization with torch.device object."""
         device = torch.device("cpu")
         manager = DeviceManager(device)
@@ -112,7 +112,7 @@ class TestDeviceManager:
         assert manager.device == device
         assert manager.device.type == "cpu"
 
-    def test_specific_cuda_device(self):
+    def test_specific_cuda_device(self) -> None:
         """Test specific CUDA device selection."""
         if torch.cuda.is_available() and torch.cuda.device_count() > 1:
             manager = DeviceManager("cuda:1")
@@ -120,7 +120,7 @@ class TestDeviceManager:
             assert manager.device.index == 1
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_get_device_info_cuda(self):
+    def test_get_device_info_cuda(self) -> None:
         """Test getting CUDA device info."""
         manager = DeviceManager("cuda")
         info = manager.get_device_info()
@@ -131,7 +131,7 @@ class TestDeviceManager:
         assert info.total_memory > 0
         assert info.compute_capability is not None
 
-    def test_get_device_info_cpu(self):
+    def test_get_device_info_cpu(self) -> None:
         """Test getting CPU device info."""
         manager = DeviceManager("cpu")
         info = manager.get_device_info()
@@ -140,7 +140,7 @@ class TestDeviceManager:
         assert info.name == "cpu"
         assert info.total_memory is None
 
-    def test_to_device(self):
+    def test_to_device(self) -> None:
         """Test moving tensor to device."""
         manager = DeviceManager("cpu")
         tensor = torch.randn(10, 10)
@@ -152,7 +152,7 @@ class TestDeviceManager:
         moved_nb = manager.to_device(tensor, non_blocking=True)
         assert moved_nb.device.type == "cpu"
 
-    def test_module_to_device(self):
+    def test_module_to_device(self) -> None:
         """Test moving module to device."""
         manager = DeviceManager("cpu")
         module = torch.nn.Linear(10, 5)
@@ -160,7 +160,7 @@ class TestDeviceManager:
         moved = manager.module_to_device(module)
         assert next(moved.parameters()).device.type == "cpu"
 
-    def test_device_placement_context(self):
+    def test_device_placement_context(self) -> None:
         """Test device placement context manager."""
         manager = DeviceManager("cpu")
 
@@ -177,7 +177,7 @@ class TestDeviceManager:
             assert manager.device == original
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_clear_cache_cuda(self):
+    def test_clear_cache_cuda(self) -> None:
         """Test GPU cache clearing."""
         manager = DeviceManager("cuda")
 
@@ -191,7 +191,7 @@ class TestDeviceManager:
         # Should not raise any errors
         assert True
 
-    def test_clear_cache_cpu(self):
+    def test_clear_cache_cpu(self) -> None:
         """Test cache clearing on CPU (should be no-op)."""
         manager = DeviceManager("cpu")
         manager.clear_cache()
@@ -199,7 +199,7 @@ class TestDeviceManager:
         # Should not raise any errors
         assert True
 
-    def test_synchronize(self):
+    def test_synchronize(self) -> None:
         """Test device synchronization."""
         manager = DeviceManager("cpu")
         manager.synchronize()  # Should be no-op for CPU
@@ -209,7 +209,7 @@ class TestDeviceManager:
             cuda_manager.synchronize()  # Should sync CUDA
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_autocast_cuda(self):
+    def test_autocast_cuda(self) -> None:
         """Test autocast context for CUDA."""
         manager = DeviceManager("cuda")
 
@@ -228,7 +228,7 @@ class TestDeviceManager:
             z = torch.matmul(x, y)
             assert z.dtype == torch.float32
 
-    def test_autocast_cpu(self):
+    def test_autocast_cpu(self) -> None:
         """Test autocast context for CPU."""
         if not hasattr(torch.cpu.amp, 'autocast'):
             pytest.skip("CPU autocast not available in this PyTorch version")
@@ -242,7 +242,7 @@ class TestDeviceManager:
             # CPU autocast typically uses bfloat16
             assert z.dtype in (torch.bfloat16, torch.float32)
 
-    def test_get_memory_summary(self):
+    def test_get_memory_summary(self) -> None:
         """Test memory summary string generation."""
         manager = DeviceManager("cpu")
         summary = manager.get_memory_summary()
@@ -255,7 +255,7 @@ class TestDeviceManager:
             assert "Device:" in cuda_summary
             assert "Memory:" in cuda_summary
 
-    def test_get_available_devices(self):
+    def test_get_available_devices(self) -> None:
         """Test getting list of available devices."""
         devices = DeviceManager.get_available_devices()
 
@@ -270,7 +270,7 @@ class TestDeviceManager:
             cuda_devices = [d for d in devices if d.type == "cuda"]
             assert len(cuda_devices) == torch.cuda.device_count()
 
-    def test_repr(self):
+    def test_repr(self) -> None:
         """Test string representation."""
         manager = DeviceManager("cpu")
         repr_str = repr(manager)
@@ -282,7 +282,7 @@ class TestDeviceManager:
 class TestGlobalDeviceManagement:
     """Test global device management functions."""
 
-    def test_get_device_manager(self):
+    def test_get_device_manager(self) -> None:
         """Test getting global device manager."""
         manager1 = get_device_manager()
         manager2 = get_device_manager()
@@ -290,7 +290,7 @@ class TestGlobalDeviceManagement:
         # Should return same instance
         assert manager1 is manager2
 
-    def test_set_device(self):
+    def test_set_device(self) -> None:
         """Test setting global device."""
         original_device = get_device()
 
@@ -305,7 +305,7 @@ class TestGlobalDeviceManagement:
             # Restore original device
             set_device(original_device)
 
-    def test_to_device_global(self):
+    def test_to_device_global(self) -> None:
         """Test global to_device function."""
         tensor = torch.randn(5, 5)
 
@@ -321,7 +321,7 @@ class TestGlobalDeviceManagement:
 class TestDecorators:
     """Test device-related decorators."""
 
-    def test_auto_device_decorator(self):
+    def test_auto_device_decorator(self) -> None:
         """Test auto_device decorator."""
         @auto_device
         def dummy_function(x: torch.Tensor) -> torch.Tensor:
@@ -332,14 +332,14 @@ class TestDecorators:
 
         assert torch.allclose(result, tensor * 2)
 
-    def test_memory_efficient_decorator(self):
+    def test_memory_efficient_decorator(self) -> None:
         """Test memory_efficient decorator."""
         clear_cache_called = []
 
         # Mock clear_cache
         original_clear_cache = DeviceManager.clear_cache
 
-        def mock_clear_cache(self):
+        def mock_clear_cache(self) -> None:
             clear_cache_called.append(True)
             original_clear_cache(self)
 
@@ -358,18 +358,18 @@ class TestDecorators:
 class TestEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_none_device(self):
+    def test_none_device(self) -> None:
         """Test None device handling."""
         manager = DeviceManager(None)
         # Should default to auto
         assert manager.device.type in ("cpu", "cuda", "mps")
 
-    def test_invalid_cuda_index(self):
+    def test_invalid_cuda_index(self) -> None:
         """Test invalid CUDA device index."""
         with pytest.raises(RuntimeError):
             DeviceManager("cuda:999")
 
-    def test_device_switching(self):
+    def test_device_switching(self) -> None:
         """Test switching between devices."""
         manager = DeviceManager("cpu")
 

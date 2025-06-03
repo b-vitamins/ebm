@@ -38,10 +38,10 @@ class Registry(ABC):
         Args:
             cls: Class to validate
 
-        Raises:
+        Raises
+        ------
             TypeError: If class is not valid for this registry
         """
-        pass
 
     def register(
         self,
@@ -61,7 +61,8 @@ class Registry(ABC):
             aliases: Alternative names for this class
             **metadata: Additional metadata to store
 
-        Returns:
+        Returns
+        -------
             Registered class or decorator function
 
         Example:
@@ -105,8 +106,7 @@ class Registry(ABC):
 
         if cls is None:
             return decorator
-        else:
-            return decorator(cls)
+        return decorator(cls)
 
     def get(self, name: str) -> type[T]:
         """Get a registered class by name.
@@ -114,10 +114,12 @@ class Registry(ABC):
         Args:
             name: Name or alias of the class
 
-        Returns:
+        Returns
+        -------
             Registered class
 
-        Raises:
+        Raises
+        ------
             KeyError: If name is not registered
         """
         # Check if it's an alias
@@ -148,7 +150,8 @@ class Registry(ABC):
             config: Configuration object (if supported)
             **kwargs: Keyword arguments for the class
 
-        Returns:
+        Returns
+        -------
             Instance of the registered class
         """
         cls = self.get(name)
@@ -212,7 +215,6 @@ class SamplerRegistry(Registry):
 
     def _validate_class(self, cls: type[T]) -> None:
         """Validate that class implements the Sampler protocol."""
-
         required_methods = {'sample', 'reset'}
         class_methods = set(dir(cls))
 
@@ -240,7 +242,6 @@ class TransformRegistry(Registry):
 
     def _validate_class(self, cls: type[T]) -> None:
         """Validate that class implements the Transform protocol."""
-
         required_methods = {'__call__', 'inverse'}
         class_methods = set(dir(cls))
 

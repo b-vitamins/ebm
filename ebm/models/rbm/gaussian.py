@@ -9,13 +9,13 @@ from __future__ import annotations
 import math
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
+from torch import Tensor, nn
 
-from ...core.config import GaussianRBMConfig
-from ...core.registry import register_model
-from ...utils.tensor import shape_for_broadcast
+from ebm.core.config import GaussianRBMConfig
+from ebm.core.registry import register_model
+from ebm.utils.tensor import shape_for_broadcast
+
 from .base import RBMBase
 
 
@@ -96,7 +96,8 @@ class GaussianBernoulliRBM(RBMBase):
             beta: Optional inverse temperature
             return_prob: If True, return mean and samples
 
-        Returns:
+        Returns
+        -------
             Sampled visible states (and mean if return_prob=True)
         """
         hidden = self.prepare_input(hidden)
@@ -140,7 +141,8 @@ class GaussianBernoulliRBM(RBMBase):
             beta: Optional inverse temperature
             return_parts: If True, return dict with energy components
 
-        Returns:
+        Returns
+        -------
             Energy values or dict of components
         """
         visible = self.prepare_input(visible)
@@ -192,7 +194,8 @@ class GaussianBernoulliRBM(RBMBase):
             v: Visible unit values
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Free energy values
         """
         v = self.prepare_input(v)
@@ -224,7 +227,8 @@ class GaussianBernoulliRBM(RBMBase):
             v: Clean visible data
             noise_std: Standard deviation of noise to add
 
-        Returns:
+        Returns
+        -------
             Score matching loss value
         """
         v = self.prepare_input(v)
@@ -242,9 +246,8 @@ class GaussianBernoulliRBM(RBMBase):
 
         # Denoising score matching loss
         target = -noise / (noise_std**2)
-        loss = 0.5 * ((score - target) ** 2).sum(dim=-1).mean()
+        return 0.5 * ((score - target) ** 2).sum(dim=-1).mean()
 
-        return loss
 
     def sample_fantasy_particles(
         self,
@@ -264,7 +267,8 @@ class GaussianBernoulliRBM(RBMBase):
             beta: Optional inverse temperature
             return_chain: If True, return all intermediate states
 
-        Returns:
+        Returns
+        -------
             Final samples (and chain if requested)
         """
         # Initialize visible units
@@ -361,7 +365,8 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
         Args:
             v: Input data
 
-        Returns:
+        Returns
+        -------
             Whitened data
         """
         if not self.fitted:
@@ -374,7 +379,8 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
         Args:
             v: Whitened data
 
-        Returns:
+        Returns
+        -------
             Original scale data
         """
         if not self.fitted:
@@ -406,7 +412,8 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
             return_chain: If True, return chain
             unwhiten_output: If True, unwhiten the output
 
-        Returns:
+        Returns
+        -------
             Samples in original scale (if unwhiten_output=True)
         """
         result = super().sample_fantasy_particles(
@@ -425,5 +432,4 @@ class WhitenedGaussianRBM(GaussianBernoulliRBM):
             samples = self.unwhiten(samples)
             chain = [self.unwhiten(v) for v in chain]
             return samples, chain
-        else:
-            return self.unwhiten(result)
+        return self.unwhiten(result)

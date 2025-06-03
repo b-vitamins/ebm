@@ -32,7 +32,7 @@ class TestSetupStyle:
     @patch('ebm.utils.visualization.HAS_SEABORN', True)
     @patch('seaborn.set_style')
     @patch('seaborn.set_context')
-    def test_with_seaborn(self, mock_set_context, mock_set_style):
+    def test_with_seaborn(self, mock_set_context, mock_set_style) -> None:
         """Test style setup with seaborn available."""
         setup_style('whitegrid')
 
@@ -41,7 +41,7 @@ class TestSetupStyle:
 
     @patch('ebm.utils.visualization.HAS_SEABORN', False)
     @patch('matplotlib.pyplot.style.use')
-    def test_without_seaborn(self, mock_style_use):
+    def test_without_seaborn(self, mock_style_use) -> None:
         """Test style setup without seaborn."""
         # Mock available styles
         with patch('matplotlib.pyplot.style.available', ['seaborn-v0_8', 'default']):
@@ -58,7 +58,7 @@ class TestSetupStyle:
 class TestTileImages:
     """Test image tiling."""
 
-    def test_3d_grayscale_images(self):
+    def test_3d_grayscale_images(self) -> None:
         """Test tiling grayscale images."""
         # Create test images (N, H, W)
         images = torch.randn(6, 8, 8)
@@ -69,7 +69,7 @@ class TestTileImages:
         assert tiled.shape == (2 * 8, 3 * 8)
         assert isinstance(tiled, np.ndarray)
 
-    def test_4d_color_images(self):
+    def test_4d_color_images(self) -> None:
         """Test tiling color images."""
         # Create test images (N, C, H, W)
         images = torch.randn(4, 3, 16, 16)
@@ -79,7 +79,7 @@ class TestTileImages:
         # Check shape
         assert tiled.shape == (2 * 16, 2 * 16, 3)
 
-    def test_auto_grid_size(self):
+    def test_auto_grid_size(self) -> None:
         """Test automatic grid size calculation."""
         # 9 images should create 3x3 grid
         images = torch.randn(9, 10, 10)
@@ -91,7 +91,7 @@ class TestTileImages:
         tiled = tile_images(images)
         assert tiled.shape == (4 * 10, 3 * 10)
 
-    def test_padding(self):
+    def test_padding(self) -> None:
         """Test image padding."""
         images = torch.randn(4, 8, 8)
 
@@ -106,7 +106,7 @@ class TestTileImages:
         assert tiled[0, 0] == 1.0
         assert tiled[1, 1] == 1.0
 
-    def test_normalization(self):
+    def test_normalization(self) -> None:
         """Test image normalization."""
         # Create images with known range
         images = torch.tensor([
@@ -124,15 +124,15 @@ class TestTileImages:
         # Each sub-image should be normalized
         # Can't easily check this without unpacking, but no errors is good
 
-    def test_tensor_to_numpy_conversion(self):
+    def test_tensor_to_numpy_conversion(self) -> None:
         """Test that tensors are converted to numpy."""
         images = torch.randn(4, 8, 8)
         tiled = tile_images(images)
 
         assert isinstance(tiled, np.ndarray)
-        assert tiled.dtype == np.float32 or tiled.dtype == np.float64
+        assert tiled.dtype in (np.float32, np.float64)
 
-    def test_insufficient_images_padding(self):
+    def test_insufficient_images_padding(self) -> None:
         """Test padding when not enough images for grid."""
         # 3 images in 2x2 grid
         images = torch.randn(3, 8, 8)
@@ -143,7 +143,7 @@ class TestTileImages:
         # Bottom-right should be pad value
         assert np.all(tiled[8:, 8:] == 0.5)
 
-    def test_invalid_dimensions(self):
+    def test_invalid_dimensions(self) -> None:
         """Test error on invalid tensor dimensions."""
         # 2D tensor
         images = torch.randn(10, 10)
@@ -162,7 +162,7 @@ class TestVisualizeFilters:
     @patch('matplotlib.pyplot.savefig')
     @patch('matplotlib.pyplot.tight_layout')
     @patch('matplotlib.pyplot.colorbar')
-    def test_square_filters(self, mock_colorbar, mock_tight_layout, mock_savefig):
+    def test_square_filters(self, mock_colorbar, mock_tight_layout, mock_savefig) -> None:
         """Test visualizing square filters."""
         # Create filter weights (25 filters of size 16)
         weights = torch.randn(25, 16)
@@ -179,7 +179,7 @@ class TestVisualizeFilters:
         plt.close(fig)
 
     @patch('matplotlib.pyplot.savefig')
-    def test_non_square_filters(self, mock_savefig):
+    def test_non_square_filters(self, mock_savefig) -> None:
         """Test visualizing non-square filters."""
         # 10 filters of size 30 (not square)
         weights = torch.randn(10, 30)
@@ -191,7 +191,7 @@ class TestVisualizeFilters:
 
         plt.close(fig)
 
-    def test_save_filters(self, tmp_path):
+    def test_save_filters(self, tmp_path) -> None:
         """Test saving filter visualization."""
         weights = torch.randn(16, 25)
         save_path = tmp_path / "filters.png"
@@ -204,7 +204,7 @@ class TestVisualizeFilters:
 
         plt.close(fig)
 
-    def test_custom_parameters(self):
+    def test_custom_parameters(self) -> None:
         """Test custom visualization parameters."""
         weights = torch.randn(9, 16)
 
@@ -232,7 +232,7 @@ class TestVisualizeFilters:
 class TestVisualizeSamples:
     """Test sample visualization."""
 
-    def test_2d_samples(self):
+    def test_2d_samples(self) -> None:
         """Test visualizing flattened samples."""
         # Flattened MNIST-like samples
         samples = torch.randn(16, 784)
@@ -244,7 +244,7 @@ class TestVisualizeSamples:
 
         plt.close(fig)
 
-    def test_3d_samples(self):
+    def test_3d_samples(self) -> None:
         """Test visualizing image samples."""
         # Already shaped images
         samples = torch.randn(9, 32, 32)
@@ -260,7 +260,7 @@ class TestVisualizeSamples:
 
         plt.close(fig)
 
-    def test_4d_color_samples(self):
+    def test_4d_color_samples(self) -> None:
         """Test visualizing color image samples."""
         samples = torch.randn(4, 3, 64, 64)
 
@@ -270,7 +270,7 @@ class TestVisualizeSamples:
 
         plt.close(fig)
 
-    def test_non_square_reshape(self):
+    def test_non_square_reshape(self) -> None:
         """Test samples that can't be reshaped to square."""
         # 120 features - can't be reshaped to square
         samples = torch.randn(8, 120)
@@ -282,7 +282,7 @@ class TestVisualizeSamples:
 
         plt.close(fig)
 
-    def test_save_samples(self, tmp_path):
+    def test_save_samples(self, tmp_path) -> None:
         """Test saving sample visualization."""
         samples = torch.randn(16, 64)
         save_path = tmp_path / "samples.png"
@@ -297,7 +297,7 @@ class TestVisualizeSamples:
 class TestPlotTrainingCurves:
     """Test training curve plotting."""
 
-    def test_simple_training_curves(self):
+    def test_simple_training_curves(self) -> None:
         """Test plotting simple training history."""
         history = {
             'train': [
@@ -315,7 +315,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_train_val_curves(self):
+    def test_train_val_curves(self) -> None:
         """Test plotting training and validation curves."""
         history = {
             'train': [
@@ -338,7 +338,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_custom_metrics(self):
+    def test_custom_metrics(self) -> None:
         """Test plotting specific metrics."""
         history = {
             'train': [
@@ -353,7 +353,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_many_metrics(self):
+    def test_many_metrics(self) -> None:
         """Test plotting many metrics."""
         history = {
             'train': [
@@ -368,7 +368,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_missing_data_handling(self):
+    def test_missing_data_handling(self) -> None:
         """Test handling of missing data points."""
         history = {
             'train': [
@@ -385,7 +385,7 @@ class TestPlotTrainingCurves:
 
         plt.close(fig)
 
-    def test_save_curves(self, tmp_path):
+    def test_save_curves(self, tmp_path) -> None:
         """Test saving training curves."""
         history = {'train': [{'loss': 1.0}]}
         save_path = tmp_path / "curves.png"
@@ -400,7 +400,7 @@ class TestPlotTrainingCurves:
 class TestPlotEnergyHistogram:
     """Test energy histogram plotting."""
 
-    def test_basic_histogram(self):
+    def test_basic_histogram(self) -> None:
         """Test basic energy histogram."""
         # Create fake energies
         data_energies = torch.randn(100) - 2.0  # Lower energies for data
@@ -422,7 +422,7 @@ class TestPlotEnergyHistogram:
 
         plt.close(fig)
 
-    def test_statistics_display(self):
+    def test_statistics_display(self) -> None:
         """Test that statistics are displayed."""
         data_energies = torch.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
         model_energies = torch.tensor([2.0, 3.0, 4.0, 5.0, 6.0])
@@ -440,7 +440,7 @@ class TestPlotEnergyHistogram:
 
         plt.close(fig)
 
-    def test_custom_parameters(self):
+    def test_custom_parameters(self) -> None:
         """Test custom histogram parameters."""
         data_energies = torch.randn(50)
         model_energies = torch.randn(50)
@@ -461,7 +461,7 @@ class TestPlotEnergyHistogram:
 class TestPlotReconstructionComparison:
     """Test reconstruction comparison plotting."""
 
-    def test_basic_comparison(self):
+    def test_basic_comparison(self) -> None:
         """Test basic reconstruction comparison."""
         original = torch.randn(5, 28, 28)
         reconstructed = original + torch.randn_like(original) * 0.1
@@ -476,7 +476,7 @@ class TestPlotReconstructionComparison:
 
         plt.close(fig)
 
-    def test_limited_examples(self):
+    def test_limited_examples(self) -> None:
         """Test limiting number of examples."""
         original = torch.randn(10, 16, 16)
         reconstructed = torch.randn(10, 16, 16)
@@ -492,7 +492,7 @@ class TestPlotReconstructionComparison:
 
         plt.close(fig)
 
-    def test_color_images(self):
+    def test_color_images(self) -> None:
         """Test with color images."""
         original = torch.randn(4, 3, 32, 32)
         reconstructed = torch.randn(4, 3, 32, 32)
@@ -512,7 +512,7 @@ class TestCreateAnimation:
     """Test animation creation."""
 
     @patch('matplotlib.animation.FuncAnimation')
-    def test_basic_animation(self, mock_animation):
+    def test_basic_animation(self, mock_animation) -> None:
         """Test creating basic animation."""
         # Create sequence of frames
         frames = [torch.randn(32, 32) for _ in range(10)]
@@ -532,7 +532,7 @@ class TestCreateAnimation:
         plt.close('all')
 
     @patch('matplotlib.animation.FuncAnimation')
-    def test_save_animation(self, mock_animation_class):
+    def test_save_animation(self, mock_animation_class) -> None:
         """Test saving animation."""
         frames = [torch.randn(16, 16) for _ in range(5)]
 
@@ -560,7 +560,7 @@ class TestCreateAnimation:
 class TestEdgeCases:
     """Test edge cases for visualization."""
 
-    def test_empty_images(self):
+    def test_empty_images(self) -> None:
         """Test visualizing empty image set."""
         images = torch.empty(0, 28, 28)
 
@@ -568,7 +568,7 @@ class TestEdgeCases:
         tiled = tile_images(images)
         assert tiled.shape[0] == 0 or tiled.shape[1] == 0
 
-    def test_single_image(self):
+    def test_single_image(self) -> None:
         """Test visualizing single image."""
         image = torch.randn(1, 32, 32)
 
@@ -577,14 +577,14 @@ class TestEdgeCases:
 
         plt.close(fig)
 
-    def test_empty_history(self):
+    def test_empty_history(self) -> None:
         """Test plotting empty training history."""
         history = {'train': [], 'val': []}
 
         with pytest.raises(ValueError, match="No metrics to plot"):
             plot_training_curves(history)
 
-    def test_nan_values(self):
+    def test_nan_values(self) -> None:
         """Test handling NaN values in plots."""
         history = {
             'train': [
@@ -601,7 +601,7 @@ class TestEdgeCases:
         plt.close(fig)
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_cuda_tensors(self):
+    def test_cuda_tensors(self) -> None:
         """Test visualization with CUDA tensors."""
         images = torch.randn(4, 28, 28, device='cuda')
 

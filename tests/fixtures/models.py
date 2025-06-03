@@ -6,7 +6,11 @@ import pytest
 import torch
 
 from ebm.core.config import GaussianRBMConfig, RBMConfig
-from ebm.models.rbm import BernoulliRBM, CenteredBernoulliRBM, GaussianBernoulliRBM
+from ebm.models.rbm import (
+    BernoulliRBM,
+    CenteredBernoulliRBM,
+    GaussianBernoulliRBM,
+)
 
 
 @pytest.fixture
@@ -87,14 +91,13 @@ def make_test_rbm():
         if model_type == "bernoulli":
             config = RBMConfig(**base_config)
             return BernoulliRBM(config)
-        elif model_type == "gaussian":
+        if model_type == "gaussian":
             config = GaussianRBMConfig(**base_config)
             return GaussianBernoulliRBM(config)
-        elif model_type == "centered":
+        if model_type == "centered":
             config = RBMConfig(**base_config, centered=True)
             return CenteredBernoulliRBM(config)
-        else:
-            raise ValueError(f"Unknown model type: {model_type}")
+        raise ValueError(f"Unknown model type: {model_type}")
 
     return _make_test_rbm
 

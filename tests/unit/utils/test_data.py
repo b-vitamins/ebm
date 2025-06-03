@@ -22,7 +22,7 @@ from ebm.utils.data import (
 class TestBinaryTransform:
     """Test BinaryTransform class."""
 
-    def test_threshold_method(self):
+    def test_threshold_method(self) -> None:
         """Test threshold binarization."""
         transform = BinaryTransform(method='threshold', threshold=0.5)
 
@@ -39,7 +39,7 @@ class TestBinaryTransform:
         assert torch.all((result == 0) | (result == 1))
         assert result.dtype == torch.float32
 
-    def test_bernoulli_method(self):
+    def test_bernoulli_method(self) -> None:
         """Test Bernoulli binarization."""
         transform = BinaryTransform(method='bernoulli')
 
@@ -57,7 +57,7 @@ class TestBinaryTransform:
         empirical_prob = results.mean()
         assert abs(empirical_prob - 0.7) < 0.02
 
-    def test_median_method(self):
+    def test_median_method(self) -> None:
         """Test median binarization."""
         transform = BinaryTransform(method='median')
 
@@ -74,7 +74,7 @@ class TestBinaryTransform:
         proportion_ones = result.mean()
         assert 0.45 < proportion_ones < 0.55
 
-    def test_invalid_method(self):
+    def test_invalid_method(self) -> None:
         """Test error on invalid method."""
         with pytest.raises(ValueError, match="Unknown binarization method"):
             transform = BinaryTransform(method='invalid')
@@ -84,7 +84,7 @@ class TestBinaryTransform:
 class TestAddNoise:
     """Test AddNoise transform."""
 
-    def test_gaussian_noise(self):
+    def test_gaussian_noise(self) -> None:
         """Test Gaussian noise addition."""
         transform = AddNoise(noise_type='gaussian', noise_level=0.1, clip=True)
 
@@ -107,7 +107,7 @@ class TestAddNoise:
         # Some values should be outside [0, 1]
         assert (result < 0).any() or (result > 1).any()
 
-    def test_uniform_noise(self):
+    def test_uniform_noise(self) -> None:
         """Test uniform noise addition."""
         transform = AddNoise(noise_type='uniform', noise_level=0.2, clip=True)
 
@@ -122,7 +122,7 @@ class TestAddNoise:
         # Test distribution
         assert abs(result.mean() - 0.5) < 0.02
 
-    def test_salt_pepper_noise(self):
+    def test_salt_pepper_noise(self) -> None:
         """Test salt and pepper noise."""
         transform = AddNoise(noise_type='salt_pepper', noise_level=0.1)
 
@@ -140,7 +140,7 @@ class TestAddNoise:
         if len(unchanged) > 0:
             assert torch.all(unchanged == 0.5)
 
-    def test_invalid_noise_type(self):
+    def test_invalid_noise_type(self) -> None:
         """Test error on invalid noise type."""
         transform = AddNoise(noise_type='invalid')
 
@@ -151,7 +151,7 @@ class TestAddNoise:
 class TestDequantizeTransform:
     """Test DequantizeTransform."""
 
-    def test_dequantization(self):
+    def test_dequantization(self) -> None:
         """Test basic dequantization."""
         transform = DequantizeTransform(levels=256, scale=1.0)
 
@@ -176,7 +176,7 @@ class TestDequantizeTransform:
         # Mean should be close to original
         assert torch.allclose(results.mean(dim=0), x, atol=noise_scale)
 
-    def test_different_scales(self):
+    def test_different_scales(self) -> None:
         """Test with different noise scales."""
         # Small scale
         transform_small = DequantizeTransform(levels=256, scale=0.5)
@@ -197,7 +197,7 @@ class TestDequantizeTransform:
 class TestEnergyDataset:
     """Test EnergyDataset wrapper."""
 
-    def test_basic_wrapping(self):
+    def test_basic_wrapping(self) -> None:
         """Test basic dataset wrapping."""
         # Create base dataset
         data = torch.randn(100, 10)
@@ -212,7 +212,7 @@ class TestEnergyDataset:
         item = energy_dataset[0]
         assert torch.equal(item, data[0])
 
-    def test_with_transform(self):
+    def test_with_transform(self) -> None:
         """Test with additional transform."""
         data = torch.rand(50, 10)
         base_dataset = TensorDataset(data)
@@ -225,7 +225,7 @@ class TestEnergyDataset:
         item = energy_dataset[0]
         assert torch.all((item == 0) | (item == 1))
 
-    def test_with_energy_computation(self):
+    def test_with_energy_computation(self) -> None:
         """Test energy computation."""
         data = torch.randn(20, 10)
         base_dataset = TensorDataset(data)
@@ -247,7 +247,7 @@ class TestEnergyDataset:
         call_args = mock_model.free_energy.call_args[0][0]
         assert torch.equal(call_args[0], data[0])
 
-    def test_with_labeled_dataset(self):
+    def test_with_labeled_dataset(self) -> None:
         """Test with dataset that returns (data, label) tuples."""
         data = torch.randn(30, 10)
         labels = torch.randint(0, 2, (30,))
@@ -273,7 +273,7 @@ class TestEnergyDataset:
 class TestSyntheticDataset:
     """Test SyntheticDataset."""
 
-    def test_random_pattern(self):
+    def test_random_pattern(self) -> None:
         """Test random binary data generation."""
         dataset = SyntheticDataset(
             n_samples=1000,
@@ -298,7 +298,7 @@ class TestSyntheticDataset:
         item = dataset[0]
         assert torch.equal(item, data[0])
 
-    def test_structured_pattern(self):
+    def test_structured_pattern(self) -> None:
         """Test structured data generation."""
         dataset = SyntheticDataset(
             n_samples=100,
@@ -320,7 +320,7 @@ class TestSyntheticDataset:
         max_corr = corr_matrix.abs().max().item()
         assert max_corr > 0.3  # Some structure exists
 
-    def test_correlated_pattern(self):
+    def test_correlated_pattern(self) -> None:
         """Test correlated data generation."""
         dataset = SyntheticDataset(
             n_samples=200,
@@ -343,7 +343,7 @@ class TestSyntheticDataset:
         # Should have meaningful correlations
         assert corr_matrix.abs().max() > 0.2
 
-    def test_invalid_pattern(self):
+    def test_invalid_pattern(self) -> None:
         """Test error on invalid pattern."""
         with pytest.raises(ValueError, match="Unknown pattern"):
             SyntheticDataset(pattern='invalid')
@@ -353,7 +353,7 @@ class TestMNISTDatasets:
     """Test MNIST dataset functions."""
 
     @patch('torchvision.datasets.MNIST')
-    def test_get_mnist_datasets(self, mock_mnist):
+    def test_get_mnist_datasets(self, mock_mnist) -> None:
         """Test MNIST dataset loading."""
         # Mock dataset
         mock_data = torch.randn(100, 1, 28, 28)
@@ -384,7 +384,7 @@ class TestMNISTDatasets:
         assert transform is not None
 
     @patch('torchvision.datasets.FashionMNIST')
-    def test_get_fashion_mnist_datasets(self, mock_fashion):
+    def test_get_fashion_mnist_datasets(self, mock_fashion) -> None:
         """Test Fashion-MNIST dataset loading."""
         # Mock dataset
         mock_dataset = MagicMock()
@@ -409,7 +409,7 @@ class TestMNISTDatasets:
 class TestDataLoaderCreation:
     """Test data loader creation."""
 
-    def test_create_data_loaders(self):
+    def test_create_data_loaders(self) -> None:
         """Test creating data loaders from datasets."""
         # Create datasets
         train_data = torch.randn(100, 10)
@@ -446,7 +446,7 @@ class TestDataLoaderCreation:
         assert test_loader.batch_size == 16
         assert len(test_loader) == 2  # ceil(30/16)
 
-    def test_create_data_loaders_minimal(self):
+    def test_create_data_loaders_minimal(self) -> None:
         """Test creating only train loader."""
         train_dataset = TensorDataset(torch.randn(50, 10))
 
@@ -463,7 +463,7 @@ class TestDataLoaderCreation:
 class TestDataStatistics:
     """Test data statistics computation."""
 
-    def test_compute_data_statistics(self):
+    def test_compute_data_statistics(self) -> None:
         """Test computing dataset statistics."""
         # Create known data
         data = torch.tensor([
@@ -496,7 +496,7 @@ class TestDataStatistics:
 
         assert stats['n_samples'] == 4
 
-    def test_compute_data_statistics_with_labels(self):
+    def test_compute_data_statistics_with_labels(self) -> None:
         """Test statistics computation with labeled data."""
         data = torch.randn(50, 20)
         labels = torch.randint(0, 10, (50,))
@@ -510,7 +510,7 @@ class TestDataStatistics:
         assert stats['n_samples'] == 50
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_compute_data_statistics_cuda(self):
+    def test_compute_data_statistics_cuda(self) -> None:
         """Test statistics computation on CUDA."""
         data = torch.randn(30, 10)
         dataset = TensorDataset(data)
@@ -527,7 +527,7 @@ class TestDataStatistics:
 class TestEdgeCases:
     """Test edge cases for data utilities."""
 
-    def test_empty_dataset(self):
+    def test_empty_dataset(self) -> None:
         """Test handling of empty datasets."""
         dataset = SyntheticDataset(n_samples=0, n_features=10)
         assert len(dataset) == 0
@@ -537,7 +537,7 @@ class TestEdgeCases:
         loader = DataLoader(dataset, batch_size=32)
         assert len(loader) == 0
 
-    def test_single_sample_dataset(self):
+    def test_single_sample_dataset(self) -> None:
         """Test dataset with single sample."""
         dataset = SyntheticDataset(n_samples=1, n_features=10)
         assert len(dataset) == 1
@@ -545,7 +545,7 @@ class TestEdgeCases:
         item = dataset[0]
         assert item.shape == (10,)
 
-    def test_transform_chaining(self):
+    def test_transform_chaining(self) -> None:
         """Test chaining multiple transforms."""
         # Create transform pipeline
         binarize = BinaryTransform(method='threshold')
@@ -554,8 +554,7 @@ class TestEdgeCases:
         # Manual chaining
         def chained_transform(x):
             x = binarize(x)
-            x = add_noise(x)
-            return x
+            return add_noise(x)
 
         # Test
         x = torch.rand(100, 20)

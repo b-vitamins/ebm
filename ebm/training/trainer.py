@@ -15,11 +15,12 @@ from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
-from ..core.config import TrainingConfig
-from ..core.device import DeviceManager
-from ..core.logging import LoggerMixin, log_context
-from ..models.base import EnergyBasedModel
-from ..sampling.base import GradientEstimator
+from ebm.core.config import TrainingConfig
+from ebm.core.device import DeviceManager
+from ebm.core.logging import LoggerMixin, log_context
+from ebm.models.base import EnergyBasedModel
+from ebm.sampling.base import GradientEstimator
+
 from .callbacks import (
     Callback,
     CallbackList,
@@ -132,22 +133,21 @@ class Trainer(LoggerMixin):
                 step_size=scheduler_params.get('step_size', 10),
                 gamma=scheduler_params.get('gamma', 0.1)
             )
-        elif scheduler_type == 'cosine':
+        if scheduler_type == 'cosine':
             return torch.optim.lr_scheduler.CosineAnnealingLR(
                 self.optimizer,
                 T_max=self.config.epochs,
                 eta_min=scheduler_params.get('eta_min', 0)
             )
-        elif scheduler_type == 'reduce_on_plateau':
+        if scheduler_type == 'reduce_on_plateau':
             return torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
                 mode='min',
                 factor=scheduler_params.get('factor', 0.1),
                 patience=scheduler_params.get('patience', 10)
             )
-        else:
-            self.log_warning(f"Unknown scheduler type: {scheduler_type}")
-            return None
+        self.log_warning(f"Unknown scheduler type: {scheduler_type}")
+        return None
 
     def _setup_callbacks(self, callbacks: list[Callback] | None) -> CallbackList:
         """Setup default and user callbacks."""
@@ -192,7 +192,8 @@ class Trainer(LoggerMixin):
             val_loader: Optional validation data loader
             num_epochs: Number of epochs (overrides config)
 
-        Returns:
+        Returns
+        -------
             Training history and final metrics
         """
         num_epochs = num_epochs or self.config.epochs
@@ -267,7 +268,8 @@ class Trainer(LoggerMixin):
         Args:
             train_loader: Training data loader
 
-        Returns:
+        Returns
+        -------
             Epoch metrics
         """
         self.model.train()
@@ -287,10 +289,7 @@ class Trainer(LoggerMixin):
 
         for _batch_idx, batch in enumerate(pbar):
             # Handle different batch formats
-            if isinstance(batch, list | tuple):
-                data = batch[0]
-            else:
-                data = batch
+            data = batch[0] if isinstance(batch, list | tuple) else batch
 
             # Move to device
             data = self.device_manager.to_device(data)
@@ -329,7 +328,8 @@ class Trainer(LoggerMixin):
         Args:
             data: Batch of training data
 
-        Returns:
+        Returns
+        -------
             Loss value and metrics dictionary
         """
         # Zero gradients
@@ -385,17 +385,15 @@ class Trainer(LoggerMixin):
         Args:
             val_loader: Validation data loader
 
-        Returns:
+        Returns
+        -------
             Validation metrics
         """
         self.model.eval()
         val_metrics = MetricsTracker()
 
         for batch in tqdm(val_loader, desc="Validation", leave=False):
-            if isinstance(batch, list | tuple):
-                data = batch[0]
-            else:
-                data = batch
+            data = batch[0] if isinstance(batch, list | tuple) else batch
 
             data = self.device_manager.to_device(data)
 
@@ -424,7 +422,8 @@ class Trainer(LoggerMixin):
         Args:
             path: Checkpoint path (auto-generated if None)
 
-        Returns:
+        Returns
+        -------
             Path where checkpoint was saved
         """
         if path is None:

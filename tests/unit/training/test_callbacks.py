@@ -23,7 +23,7 @@ from ebm.training.callbacks import (
 class MockTrainer:
     """Mock trainer for testing callbacks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.current_epoch = 0
         self.global_step = 0
         self.best_metric = float('inf')
@@ -42,7 +42,7 @@ class MockTrainer:
 class MockModel(EnergyBasedModel):
     """Mock model for testing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.W = torch.randn(10, 20)
         self.vbias = torch.randn(20)
         self.hbias = torch.randn(10)
@@ -78,7 +78,7 @@ class MockModel(EnergyBasedModel):
 class TestCallback:
     """Test base Callback class."""
 
-    def test_default_methods(self):
+    def test_default_methods(self) -> None:
         """Test that default callback methods do nothing."""
         callback = Callback()
         trainer = MockTrainer()
@@ -100,7 +100,7 @@ class TestCallback:
 class TestCallbackList:
     """Test CallbackList container."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test callback list initialization."""
         cb1 = Mock(spec=Callback)
         cb2 = Mock(spec=Callback)
@@ -112,7 +112,7 @@ class TestCallbackList:
         assert cb2 in callback_list.callbacks
         assert callback_list.should_stop is False
 
-    def test_delegation(self):
+    def test_delegation(self) -> None:
         """Test that methods are delegated to all callbacks."""
         cb1 = Mock(spec=Callback)
         cb2 = Mock(spec=Callback)
@@ -128,7 +128,7 @@ class TestCallbackList:
         cb1.on_epoch_start.assert_called_once_with(trainer, model)
         cb2.on_epoch_start.assert_called_once_with(trainer, model)
 
-    def test_stop_training(self):
+    def test_stop_training(self) -> None:
         """Test stop training flag."""
         callback_list = CallbackList([])
 
@@ -138,11 +138,11 @@ class TestCallbackList:
 
         assert callback_list.should_stop is True
 
-    def test_missing_method_handling(self):
+    def test_missing_method_handling(self) -> None:
         """Test handling of callbacks without all methods."""
         # Callback with only some methods
         class PartialCallback:
-            def on_epoch_start(self, trainer, model):
+            def on_epoch_start(self, trainer, model) -> None:
                 self.called = True
 
         partial_cb = PartialCallback()
@@ -164,7 +164,7 @@ class TestCallbackList:
 class TestLoggingCallback:
     """Test LoggingCallback."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test logging callback initialization."""
         callback = LoggingCallback(
             log_every=50,
@@ -179,7 +179,7 @@ class TestLoggingCallback:
         assert callback.epoch_start_time is None
 
     @patch('ebm.training.callbacks.logger')
-    def test_epoch_logging(self, mock_logger):
+    def test_epoch_logging(self, mock_logger) -> None:
         """Test epoch start/end logging."""
         callback = LoggingCallback()
         trainer = MockTrainer()
@@ -206,7 +206,7 @@ class TestLoggingCallback:
         assert "loss=0.5000, accuracy=0.9500" in end_call[1]["metrics"]
 
     @patch('ebm.training.callbacks.logger')
-    def test_batch_logging(self, mock_logger):
+    def test_batch_logging(self, mock_logger) -> None:
         """Test batch logging."""
         callback = LoggingCallback(log_every=2)
         trainer = MockTrainer()
@@ -229,7 +229,7 @@ class TestLoggingCallback:
         assert log_call[1]["loss"] == 0.4
 
     @patch('ebm.training.callbacks.logger')
-    def test_gradient_logging(self, mock_logger):
+    def test_gradient_logging(self, mock_logger) -> None:
         """Test gradient statistics logging."""
         callback = LoggingCallback(log_every=1, log_gradients=True)
         trainer = MockTrainer()
@@ -248,7 +248,7 @@ class TestLoggingCallback:
         assert log_call[1]["grad_norm_mean"] > 0
 
     @patch('ebm.training.callbacks.logger')
-    def test_weight_logging(self, mock_logger):
+    def test_weight_logging(self, mock_logger) -> None:
         """Test weight statistics logging."""
         callback = LoggingCallback(log_every=1, log_weights=True)
         trainer = MockTrainer()
@@ -265,7 +265,7 @@ class TestLoggingCallback:
 class TestMetricsCallback:
     """Test MetricsCallback."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test metrics callback initialization."""
         callback = MetricsCallback()
 
@@ -274,7 +274,7 @@ class TestMetricsCallback:
         assert len(callback.train_metrics) == 0
         assert len(callback.val_metrics) == 0
 
-    def test_metrics_storage(self):
+    def test_metrics_storage(self) -> None:
         """Test metrics storage."""
         callback = MetricsCallback()
         trainer = MockTrainer()
@@ -298,7 +298,7 @@ class TestMetricsCallback:
         assert callback.val_metrics[0]["val_loss"] == 0.4
         assert callback.val_metrics[0]["epoch"] == 1
 
-    def test_save_metrics(self, tmp_path):
+    def test_save_metrics(self, tmp_path) -> None:
         """Test saving metrics to file."""
         save_path = tmp_path / "metrics.json"
         callback = MetricsCallback(save_path=save_path)
@@ -327,7 +327,7 @@ class TestMetricsCallback:
 class TestCheckpointCallback:
     """Test CheckpointCallback."""
 
-    def test_initialization(self, tmp_path):
+    def test_initialization(self, tmp_path) -> None:
         """Test checkpoint callback initialization."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -344,7 +344,7 @@ class TestCheckpointCallback:
         assert callback.mode == "min"
         assert callback.best_value == float('inf')
 
-    def test_regular_checkpointing(self, tmp_path):
+    def test_regular_checkpointing(self, tmp_path) -> None:
         """Test regular epoch checkpointing."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -369,7 +369,7 @@ class TestCheckpointCallback:
         assert (tmp_path / "checkpoint_epoch_2.pt").exists()
 
     @patch('ebm.training.callbacks.logger')
-    def test_best_model_saving(self, mock_logger, tmp_path):
+    def test_best_model_saving(self, mock_logger, tmp_path) -> None:
         """Test best model checkpointing."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -401,7 +401,7 @@ class TestCheckpointCallback:
         # Check logging
         assert mock_logger.info.call_count == 2  # Called for epochs 1 and 3
 
-    def test_mode_max(self, tmp_path):
+    def test_mode_max(self, tmp_path) -> None:
         """Test monitoring with mode='max'."""
         callback = CheckpointCallback(
             checkpoint_dir=tmp_path,
@@ -428,7 +428,7 @@ class TestCheckpointCallback:
 class TestEarlyStoppingCallback:
     """Test EarlyStoppingCallback."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test early stopping initialization."""
         callback = EarlyStoppingCallback(
             patience=5,
@@ -445,7 +445,7 @@ class TestEarlyStoppingCallback:
         assert callback.patience_counter == 0
         assert callback.trainer is None
 
-    def test_improvement_detection(self):
+    def test_improvement_detection(self) -> None:
         """Test improvement detection."""
         callback = EarlyStoppingCallback(
             patience=3,
@@ -478,7 +478,7 @@ class TestEarlyStoppingCallback:
         assert callback.patience_counter == 2
 
     @patch('ebm.training.callbacks.logger')
-    def test_early_stopping_trigger(self, mock_logger):
+    def test_early_stopping_trigger(self, mock_logger) -> None:
         """Test early stopping trigger."""
         callback = EarlyStoppingCallback(
             patience=2,
@@ -512,7 +512,7 @@ class TestEarlyStoppingCallback:
         log_call = mock_logger.info.call_args
         assert "Early stopping triggered" in log_call[0][0]
 
-    def test_missing_monitor_metric(self):
+    def test_missing_monitor_metric(self) -> None:
         """Test behavior when monitor metric is missing."""
         callback = EarlyStoppingCallback(monitor="val_loss")
         trainer = MockTrainer()
@@ -529,7 +529,7 @@ class TestEarlyStoppingCallback:
 class TestVisualizationCallback:
     """Test VisualizationCallback."""
 
-    def test_initialization(self, tmp_path):
+    def test_initialization(self, tmp_path) -> None:
         """Test visualization callback initialization."""
         callback = VisualizationCallback(
             visualize_every=5,
@@ -544,7 +544,7 @@ class TestVisualizationCallback:
 
     @patch('ebm.utils.visualization.visualize_samples')
     @patch('ebm.utils.visualization.visualize_filters')
-    def test_visualization_generation(self, mock_vis_filters, mock_vis_samples, tmp_path):
+    def test_visualization_generation(self, mock_vis_filters, mock_vis_samples, tmp_path) -> None:
         """Test visualization generation."""
         callback = VisualizationCallback(
             visualize_every=2,
@@ -585,7 +585,7 @@ class TestVisualizationCallback:
 class TestLearningRateSchedulerCallback:
     """Test LearningRateSchedulerCallback."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test LR scheduler callback initialization."""
         def schedule_fn(epoch, step):
             return 0.1 * (0.9 ** epoch)
@@ -598,7 +598,7 @@ class TestLearningRateSchedulerCallback:
         assert callback.schedule_fn is schedule_fn
         assert callback.update_every == 'epoch'
 
-    def test_epoch_update(self):
+    def test_epoch_update(self) -> None:
         """Test LR update at epoch start."""
         def schedule_fn(epoch, step):
             return 0.1 * (0.5 ** epoch)
@@ -625,7 +625,7 @@ class TestLearningRateSchedulerCallback:
         callback.on_epoch_start(trainer, model)
         assert trainer.optimizer.param_groups[0]['lr'] == 0.025
 
-    def test_step_update(self):
+    def test_step_update(self) -> None:
         """Test LR update at batch start."""
         def schedule_fn(epoch, step):
             return 0.1 / (1 + 0.01 * step)
@@ -657,7 +657,7 @@ class TestLearningRateSchedulerCallback:
 class TestWarmupCallback:
     """Test WarmupCallback."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test warmup callback initialization."""
         callback = WarmupCallback(
             warmup_steps=100,
@@ -669,7 +669,7 @@ class TestWarmupCallback:
         assert callback.start_lr == 1e-6
         assert callback.end_lr == 1e-3
 
-    def test_linear_warmup(self):
+    def test_linear_warmup(self) -> None:
         """Test linear warmup schedule."""
         callback = WarmupCallback(
             warmup_steps=10,

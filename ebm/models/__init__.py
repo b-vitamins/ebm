@@ -14,14 +14,18 @@ from .rbm import (
 )
 
 __all__ = [
+    "AISInterpolator",
+    "BernoulliRBM",
+    "CenteredBernoulliRBM",
     # Base classes
-    "EnergyBasedModel", "LatentVariableModel", "AISInterpolator",
-
+    "EnergyBasedModel",
+    "GaussianBernoulliRBM",
+    "LatentVariableModel",
+    "RBMAISAdapter",
+    # RBM models
+    "RBMBase",
+    "SparseBernoulliRBM",
+    "WhitenedGaussianRBM",
     # RBM module
     "rbm",
-
-    # RBM models
-    "RBMBase", "RBMAISAdapter",
-    "BernoulliRBM", "CenteredBernoulliRBM", "SparseBernoulliRBM",
-    "GaussianBernoulliRBM", "WhitenedGaussianRBM",
 ]

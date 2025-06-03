@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 from ebm.sampling.mcmc import (
@@ -18,7 +18,7 @@ from ebm.sampling.mcmc import (
 class MockLatentModel(LatentVariableModel):
     """Mock model for testing."""
 
-    def __init__(self, n_visible=10, n_hidden=5):
+    def __init__(self, n_visible=10, n_hidden=5) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
@@ -101,7 +101,7 @@ class MockLatentModel(LatentVariableModel):
 class TestParallelTempering:
     """Test ParallelTempering sampler."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test PT initialization."""
         pt = ParallelTempering(
             num_temps=5,
@@ -130,7 +130,7 @@ class TestParallelTempering:
         assert torch.all(pt.swap_attempts == 0)
         assert torch.all(pt.swap_accepts == 0)
 
-    def test_chain_initialization(self):
+    def test_chain_initialization(self) -> None:
         """Test chain initialization."""
         pt = ParallelTempering(num_temps=3, num_chains=5)
         model = MockLatentModel(n_visible=8, n_hidden=4)
@@ -146,7 +146,7 @@ class TestParallelTempering:
         expected_temps = torch.arange(3).unsqueeze(0).expand(5, -1)
         assert torch.equal(pt.chain_temps, expected_temps)
 
-    def test_gibbs_step_all_temps(self):
+    def test_gibbs_step_all_temps(self) -> None:
         """Test Gibbs step at all temperatures."""
         pt = ParallelTempering(num_temps=3, min_beta=0.5, max_beta=1.0)
         model = MockLatentModel()
@@ -168,7 +168,7 @@ class TestParallelTempering:
         # This is statistical, so we just check shapes for now
         assert pt.chains.shape == initial_chains.shape
 
-    def test_swap_attempts(self):
+    def test_swap_attempts(self) -> None:
         """Test state swapping between temperatures."""
         pt = ParallelTempering(num_temps=3, swap_every=1)
         model = MockLatentModel(n_visible=5, n_hidden=3)
@@ -197,7 +197,7 @@ class TestParallelTempering:
         # With our mock energies, swaps should be accepted
         # The exact behavior depends on random acceptance
 
-    def test_sampling(self):
+    def test_sampling(self) -> None:
         """Test full PT sampling."""
         pt = ParallelTempering(
             num_temps=3,
@@ -220,7 +220,7 @@ class TestParallelTempering:
         if pt.swap_every <= 5:
             assert pt.swap_attempts.sum() > 0
 
-    def test_swap_rates(self):
+    def test_swap_rates(self) -> None:
         """Test swap rate calculation."""
         pt = ParallelTempering(num_temps=4)
 
@@ -232,7 +232,7 @@ class TestParallelTempering:
 
         assert torch.allclose(rates, torch.tensor([0.3, 0.45, 0.2]))
 
-    def test_adaptive_temperatures(self):
+    def test_adaptive_temperatures(self) -> None:
         """Test adaptive temperature adjustment."""
         pt = ParallelTempering(
             num_temps=3,
@@ -256,7 +256,7 @@ class TestParallelTempering:
         # But changes should maintain ordering
         assert torch.all(pt.betas[1:] >= pt.betas[:-1])
 
-    def test_invalid_model_type(self):
+    def test_invalid_model_type(self) -> None:
         """Test error on non-latent model."""
         pt = ParallelTempering()
         model = Mock(spec=EnergyBasedModel)
@@ -265,7 +265,7 @@ class TestParallelTempering:
         with pytest.raises(TypeError, match="PT requires a LatentVariableModel"):
             pt.sample(model, init_state)
 
-    def test_registry_registration(self):
+    def test_registry_registration(self) -> None:
         """Test PT registration in registry."""
         from ebm.core.registry import samplers
 
@@ -278,7 +278,7 @@ class TestParallelTempering:
 class TestPTGradientEstimator:
     """Test PT-based gradient estimation."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test PT gradient estimator initialization."""
         pt_grad = PTGradientEstimator(
             num_temps=5,
@@ -291,7 +291,7 @@ class TestPTGradientEstimator:
         assert pt_grad.sampler.num_temps == 5
         assert pt_grad.sampler.swap_every == 2
 
-    def test_gradient_estimation(self):
+    def test_gradient_estimation(self) -> None:
         """Test gradient estimation using PT."""
         pt_grad = PTGradientEstimator(num_temps=3, k=2)
         model = MockLatentModel()
@@ -307,7 +307,7 @@ class TestPTGradientEstimator:
         assert gradients["vbias"].shape == model.vbias.shape
         assert gradients["hbias"].shape == model.hbias.shape
 
-    def test_invalid_model(self):
+    def test_invalid_model(self) -> None:
         """Test error on non-latent model."""
         pt_grad = PTGradientEstimator()
         model = Mock(spec=EnergyBasedModel)
@@ -320,7 +320,7 @@ class TestPTGradientEstimator:
 class TestAnnealedImportanceSampling:
     """Test AIS implementation."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test AIS initialization."""
         ais = AnnealedImportanceSampling(
             num_temps=100,
@@ -339,7 +339,7 @@ class TestAnnealedImportanceSampling:
         assert ais.betas[0] == 0.0
         assert ais.betas[-1] == 1.0
 
-    def test_log_partition_estimation(self):
+    def test_log_partition_estimation(self) -> None:
         """Test partition function estimation."""
         ais = AnnealedImportanceSampling(
             num_temps=10,
@@ -362,7 +362,7 @@ class TestAnnealedImportanceSampling:
         # Can't test exact value due to stochasticity
         assert log_z_est > 0  # Should be positive for typical RBMs
 
-    def test_log_partition_with_bounds(self):
+    def test_log_partition_with_bounds(self) -> None:
         """Test partition function estimation with confidence bounds."""
         ais = AnnealedImportanceSampling(
             num_temps=50,
@@ -388,7 +388,7 @@ class TestAnnealedImportanceSampling:
         # Confidence interval should be reasonable
         assert (ci_upper - ci_lower) < 10.0  # Not too wide
 
-    def test_importance_weights(self):
+    def test_importance_weights(self) -> None:
         """Test importance weight computation."""
         ais = AnnealedImportanceSampling(
             num_temps=5,
@@ -426,7 +426,7 @@ class TestAnnealedImportanceSampling:
         # Final weights should be finite
         assert torch.all(torch.isfinite(log_w))
 
-    def test_effective_sample_size(self):
+    def test_effective_sample_size(self) -> None:
         """Test ESS calculation in AIS."""
         ais = AnnealedImportanceSampling(
             num_temps=20,
@@ -451,7 +451,7 @@ class TestAnnealedImportanceSampling:
 class TestEdgeCases:
     """Test edge cases for MCMC methods."""
 
-    def test_single_temperature(self):
+    def test_single_temperature(self) -> None:
         """Test PT with single temperature."""
         pt = ParallelTempering(num_temps=1)
         model = MockLatentModel()
@@ -463,7 +463,7 @@ class TestEdgeCases:
         assert samples.shape == init_state.shape
         assert torch.all(pt.swap_attempts == 0)
 
-    def test_extreme_temperatures(self):
+    def test_extreme_temperatures(self) -> None:
         """Test PT with extreme temperature range."""
         pt = ParallelTempering(
             num_temps=3,
@@ -480,7 +480,7 @@ class TestEdgeCases:
         # Should handle extreme temperatures
         assert torch.all(torch.isfinite(samples))
 
-    def test_empty_batch_pt(self):
+    def test_empty_batch_pt(self) -> None:
         """Test PT with empty batch."""
         pt = ParallelTempering()
         model = MockLatentModel()
@@ -491,13 +491,13 @@ class TestEdgeCases:
         pt.init_chains(model, batch_size=0, state_shape=(10,))
         assert pt.chains.shape[0] == pt.num_chains or 0
 
-    def test_ais_with_zero_chains(self):
+    def test_ais_with_zero_chains(self) -> None:
         """Test AIS with invalid number of chains."""
         with pytest.raises(ValueError):
             # Should validate num_chains > 0
             AnnealedImportanceSampling(num_chains=0)
 
-    def test_numerical_stability_ais(self):
+    def test_numerical_stability_ais(self) -> None:
         """Test AIS numerical stability."""
         ais = AnnealedImportanceSampling(num_temps=100, num_chains=10)
 

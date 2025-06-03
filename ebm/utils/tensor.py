@@ -13,7 +13,7 @@ from typing import overload
 import torch
 from torch import Tensor
 
-from ..core.types import Device, DType, Shape, TensorLike
+from ebm.core.types import Device, DType, Shape, TensorLike
 
 
 def ensure_tensor(
@@ -26,7 +26,8 @@ def ensure_tensor(
         dtype: Target data type
         device: Target device
 
-    Returns:
+    Returns
+    -------
         Tensor with specified properties
     """
     if isinstance(x, Tensor):
@@ -56,7 +57,8 @@ def safe_log(x: Tensor, eps: float = 1e-10) -> Tensor:
         x: Input tensor
         eps: Small constant for numerical stability
 
-    Returns:
+    Returns
+    -------
         log(x + eps)
     """
     return torch.log(x + eps)
@@ -69,7 +71,8 @@ def safe_sqrt(x: Tensor, eps: float = 1e-10) -> Tensor:
         x: Input tensor
         eps: Small constant for numerical stability
 
-    Returns:
+    Returns
+    -------
         sqrt(x + eps)
     """
     return torch.sqrt(x + eps)
@@ -85,7 +88,8 @@ def log_sum_exp(
         dim: Dimension(s) to reduce
         keepdim: Whether to keep reduced dimensions
 
-    Returns:
+    Returns
+    -------
         Log sum exp result
     """
     return torch.logsumexp(x, dim=dim, keepdim=keepdim)
@@ -98,7 +102,8 @@ def batch_outer_product(a: Tensor, b: Tensor) -> Tensor:
         a: Tensor of shape (batch_size, n)
         b: Tensor of shape (batch_size, m)
 
-    Returns:
+    Returns
+    -------
         Outer products of shape (batch_size, n, m)
     """
     return torch.einsum("bi,bj->bij", a, b)
@@ -111,15 +116,15 @@ def batch_quadratic_form(x: Tensor, A: Tensor) -> Tensor:
         x: Tensor of shape (batch_size, n)
         A: Matrix of shape (n, n) or (batch_size, n, n)
 
-    Returns:
+    Returns
+    -------
         Quadratic form values of shape (batch_size,)
     """
     if A.dim() == 2:
         # Single matrix for all batch elements
         return torch.einsum("bi,ij,bj->b", x, A, x)
-    else:
-        # Different matrix for each batch element
-        return torch.einsum("bi,bij,bj->b", x, A, x)
+    # Different matrix for each batch element
+    return torch.einsum("bi,bij,bj->b", x, A, x)
 
 
 def batch_mv(A: Tensor, x: Tensor) -> Tensor:
@@ -129,17 +134,17 @@ def batch_mv(A: Tensor, x: Tensor) -> Tensor:
         A: Matrix of shape (n, m) or (batch_size, n, m)
         x: Vector of shape (m,) or (batch_size, m)
 
-    Returns:
+    Returns
+    -------
         Result of shape (n,) or (batch_size, n)
     """
     if A.dim() == 2 and x.dim() == 1:
         return torch.mv(A, x)
-    elif A.dim() == 2 and x.dim() == 2:
+    if A.dim() == 2 and x.dim() == 2:
         return torch.einsum("nm,bm->bn", A, x)
-    elif A.dim() == 3 and x.dim() == 1:
+    if A.dim() == 3 and x.dim() == 1:
         return torch.einsum("bnm,m->bn", A, x)
-    else:
-        return torch.einsum("bnm,bm->bn", A, x)
+    return torch.einsum("bnm,bm->bn", A, x)
 
 
 def shape_for_broadcast(
@@ -152,7 +157,8 @@ def shape_for_broadcast(
         target_shape: Target shape for broadcasting
         dim: If specified, which dimension to preserve
 
-    Returns:
+    Returns
+    -------
         Reshaped tensor
     """
     if tensor.shape == target_shape:
@@ -185,7 +191,8 @@ def expand_dims_like(tensor: Tensor, reference: Tensor) -> Tensor:
         tensor: Tensor to expand
         reference: Reference tensor for shape
 
-    Returns:
+    Returns
+    -------
         Expanded tensor
     """
     while tensor.dim() < reference.dim():
@@ -203,7 +210,8 @@ def masked_fill_inf(
         mask: Boolean mask (True = fill)
         value: Value to fill
 
-    Returns:
+    Returns
+    -------
         Filled tensor
     """
     return tensor.masked_fill(mask, value)
@@ -216,7 +224,8 @@ def create_causal_mask(size: int, device: Device | None = None) -> Tensor:
         size: Size of the square mask
         device: Device to create mask on
 
-    Returns:
+    Returns
+    -------
         Boolean mask of shape (size, size)
     """
     return torch.tril(torch.ones(size, size, device=device, dtype=torch.bool))
@@ -232,7 +241,8 @@ def create_padding_mask(
         max_length: Maximum sequence length
         device: Device to create mask on
 
-    Returns:
+    Returns
+    -------
         Boolean mask of shape (batch_size, max_length)
     """
     if max_length is None:
@@ -241,9 +251,8 @@ def create_padding_mask(
     batch_size = lengths.shape[0]
     mask = torch.arange(max_length, device=device or lengths.device)
     mask = mask.unsqueeze(0).expand(batch_size, -1)
-    mask = mask < lengths.unsqueeze(1)
+    return mask < lengths.unsqueeze(1)
 
-    return mask
 
 
 @overload
@@ -266,13 +275,13 @@ def split_tensor(
         split_size_or_sizes: Size of each chunk or list of sizes
         dim: Dimension to split along
 
-    Returns:
+    Returns
+    -------
         List of tensor chunks
     """
     if isinstance(split_size_or_sizes, int):
         return torch.chunk(tensor, tensor.shape[dim] // split_size_or_sizes, dim=dim)
-    else:
-        return torch.split(tensor, split_size_or_sizes, dim=dim)
+    return torch.split(tensor, split_size_or_sizes, dim=dim)
 
 
 def concat_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
@@ -282,7 +291,8 @@ def concat_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
         tensors: Sequence of tensors
         dim: Dimension to concatenate along
 
-    Returns:
+    Returns
+    -------
         Concatenated tensor
     """
     return torch.cat(tensors, dim=dim)
@@ -295,7 +305,8 @@ def stack_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
         tensors: Sequence of tensors
         dim: Dimension to stack along
 
-    Returns:
+    Returns
+    -------
         Stacked tensor
     """
     return torch.stack(tensors, dim=dim)
@@ -304,7 +315,7 @@ def stack_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
 class TensorStatistics:
     """Helper class for computing running statistics of tensors."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.reset()
 
     def reset(self) -> None:

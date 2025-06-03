@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 import torch
-import torch.nn as nn
+from torch import nn
 
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 from ebm.sampling.gradient import (
@@ -20,7 +20,7 @@ from ebm.utils.tensor import batch_outer_product
 class MockLatentModel(LatentVariableModel):
     """Mock latent variable model for testing."""
 
-    def __init__(self, n_visible=20, n_hidden=10):
+    def __init__(self, n_visible=20, n_hidden=10) -> None:
         self.num_visible = n_visible
         self.num_hidden = n_hidden
         self.W = nn.Parameter(torch.randn(n_hidden, n_visible) * 0.01)
@@ -82,7 +82,7 @@ class MockLatentModel(LatentVariableModel):
 class TestContrastiveDivergence:
     """Test ContrastiveDivergence gradient estimator."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test CD initialization."""
         cd = ContrastiveDivergence(k=1)
 
@@ -97,7 +97,7 @@ class TestContrastiveDivergence:
         assert pcd.persistent is True
         assert pcd.num_chains == 100
 
-    def test_estimate_gradient(self):
+    def test_estimate_gradient(self) -> None:
         """Test gradient estimation."""
         cd = ContrastiveDivergence(k=1)
         model = MockLatentModel()
@@ -119,7 +119,7 @@ class TestContrastiveDivergence:
         assert hasattr(cd, 'last_negative_samples')
         assert cd.last_negative_samples.shape == data.shape
 
-    def test_gradient_computation(self):
+    def test_gradient_computation(self) -> None:
         """Test that gradients are computed correctly."""
         cd = ContrastiveDivergence(k=1)
         model = MockLatentModel(n_visible=5, n_hidden=3)
@@ -154,7 +154,7 @@ class TestContrastiveDivergence:
         assert gradients["vbias"].shape == expected_vbias.shape
         assert gradients["hbias"].shape == expected_hbias.shape
 
-    def test_apply_gradients(self):
+    def test_apply_gradients(self) -> None:
         """Test gradient application."""
         cd = ContrastiveDivergence(k=1)
         model = MockLatentModel()
@@ -178,7 +178,7 @@ class TestContrastiveDivergence:
         assert torch.allclose(model.W.data, W_orig + lr * gradients["W"])
         assert torch.allclose(model.vbias.data, vbias_orig + lr * gradients["vbias"])
 
-    def test_invalid_model_type(self):
+    def test_invalid_model_type(self) -> None:
         """Test error on non-latent model."""
         cd = ContrastiveDivergence(k=1)
 
@@ -193,7 +193,7 @@ class TestContrastiveDivergence:
 class TestCDSampler:
     """Test CDSampler class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test CD sampler initialization."""
         # Non-persistent
         sampler = CDSampler(k=1)
@@ -210,7 +210,7 @@ class TestCDSampler:
         assert sampler_pcd.name == "PCD-5"
         assert hasattr(sampler_pcd, 'persistent_chains')
 
-    def test_non_persistent_sampling(self):
+    def test_non_persistent_sampling(self) -> None:
         """Test non-persistent CD sampling."""
         sampler = CDSampler(k=3)
         model = MockLatentModel()
@@ -222,7 +222,7 @@ class TestCDSampler:
         # Should not maintain chains
         assert sampler.persistent_chains is None
 
-    def test_persistent_sampling(self):
+    def test_persistent_sampling(self) -> None:
         """Test persistent CD sampling."""
         sampler = CDSampler(k=1, persistent=True, num_chains=5)
         model = MockLatentModel()
@@ -240,7 +240,7 @@ class TestCDSampler:
         # Chains should have been updated
         assert not torch.allclose(samples1[:5], samples2)
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         """Test sampler reset."""
         sampler = CDSampler(k=1, persistent=True, num_chains=10)
         model = MockLatentModel()
@@ -254,7 +254,7 @@ class TestCDSampler:
         assert sampler.persistent_chains is None
         assert sampler.num_steps_taken == 0
 
-    def test_custom_num_steps(self):
+    def test_custom_num_steps(self) -> None:
         """Test overriding k with num_steps."""
         sampler = CDSampler(k=1)
         model = MockLatentModel()
@@ -273,7 +273,7 @@ class TestCDSampler:
 class TestPersistentContrastiveDivergence:
     """Test PersistentContrastiveDivergence class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test PCD initialization."""
         pcd = PersistentContrastiveDivergence(k=1, num_chains=100)
 
@@ -283,7 +283,7 @@ class TestPersistentContrastiveDivergence:
         assert isinstance(pcd.sampler, CDSampler)
         assert pcd.sampler.persistent is True
 
-    def test_gradient_estimation_persistent(self):
+    def test_gradient_estimation_persistent(self) -> None:
         """Test that PCD maintains persistent chains."""
         pcd = PersistentContrastiveDivergence(k=1, num_chains=5)
         model = MockLatentModel()
@@ -309,7 +309,7 @@ class TestPersistentContrastiveDivergence:
 class TestFastPersistentCD:
     """Test FastPersistentCD with momentum."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test FPCD initialization."""
         fpcd = FastPersistentCD(
             k=1,
@@ -323,7 +323,7 @@ class TestFastPersistentCD:
         assert isinstance(fpcd.velocities, dict)
         assert len(fpcd.velocities) == 0  # Empty initially
 
-    def test_fast_weights_application(self):
+    def test_fast_weights_application(self) -> None:
         """Test that fast weights are applied during sampling."""
         fpcd = FastPersistentCD(k=1, num_chains=10, momentum=0.9)
         model = MockLatentModel()
@@ -349,7 +349,7 @@ class TestFastPersistentCD:
         # Velocities should have been updated
         assert not torch.allclose(fpcd.velocities["W"], gradients2["W"])
 
-    def test_velocity_updates(self):
+    def test_velocity_updates(self) -> None:
         """Test velocity update mechanism."""
         fpcd = FastPersistentCD(k=1, momentum=0.95)
         MockLatentModel(n_visible=5, n_hidden=3)
@@ -368,7 +368,7 @@ class TestFastPersistentCD:
 class TestCDWithDecay:
     """Test CDWithDecay class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test CD with decay initialization."""
         cd_decay = CDWithDecay(
             initial_k=25,
@@ -383,7 +383,7 @@ class TestCDWithDecay:
         assert cd_decay.k == 25  # Starts at initial_k
         assert cd_decay.current_epoch == 0
 
-    def test_k_update(self):
+    def test_k_update(self) -> None:
         """Test k decay mechanism."""
         cd_decay = CDWithDecay(
             initial_k=20,
@@ -411,7 +411,7 @@ class TestCDWithDecay:
         cd_decay.update_k(20)
         assert cd_decay.k == 2  # Should stay at final_k
 
-    def test_sampling_with_decay(self):
+    def test_sampling_with_decay(self) -> None:
         """Test that sampling uses current k value."""
         cd_decay = CDWithDecay(
             initial_k=10,
@@ -438,7 +438,7 @@ class TestCDWithDecay:
 class TestEdgeCases:
     """Test edge cases for gradient-based samplers."""
 
-    def test_empty_batch(self):
+    def test_empty_batch(self) -> None:
         """Test handling of empty batches."""
         cd = ContrastiveDivergence(k=1)
         model = MockLatentModel()
@@ -450,7 +450,7 @@ class TestEdgeCases:
         assert gradients["W"].shape == model.W.shape
         assert torch.all(gradients["W"] == 0)
 
-    def test_single_sample(self):
+    def test_single_sample(self) -> None:
         """Test single sample gradient estimation."""
         cd = ContrastiveDivergence(k=1)
         model = MockLatentModel()
@@ -461,7 +461,7 @@ class TestEdgeCases:
         assert gradients["W"].shape == model.W.shape
         assert not torch.all(gradients["W"] == 0)
 
-    def test_large_k(self):
+    def test_large_k(self) -> None:
         """Test CD with large k value."""
         cd = ContrastiveDivergence(k=100)
         model = MockLatentModel(n_visible=10, n_hidden=5)
@@ -479,7 +479,7 @@ class TestEdgeCases:
         )[0, 1]
         assert abs(data_neg_corr) < 0.5  # Weak correlation
 
-    def test_persistent_chains_size_mismatch(self):
+    def test_persistent_chains_size_mismatch(self) -> None:
         """Test PCD when data batch size changes."""
         pcd = PersistentContrastiveDivergence(k=1, num_chains=10)
         model = MockLatentModel()
@@ -497,7 +497,7 @@ class TestEdgeCases:
         assert pcd.sampler.persistent_chains.shape[0] == 10
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-    def test_device_consistency(self):
+    def test_device_consistency(self) -> None:
         """Test that sampling maintains device consistency."""
         cd = ContrastiveDivergence(k=1)
 

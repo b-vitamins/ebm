@@ -11,12 +11,11 @@ import math
 from typing import Any
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 from tqdm.auto import tqdm
 
-from ..core.logging import LoggerMixin
-from ..models.base import EnergyBasedModel, LatentVariableModel
+from ebm.core.logging import LoggerMixin
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 
 class PartitionFunctionEstimator(nn.Module, LoggerMixin):
@@ -34,7 +33,8 @@ class PartitionFunctionEstimator(nn.Module, LoggerMixin):
     def estimate(self, **kwargs) -> float | tuple[float, float, float]:
         """Estimate log partition function.
 
-        Returns:
+        Returns
+        -------
             Log Z estimate (and optionally confidence bounds)
         """
         raise NotImplementedError
@@ -77,7 +77,8 @@ class AISEstimator(PartitionFunctionEstimator):
             return_diagnostics: Whether to return diagnostic information
             show_progress: Whether to show progress bar
 
-        Returns:
+        Returns
+        -------
             Log partition estimate (and diagnostics if requested)
         """
         if not isinstance(self.model, LatentVariableModel):
@@ -215,7 +216,8 @@ class BridgeSampling(PartitionFunctionEstimator):
             tol: Convergence tolerance
             max_iter: Maximum iterations
 
-        Returns:
+        Returns
+        -------
             (log(Z2/Z1), standard error)
         """
         # Generate samples from both models
@@ -266,8 +268,7 @@ class BridgeSampling(PartitionFunctionEstimator):
             return model.sample_fantasy_particles(
                 num_samples=num_samples, num_steps=10000
             )
-        else:
-            raise NotImplementedError("Model must implement sample_fantasy_particles")
+        raise NotImplementedError("Model must implement sample_fantasy_particles")
 
 
 class SimpleIS(PartitionFunctionEstimator):
@@ -302,7 +303,8 @@ class SimpleIS(PartitionFunctionEstimator):
         Args:
             data_loader: Data loader for data-based proposal
 
-        Returns:
+        Returns
+        -------
             (log Z estimate, standard error)
         """
         device = self.model.device
@@ -380,7 +382,8 @@ class RatioEstimator(PartitionFunctionEstimator):
             reference_idx: Index of reference model
             **kwargs: Arguments for estimation method
 
-        Returns:
+        Returns
+        -------
             Dictionary mapping (i,j) to (log(Zi/Zj), std_error)
         """
         n_models = len(self.models)

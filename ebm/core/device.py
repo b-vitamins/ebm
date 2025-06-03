@@ -85,10 +85,9 @@ class DeviceManager:
             # Auto-select best available device
             if torch.cuda.is_available():
                 return torch.device('cuda')
-            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            if hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
                 return torch.device('mps')
-            else:
-                return torch.device('cpu')
+            return torch.device('cpu')
 
         if isinstance(device, str):
             device = torch.device(device)
@@ -157,7 +156,8 @@ class DeviceManager:
             tensor: Tensor to move
             non_blocking: Whether to use non-blocking transfer
 
-        Returns:
+        Returns
+        -------
             Tensor on current device
         """
         return tensor.to(device=self._device, non_blocking=non_blocking)
@@ -168,7 +168,8 @@ class DeviceManager:
         Args:
             module: Module to move
 
-        Returns:
+        Returns
+        -------
             Module on current device
         """
         return module.to(device=self._device)
@@ -288,8 +289,7 @@ def memory_efficient(fn):
         manager = get_device_manager()
         manager.clear_cache()
         try:
-            result = fn(*args, **kwargs)
-            return result
+            return fn(*args, **kwargs)
         finally:
             manager.clear_cache()
     return wrapper

@@ -11,12 +11,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
-from ..core.logging import LoggerMixin
-from ..core.types import ChainState
-from ..models.base import EnergyBasedModel, LatentVariableModel
+from ebm.core.logging import LoggerMixin
+from ebm.core.types import ChainState
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 
 @dataclass
@@ -72,10 +71,10 @@ class Sampler(nn.Module, LoggerMixin, ABC):
             num_steps: Number of sampling steps
             **kwargs: Additional sampler-specific arguments
 
-        Returns:
+        Returns
+        -------
             Samples from the model
         """
-        pass
 
     def reset(self) -> None:
         """Reset sampler state."""
@@ -90,7 +89,8 @@ class Sampler(nn.Module, LoggerMixin, ABC):
     def get_diagnostics(self) -> dict[str, Any]:
         """Get diagnostic information about the sampler.
 
-        Returns:
+        Returns
+        -------
             Dictionary of diagnostic metrics
         """
         return {
@@ -132,7 +132,8 @@ class GibbsSampler(Sampler):
             beta: Optional inverse temperature
             start_from: Whether to start from 'visible' or 'hidden'
 
-        Returns:
+        Returns
+        -------
             New (visible, hidden) states
         """
         if start_from == 'visible':
@@ -167,7 +168,8 @@ class GibbsSampler(Sampler):
             return_all: If True, return all intermediate states
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Final samples (or all samples if return_all=True)
         """
         if not isinstance(model, LatentVariableModel):
@@ -221,10 +223,10 @@ class MCMCSampler(Sampler):
             state: Current state
             **kwargs: Kernel-specific arguments
 
-        Returns:
+        Returns
+        -------
             New state and transition metadata
         """
-        pass
 
     def sample(
         self,
@@ -248,7 +250,8 @@ class MCMCSampler(Sampler):
             return_all: If True, return all kept samples
             **kwargs: Kernel-specific arguments
 
-        Returns:
+        Returns
+        -------
             Samples from the chain
         """
         state = init_state
@@ -262,9 +265,8 @@ class MCMCSampler(Sampler):
         for i in range(num_steps):
             state, metadata = self.transition_kernel(model, state, **kwargs)
 
-            if i % thin == 0:
-                if return_all:
-                    samples.append(state)
+            if i % thin == 0 and return_all:
+                samples.append(state)
 
         self.state.num_steps += burn_in + num_steps
 
@@ -299,10 +301,10 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
             data: Training data batch
             **kwargs: Estimator-specific arguments
 
-        Returns:
+        Returns
+        -------
             Dictionary mapping parameter names to gradients
         """
-        pass
 
     def compute_metrics(
         self,
@@ -317,7 +319,8 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
             data: Data samples
             samples: Model samples
 
-        Returns:
+        Returns
+        -------
             Dictionary of metrics
         """
         with torch.no_grad():

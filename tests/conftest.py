@@ -91,8 +91,7 @@ def dtype() -> torch.dtype:
 @pytest.fixture
 def random_state() -> Generator[np.random.RandomState, None, None]:
     """Provide a seeded random state for tests."""
-    state = np.random.RandomState(SEED)
-    yield state
+    return np.random.RandomState(SEED)
 
 
 @pytest.fixture
@@ -100,7 +99,7 @@ def torch_random_state() -> Generator[torch.Generator, None, None]:
     """Provide a seeded PyTorch random generator."""
     generator = torch.Generator()
     generator.manual_seed(SEED)
-    yield generator
+    return generator
 
 
 @pytest.fixture(autouse=True)
@@ -228,9 +227,8 @@ def make_random_tensor():
         if binary:
             tensor = torch.rand(shape, dtype=dtype, device=device)
             return (tensor > 0.5).to(dtype)
-        else:
-            tensor = torch.rand(shape, dtype=dtype, device=device)
-            return low + (high - low) * tensor
+        tensor = torch.rand(shape, dtype=dtype, device=device)
+        return low + (high - low) * tensor
 
     return _make_random_tensor
 
@@ -239,7 +237,7 @@ def make_random_tensor():
 class PerformanceMonitor:
     """Monitor performance metrics during tests."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.metrics = {}
 
     def record(self, name: str, value: float) -> None:

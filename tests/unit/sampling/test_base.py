@@ -55,7 +55,7 @@ class ConcreteGradientEstimator(GradientEstimator):
 class TestSamplerState:
     """Test SamplerState dataclass."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test sampler state initialization."""
         state = SamplerState()
 
@@ -64,7 +64,7 @@ class TestSamplerState:
         assert isinstance(state.metadata, dict)
         assert len(state.metadata) == 0
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         """Test state reset."""
         state = SamplerState()
 
@@ -84,7 +84,7 @@ class TestSamplerState:
 class TestSampler:
     """Test base Sampler class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test sampler initialization."""
         sampler = ConcreteSampler()
 
@@ -96,7 +96,7 @@ class TestSampler:
         sampler_named = ConcreteSampler(name="CustomSampler")
         assert sampler_named.name == "CustomSampler"
 
-    def test_sample_method(self):
+    def test_sample_method(self) -> None:
         """Test sampling functionality."""
         sampler = ConcreteSampler()
         model = Mock(spec=EnergyBasedModel)
@@ -111,7 +111,7 @@ class TestSampler:
         sampler.sample(model, init_state, num_steps=3)
         assert sampler.num_steps_taken == 8
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         """Test sampler reset."""
         sampler = ConcreteSampler()
         model = Mock(spec=EnergyBasedModel)
@@ -126,7 +126,7 @@ class TestSampler:
         sampler.reset()
         assert sampler.num_steps_taken == 0
 
-    def test_get_diagnostics(self):
+    def test_get_diagnostics(self) -> None:
         """Test diagnostic information."""
         sampler = ConcreteSampler()
 
@@ -147,7 +147,7 @@ class TestSampler:
 class TestGibbsSampler:
     """Test GibbsSampler base class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test Gibbs sampler initialization."""
         sampler = GibbsSampler()
 
@@ -158,7 +158,7 @@ class TestGibbsSampler:
         sampler_no_block = GibbsSampler(block_gibbs=False)
         assert sampler_no_block.block_gibbs is False
 
-    def test_gibbs_step(self):
+    def test_gibbs_step(self) -> None:
         """Test single Gibbs step."""
         sampler = GibbsSampler()
 
@@ -185,7 +185,7 @@ class TestGibbsSampler:
         assert model.sample_hidden.call_count == 2
         assert model.sample_visible.call_count == 1
 
-    def test_gibbs_sampling(self):
+    def test_gibbs_sampling(self) -> None:
         """Test multi-step Gibbs sampling."""
         sampler = GibbsSampler()
 
@@ -221,7 +221,7 @@ class TestGibbsSampler:
         )
         assert all_samples.shape == (4, 10, 20)  # init + 3 steps
 
-    def test_invalid_model_type(self):
+    def test_invalid_model_type(self) -> None:
         """Test error on invalid model type."""
         sampler = GibbsSampler()
 
@@ -252,7 +252,7 @@ class TestMCMCSampler:
             metadata = {"accepted": True, "step_size": 0.1}
             return proposal, metadata
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test MCMC sampler initialization."""
         sampler = self.ConcreteMCMC()
         assert sampler.num_chains is None
@@ -260,7 +260,7 @@ class TestMCMCSampler:
         sampler_chains = self.ConcreteMCMC(num_chains=10)
         assert sampler_chains.num_chains == 10
 
-    def test_basic_sampling(self):
+    def test_basic_sampling(self) -> None:
         """Test basic MCMC sampling."""
         sampler = self.ConcreteMCMC()
         model = Mock(spec=EnergyBasedModel)
@@ -271,7 +271,7 @@ class TestMCMCSampler:
         assert samples.shape == init_state.shape
         assert sampler.num_steps_taken == 10
 
-    def test_burn_in(self):
+    def test_burn_in(self) -> None:
         """Test burn-in functionality."""
         sampler = self.ConcreteMCMC()
         model = Mock(spec=EnergyBasedModel)
@@ -291,7 +291,7 @@ class TestMCMCSampler:
         # Final state should be different from init
         assert not torch.allclose(samples, init_state)
 
-    def test_thinning(self):
+    def test_thinning(self) -> None:
         """Test thinning functionality."""
         sampler = self.ConcreteMCMC()
         model = Mock(spec=EnergyBasedModel)
@@ -316,7 +316,7 @@ class TestMCMCSampler:
         # Should keep every 2nd sample: 10 steps / 2 = 5 samples
         assert all_samples.shape == (5, 5, 10)
 
-    def test_combined_options(self):
+    def test_combined_options(self) -> None:
         """Test burn-in + thinning + return_all."""
         sampler = self.ConcreteMCMC()
         model = Mock(spec=EnergyBasedModel)
@@ -339,14 +339,14 @@ class TestMCMCSampler:
 class TestGradientEstimator:
     """Test GradientEstimator base class."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test gradient estimator initialization."""
         mock_sampler = Mock(spec=Sampler)
         estimator = ConcreteGradientEstimator(mock_sampler)
 
         assert estimator.sampler is mock_sampler
 
-    def test_estimate_gradient(self):
+    def test_estimate_gradient(self) -> None:
         """Test gradient estimation."""
         mock_sampler = Mock(spec=Sampler)
         estimator = ConcreteGradientEstimator(mock_sampler)
@@ -362,7 +362,7 @@ class TestGradientEstimator:
         assert gradients["param1"].shape == (10, 10)
         assert gradients["param2"].shape == (10,)
 
-    def test_compute_metrics(self):
+    def test_compute_metrics(self) -> None:
         """Test metric computation."""
         mock_sampler = Mock(spec=Sampler)
         estimator = ConcreteGradientEstimator(mock_sampler)
@@ -385,7 +385,7 @@ class TestGradientEstimator:
         for value in metrics.values():
             assert isinstance(value, float)
 
-    def test_compute_metrics_with_latent_model(self):
+    def test_compute_metrics_with_latent_model(self) -> None:
         """Test metrics with latent variable model."""
         mock_sampler = Mock(spec=Sampler)
         estimator = ConcreteGradientEstimator(mock_sampler)
@@ -421,7 +421,7 @@ class TestAnnealedSampler:
             # Simple implementation
             return init_state + torch.randn_like(init_state) * 0.1
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test annealed sampler initialization."""
         sampler = self.ConcreteAnnealed(
             num_temps=5,
@@ -435,7 +435,7 @@ class TestAnnealedSampler:
         assert hasattr(sampler, 'betas')
         assert len(sampler.betas) == 5
 
-    def test_temperature_schedule(self):
+    def test_temperature_schedule(self) -> None:
         """Test temperature schedule creation."""
         sampler = self.ConcreteAnnealed(
             num_temps=10,
@@ -455,7 +455,7 @@ class TestAnnealedSampler:
         diffs = log_betas[1:] - log_betas[:-1]
         assert torch.allclose(diffs, diffs[0], rtol=1e-5)
 
-    def test_temperatures_property(self):
+    def test_temperatures_property(self) -> None:
         """Test temperature computation."""
         sampler = self.ConcreteAnnealed(
             num_temps=3,
@@ -476,7 +476,7 @@ class TestAnnealedSampler:
 class TestEdgeCases:
     """Test edge cases for sampling classes."""
 
-    def test_empty_state_handling(self):
+    def test_empty_state_handling(self) -> None:
         """Test handling of empty states."""
         sampler = ConcreteSampler()
         model = Mock(spec=EnergyBasedModel)
@@ -486,7 +486,7 @@ class TestEdgeCases:
         samples = sampler.sample(model, empty_state)
         assert samples.shape == (0, 10)
 
-    def test_single_sample(self):
+    def test_single_sample(self) -> None:
         """Test single sample handling."""
         sampler = GibbsSampler()
 
@@ -498,7 +498,7 @@ class TestEdgeCases:
         samples = sampler.sample(model, single_state)
         assert samples.shape == (1, 20)
 
-    def test_large_batch(self):
+    def test_large_batch(self) -> None:
         """Test large batch handling."""
         sampler = ConcreteSampler()
         model = Mock(spec=EnergyBasedModel)
@@ -510,7 +510,7 @@ class TestEdgeCases:
         assert samples.shape == large_state.shape
         assert torch.all(torch.isfinite(samples))
 
-    def test_gradient_estimator_without_sampler(self):
+    def test_gradient_estimator_without_sampler(self) -> None:
         """Test gradient estimator edge cases."""
         # Sampler that returns None
         mock_sampler = Mock(spec=Sampler)

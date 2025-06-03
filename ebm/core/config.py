@@ -101,7 +101,7 @@ class ModelConfig(BaseConfig):
     seed: int | None = Field(None, description="Random seed for reproducibility")
 
     @validator("device")
-    def validate_device(cls, v: str | None) -> str | None:
+    def validate_device(self, v: str | None) -> str | None:
         """Validate and normalize device string."""
         if v is None or v == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
@@ -111,7 +111,7 @@ class ModelConfig(BaseConfig):
         return v
 
     @validator("dtype")
-    def validate_dtype(cls, v: str) -> str:
+    def validate_dtype(self, v: str) -> str:
         """Validate data type string."""
         valid_dtypes = {
             "float32",
@@ -174,7 +174,7 @@ class OptimizerConfig(BaseConfig):
     scheduler_params: dict[str, Any] = Field({}, description="Scheduler parameters")
 
     @validator("name")
-    def validate_optimizer(cls, v: str) -> str:
+    def validate_optimizer(self, v: str) -> str:
         """Validate optimizer name."""
         valid = {"adam", "adamw", "sgd", "rmsprop", "lbfgs"}
         if v.lower() not in valid:
@@ -254,7 +254,7 @@ class ParallelTemperingConfig(SamplerConfig):
     swap_every: int = Field(1, description="Swap frequency", gt=0)
 
     @validator("min_beta")
-    def validate_beta_range(cls, v: float, values: dict[str, Any]) -> float:
+    def validate_beta_range(self, v: float, values: dict[str, Any]) -> float:
         """Ensure min_beta < max_beta."""
         if "max_beta" in values and v >= values["max_beta"]:
             raise ValueError("min_beta must be less than max_beta")
@@ -283,7 +283,7 @@ class RBMConfig(ModelConfig):
     l1_weight: float = Field(0.0, description="L1 weight regularization", ge=0)
 
     @validator("weight_init")
-    def validate_init_method(cls, v: str) -> str:
+    def validate_init_method(self, v: str) -> str:
         """Validate initialization method."""
         valid_methods = {
             "xavier_uniform",

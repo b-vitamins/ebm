@@ -15,7 +15,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import datasets, transforms
 
-from ..core.logging import logger
+from ebm.core.logging import logger
 
 
 class BinaryTransform:
@@ -37,17 +37,17 @@ class BinaryTransform:
         Args:
             x: Input tensor
 
-        Returns:
+        Returns
+        -------
             Binarized tensor
         """
         if self.method == 'threshold':
             return (x > self.threshold).float()
-        elif self.method == 'bernoulli':
+        if self.method == 'bernoulli':
             return torch.bernoulli(x)
-        elif self.method == 'median':
+        if self.method == 'median':
             return (x > x.median()).float()
-        else:
-            raise ValueError(f"Unknown binarization method: {self.method}")
+        raise ValueError(f"Unknown binarization method: {self.method}")
 
 
 class AddNoise:
@@ -76,7 +76,8 @@ class AddNoise:
         Args:
             x: Input tensor
 
-        Returns:
+        Returns
+        -------
             Noisy tensor
         """
         if self.noise_type == 'gaussian':
@@ -117,7 +118,8 @@ class DequantizeTransform:
         Args:
             x: Input tensor (assumed to be in [0, 1])
 
-        Returns:
+        Returns
+        -------
             Dequantized tensor
         """
         # Add uniform noise
@@ -154,17 +156,15 @@ class EnergyDataset(Dataset):
         Args:
             idx: Item index
 
-        Returns:
+        Returns
+        -------
             Data tensor or (data, energy) tuple
         """
         # Get base item
         item = self.base_dataset[idx]
 
         # Handle (data, label) format
-        if isinstance(item, tuple):
-            data = item[0]
-        else:
-            data = item
+        data = item[0] if isinstance(item, tuple) else item
 
         # Apply transform
         if self.transform is not None:
@@ -195,7 +195,8 @@ def get_mnist_datasets(
         train_val_split: Fraction of training data to use for training
         download: Whether to download if not present
 
-    Returns:
+    Returns
+    -------
         (train_dataset, val_dataset, test_dataset)
     """
     data_dir = Path(data_dir)
@@ -244,7 +245,8 @@ def get_fashion_mnist_datasets(
         data_dir: Data directory
         **kwargs: Arguments passed to get_mnist_datasets
 
-    Returns:
+    Returns
+    -------
         (train_dataset, val_dataset, test_dataset)
     """
     data_dir = Path(data_dir)
@@ -319,7 +321,7 @@ class SyntheticDataset(Dataset):
                 torch.full((self.n_samples, self.n_features), self.sparsity)
             )
 
-        elif self.pattern == 'structured':
+        if self.pattern == 'structured':
             # Data with structure (e.g., bars and stripes)
             data = torch.zeros(self.n_samples, self.n_features)
 
@@ -336,7 +338,7 @@ class SyntheticDataset(Dataset):
 
             return data
 
-        elif self.pattern == 'correlated':
+        if self.pattern == 'correlated':
             # Data with correlations
             # Generate latent factors
             n_factors = max(10, self.n_features // 10)
@@ -349,8 +351,7 @@ class SyntheticDataset(Dataset):
             data = torch.sigmoid(factors @ W + torch.randn(self.n_samples, self.n_features) * 0.1)
             return torch.bernoulli(data)
 
-        else:
-            raise ValueError(f"Unknown pattern: {self.pattern}")
+        raise ValueError(f"Unknown pattern: {self.pattern}")
 
     def __len__(self) -> int:
         return self.n_samples
@@ -379,7 +380,8 @@ def create_data_loaders(
         pin_memory: Whether to pin memory for GPU
         shuffle_train: Whether to shuffle training data
 
-    Returns:
+    Returns
+    -------
         (train_loader, val_loader, test_loader)
     """
     train_loader = DataLoader(
@@ -423,7 +425,8 @@ def compute_data_statistics(
         data_loader: Data loader
         device: Device to use for computation
 
-    Returns:
+    Returns
+    -------
         Dictionary with 'mean', 'std', 'min', 'max' statistics
     """
     if device is None:

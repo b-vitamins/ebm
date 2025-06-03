@@ -29,23 +29,23 @@ from .models import (
 __all__ = [
     # From configs
     "default_rbm_config",
-    "small_rbm_config",
     "gaussian_rbm_config",
-    "training_config",
-    "sampler_configs",
-    # From datasets
-    "synthetic_binary_data",
-    "synthetic_continuous_data",
-    "mini_mnist_dataset",
     "make_structured_data",
-    # From models
-    "simple_bernoulli_rbm",
-    "small_gaussian_rbm",
-    "pretrained_rbm",
     "make_test_rbm",
+    "mini_mnist_dataset",
+    "mock_callback",
     # From mocks
     "mock_data_loader",
     "mock_gradient_estimator",
-    "mock_callback",
     "mock_sampler",
+    "pretrained_rbm",
+    "sampler_configs",
+    # From models
+    "simple_bernoulli_rbm",
+    "small_gaussian_rbm",
+    "small_rbm_config",
+    # From datasets
+    "synthetic_binary_data",
+    "synthetic_continuous_data",
+    "training_config",
 ]

@@ -55,7 +55,8 @@ def tile_images(
         scale_each: Whether to scale each image independently
         normalize: Whether to normalize to [0, 1]
 
-    Returns:
+    Returns
+    -------
         Tiled image array
     """
     if isinstance(images, Tensor):
@@ -140,7 +141,8 @@ def visualize_filters(
         figsize: Figure size
         **kwargs: Additional arguments for tile_images
 
-    Returns:
+    Returns
+    -------
         Matplotlib figure
     """
     # Determine image shape
@@ -200,7 +202,8 @@ def visualize_samples(
         figsize: Figure size
         **kwargs: Additional arguments for tile_images
 
-    Returns:
+    Returns
+    -------
         Matplotlib figure
     """
     # Handle flattened samples
@@ -251,7 +254,8 @@ def plot_training_curves(
         save_path: Path to save figure
         figsize: Figure size
 
-    Returns:
+    Returns
+    -------
         Matplotlib figure
     """
     # Extract metrics to plot
@@ -332,7 +336,8 @@ def plot_energy_histogram(
         save_path: Path to save figure
         figsize: Figure size
 
-    Returns:
+    Returns
+    -------
         Matplotlib figure
     """
     fig, ax = plt.subplots(figsize=figsize)
@@ -387,7 +392,8 @@ def plot_reconstruction_comparison(
         save_path: Path to save figure
         figsize: Figure size
 
-    Returns:
+    Returns
+    -------
         Matplotlib figure
     """
     n_examples = min(n_examples, original.shape[0])
@@ -437,7 +443,8 @@ def create_animation(
         save_path: Path to save animation (as GIF or MP4)
         title: Animation title
 
-    Returns:
+    Returns
+    -------
         Animation object
     """
     from matplotlib import animation

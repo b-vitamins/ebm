@@ -18,14 +18,14 @@ from ebm.core.config import (
 class TestBaseConfig:
     """Test the base configuration class."""
 
-    def test_immutability(self):
+    def test_immutability(self) -> None:
         """Test that configs are immutable."""
         config = ModelConfig(device="cpu", dtype="float32")
 
         with pytest.raises(AttributeError):
             config.device = "cuda"
 
-    def test_from_dict(self):
+    def test_from_dict(self) -> None:
         """Test creating config from dictionary."""
         data = {"device": "cuda", "dtype": "float16", "seed": 123}
         config = ModelConfig.from_dict(data)
@@ -34,7 +34,7 @@ class TestBaseConfig:
         assert config.dtype == "float16"
         assert config.seed == 123
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         """Test converting config to dictionary."""
         config = ModelConfig(device="cpu", dtype="float32", seed=42)
         data = config.dict()
@@ -44,7 +44,7 @@ class TestBaseConfig:
         assert data["dtype"] == "float32"
         assert data["seed"] == 42
 
-    def test_with_updates(self):
+    def test_with_updates(self) -> None:
         """Test creating updated config."""
         config1 = ModelConfig(device="cpu", dtype="float32")
         config2 = config1.with_updates(device="cuda")
@@ -55,7 +55,7 @@ class TestBaseConfig:
         assert config2.device == "cuda"
         assert config2.dtype == "float32"
 
-    def test_save_load_json(self, tmp_path: Path):
+    def test_save_load_json(self, tmp_path: Path) -> None:
         """Test saving and loading config as JSON."""
         config = RBMConfig(
             visible_units=784,
@@ -74,7 +74,7 @@ class TestBaseConfig:
         assert loaded.hidden_units == config.hidden_units
         assert loaded.weight_init == config.weight_init
 
-    def test_save_load_yaml(self, tmp_path: Path):
+    def test_save_load_yaml(self, tmp_path: Path) -> None:
         """Test saving and loading config as YAML."""
         pytest.importorskip("yaml")
 
@@ -100,7 +100,7 @@ class TestBaseConfig:
 class TestModelConfig:
     """Test model configuration."""
 
-    def test_device_validation(self):
+    def test_device_validation(self) -> None:
         """Test device string validation."""
         # Valid devices
         config = ModelConfig(device="cpu")
@@ -116,7 +116,7 @@ class TestModelConfig:
         with pytest.raises(ValueError):
             ModelConfig(device="invalid")
 
-    def test_dtype_validation(self):
+    def test_dtype_validation(self) -> None:
         """Test data type validation."""
         # Valid dtypes
         valid_dtypes = ["float32", "float16", "bfloat16", "float64"]
@@ -128,13 +128,13 @@ class TestModelConfig:
         with pytest.raises(ValueError):
             ModelConfig(dtype="int32")
 
-    def test_torch_device_property(self):
+    def test_torch_device_property(self) -> None:
         """Test torch device property."""
         config = ModelConfig(device="cpu")
         assert isinstance(config.torch_device, torch.device)
         assert config.torch_device.type == "cpu"
 
-    def test_torch_dtype_property(self):
+    def test_torch_dtype_property(self) -> None:
         """Test torch dtype property."""
         dtype_map = {
             "float32": torch.float32,
@@ -150,7 +150,7 @@ class TestModelConfig:
 class TestOptimizerConfig:
     """Test optimizer configuration."""
 
-    def test_optimizer_validation(self):
+    def test_optimizer_validation(self) -> None:
         """Test optimizer name validation."""
         valid_names = ["adam", "adamw", "sgd", "rmsprop", "lbfgs"]
 
@@ -161,7 +161,7 @@ class TestOptimizerConfig:
         with pytest.raises(ValueError):
             OptimizerConfig(name="invalid_optimizer")
 
-    def test_parameter_validation(self):
+    def test_parameter_validation(self) -> None:
         """Test parameter validation."""
         # Learning rate must be positive
         with pytest.raises(ValueError):
@@ -176,7 +176,7 @@ class TestOptimizerConfig:
         assert config.lr == 0.001
         assert config.weight_decay == 0.01
 
-    def test_scheduler_config(self):
+    def test_scheduler_config(self) -> None:
         """Test scheduler configuration."""
         config = OptimizerConfig(
             scheduler="cosine",
@@ -190,7 +190,7 @@ class TestOptimizerConfig:
 class TestTrainingConfig:
     """Test training configuration."""
 
-    def test_validation_constraints(self):
+    def test_validation_constraints(self) -> None:
         """Test validation of training parameters."""
         # Epochs must be positive
         with pytest.raises(ValueError):
@@ -205,7 +205,7 @@ class TestTrainingConfig:
         assert config.epochs == 10
         assert config.batch_size == 32
 
-    def test_eval_batch_size_property(self):
+    def test_eval_batch_size_property(self) -> None:
         """Test eval batch size property."""
         # Default to training batch size
         config = TrainingConfig(batch_size=32)
@@ -215,7 +215,7 @@ class TestTrainingConfig:
         config = TrainingConfig(batch_size=32, eval_batch_size=64)
         assert config.eval_batch_size_actual == 64
 
-    def test_checkpoint_dir_path(self):
+    def test_checkpoint_dir_path(self) -> None:
         """Test checkpoint directory handling."""
         config = TrainingConfig(checkpoint_dir="./checkpoints")
         assert isinstance(config.checkpoint_dir, Path)
@@ -225,7 +225,7 @@ class TestTrainingConfig:
 class TestRBMConfig:
     """Test RBM configuration."""
 
-    def test_dimension_validation(self):
+    def test_dimension_validation(self) -> None:
         """Test dimension validation."""
         # Valid dimensions
         config = RBMConfig(visible_units=784, hidden_units=500)
@@ -239,7 +239,7 @@ class TestRBMConfig:
         with pytest.raises(ValueError):
             RBMConfig(visible_units=100, hidden_units=-1)
 
-    def test_init_method_validation(self):
+    def test_init_method_validation(self) -> None:
         """Test initialization method validation."""
         valid_methods = [
             "xavier_uniform", "xavier_normal",
@@ -262,7 +262,7 @@ class TestRBMConfig:
                 weight_init="invalid_method"
             )
 
-    def test_regularization_params(self):
+    def test_regularization_params(self) -> None:
         """Test regularization parameters."""
         config = RBMConfig(
             visible_units=100,
@@ -286,7 +286,7 @@ class TestRBMConfig:
 class TestGaussianRBMConfig:
     """Test Gaussian RBM configuration."""
 
-    def test_gaussian_specific_params(self):
+    def test_gaussian_specific_params(self) -> None:
         """Test Gaussian-specific parameters."""
         config = GaussianRBMConfig(
             visible_units=100,
@@ -307,7 +307,7 @@ class TestGaussianRBMConfig:
                 sigma=-1.0
             )
 
-    def test_inheritance(self):
+    def test_inheritance(self) -> None:
         """Test that GaussianRBMConfig inherits from RBMConfig."""
         config = GaussianRBMConfig(
             visible_units=100,
@@ -325,7 +325,7 @@ class TestGaussianRBMConfig:
 class TestConfigSerialization:
     """Test configuration serialization edge cases."""
 
-    def test_torch_type_serialization(self):
+    def test_torch_type_serialization(self) -> None:
         """Test serialization of torch types."""
         config = ModelConfig(device="cuda:0", dtype="float32")
         data = config.dict()
@@ -341,7 +341,7 @@ class TestConfigSerialization:
         assert loaded["device"] == "cuda:0"
         assert loaded["dtype"] == "float32"
 
-    def test_nested_config_serialization(self):
+    def test_nested_config_serialization(self) -> None:
         """Test serialization of nested configs."""
         config = TrainingConfig(
             epochs=10,
@@ -361,7 +361,7 @@ class TestConfigSerialization:
         assert loaded.optimizer.name == "adam"
         assert loaded.optimizer.lr == 0.001
 
-    def test_path_serialization(self, tmp_path: Path):
+    def test_path_serialization(self, tmp_path: Path) -> None:
         """Test Path object serialization."""
         config = TrainingConfig(checkpoint_dir=tmp_path / "checkpoints")
         data = config.dict()

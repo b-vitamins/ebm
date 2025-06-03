@@ -21,23 +21,33 @@ from .gradient import (
     FastPersistentCD,
     PersistentContrastiveDivergence,
 )
-from .mcmc import AnnealedImportanceSampling, ParallelTempering, PTGradientEstimator
+from .mcmc import (
+    AnnealedImportanceSampling,
+    ParallelTempering,
+    PTGradientEstimator,
+)
 
 __all__ = [
-    # Base classes
-    "SamplerState", "Sampler", "GibbsSampler", "MCMCSampler",
-    "GradientEstimator", "AnnealedSampler",
-
-    # Gradient-based samplers
-    "ContrastiveDivergence", "CDSampler",
-    "PersistentContrastiveDivergence",
-    "FastPersistentCD", "CDWithDecay",
-
-    # MCMC samplers
-    "ParallelTempering", "PTGradientEstimator",
     "AnnealedImportanceSampling",
-
-    # Deterministic samplers
-    "MeanFieldSampler", "TAPSampler", "TAPGradientEstimator",
+    "AnnealedSampler",
     "BeliefPropagationSampler",
+    "CDSampler",
+    "CDWithDecay",
+    # Gradient-based samplers
+    "ContrastiveDivergence",
+    "FastPersistentCD",
+    "GibbsSampler",
+    "GradientEstimator",
+    "MCMCSampler",
+    # Deterministic samplers
+    "MeanFieldSampler",
+    "PTGradientEstimator",
+    # MCMC samplers
+    "ParallelTempering",
+    "PersistentContrastiveDivergence",
+    "Sampler",
+    # Base classes
+    "SamplerState",
+    "TAPGradientEstimator",
+    "TAPSampler",
 ]

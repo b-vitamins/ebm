@@ -7,13 +7,13 @@ and their variants, including centered RBMs.
 from __future__ import annotations
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
+from torch import Tensor, nn
 
-from ...core.config import RBMConfig
-from ...core.registry import register_model
-from ...utils.tensor import shape_for_broadcast
+from ebm.core.config import RBMConfig
+from ebm.core.registry import register_model
+from ebm.utils.tensor import shape_for_broadcast
+
 from .base import RBMBase
 
 
@@ -49,7 +49,8 @@ class BernoulliRBM(RBMBase):
             v2: Second set of visible configurations
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Log probability ratios
         """
         v1 = self.prepare_input(v1)
@@ -73,7 +74,8 @@ class BernoulliRBM(RBMBase):
             v: Visible configurations
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Dictionary with score w.r.t. each parameter
         """
         v = self.prepare_input(v)
@@ -145,7 +147,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled hidden states, optionally with probabilities
         """
         visible = self.prepare_input(visible)
@@ -181,7 +184,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sampled visible states, optionally with probabilities
         """
         hidden = self.prepare_input(hidden)
@@ -225,7 +229,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
             beta: Optional inverse temperature
             return_parts: If True, return dict with energy components
 
-        Returns:
+        Returns
+        -------
             Energy values or dict of components
         """
         visible = self.prepare_input(visible)
@@ -270,7 +275,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
             v: Visible unit values
             beta: Optional inverse temperature
 
-        Returns:
+        Returns
+        -------
             Free energy values
         """
         v = self.prepare_input(v)
@@ -289,9 +295,8 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Free energy computation
         hidden_term = F.softplus(pre_h).sum(dim=-1)
-        free_energy = -v_bias_term - hidden_term
+        return -v_bias_term - hidden_term
 
-        return free_energy
 
     def update_offsets(
         self, v_mean: Tensor, h_mean: Tensor, momentum: float = 0.9
@@ -370,7 +375,8 @@ class SparseBernoulliRBM(BernoulliRBM):
         Args:
             h_prob: Hidden unit probabilities
 
-        Returns:
+        Returns
+        -------
             Sparsity penalty value
         """
         # Update running mean
@@ -406,7 +412,8 @@ class SparseBernoulliRBM(BernoulliRBM):
             beta: Optional inverse temperature
             return_prob: If True, also return probabilities
 
-        Returns:
+        Returns
+        -------
             Sparse hidden states, optionally with probabilities
         """
         # Get probabilities

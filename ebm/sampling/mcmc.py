@@ -11,9 +11,10 @@ from typing import Any
 import torch
 from torch import Tensor
 
-from ..core.registry import register_sampler
-from ..models.base import EnergyBasedModel, LatentVariableModel
-from ..utils.tensor import log_sum_exp
+from ebm.core.registry import register_sampler
+from ebm.models.base import EnergyBasedModel, LatentVariableModel
+from ebm.utils.tensor import log_sum_exp
+
 from .base import AnnealedSampler, GradientEstimator
 
 
@@ -121,7 +122,8 @@ class ParallelTempering(AnnealedSampler):
             num_steps: Number of PT steps
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Samples from the target distribution (beta=1)
         """
         if not isinstance(model, LatentVariableModel):
@@ -242,10 +244,7 @@ class ParallelTempering(AnnealedSampler):
                     continue
 
                 # Adjust beta while maintaining order
-                if i > 0:
-                    min_beta = self.betas[i - 1] * 1.01
-                else:
-                    min_beta = self.min_beta
+                min_beta = self.betas[i - 1] * 1.01 if i > 0 else self.min_beta
 
                 if i < self.num_temps - 2:
                     max_beta = self.betas[i + 2] * 0.99
@@ -289,7 +288,8 @@ class PTGradientEstimator(GradientEstimator):
             data: Training data
             **kwargs: Additional arguments
 
-        Returns:
+        Returns
+        -------
             Parameter gradients
         """
         if not isinstance(model, LatentVariableModel):
@@ -303,7 +303,7 @@ class PTGradientEstimator(GradientEstimator):
         h_model = model.sample_hidden(v_model, return_prob=True)[1]
 
         # Compute gradients
-        from ..utils.tensor import batch_outer_product
+        from ebm.utils.tensor import batch_outer_product
 
         gradients = {}
         pos_stats = batch_outer_product(h_data, data).mean(dim=0)
@@ -349,7 +349,8 @@ class AnnealedImportanceSampling(AnnealedSampler):
             base_log_z: Log partition function of base distribution
             return_bounds: If True, return confidence bounds
 
-        Returns:
+        Returns
+        -------
             Log partition estimate (and bounds if requested)
         """
         device = next(model.parameters()).device

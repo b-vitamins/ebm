@@ -1,8 +1,7 @@
 """Unit tests for RBM base class."""
 
 import torch
-import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, nn
 
 from ebm.core.config import RBMConfig
 from ebm.models.rbm.base import RBMAISAdapter, RBMBase
@@ -24,7 +23,7 @@ class ConcreteRBM(RBMBase):
 class TestRBMBase:
     """Test RBMBase class."""
 
-    def test_initialization(self, small_rbm_config):
+    def test_initialization(self, small_rbm_config) -> None:
         """Test RBM initialization."""
         rbm = ConcreteRBM(small_rbm_config)
 
@@ -42,7 +41,7 @@ class TestRBMBase:
         assert rbm.vbias.shape == (20,)
         assert rbm.hbias.shape == (10,)
 
-    def test_no_bias_initialization(self):
+    def test_no_bias_initialization(self) -> None:
         """Test RBM without bias terms."""
         config = RBMConfig(
             visible_units=20,
@@ -57,7 +56,7 @@ class TestRBMBase:
         assert torch.all(rbm.vbias == 0)
         assert torch.all(rbm.hbias == 0)
 
-    def test_parameter_initialization(self):
+    def test_parameter_initialization(self) -> None:
         """Test different parameter initialization methods."""
         # Xavier initialization
         config = RBMConfig(
@@ -77,7 +76,7 @@ class TestRBMBase:
         assert torch.allclose(rbm.vbias, torch.full_like(rbm.vbias, 0.01))
         assert torch.allclose(rbm.hbias, torch.full_like(rbm.hbias, 0.01))
 
-    def test_energy_computation(self):
+    def test_energy_computation(self) -> None:
         """Test energy computation."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = ConcreteRBM(config)
@@ -107,7 +106,7 @@ class TestRBMBase:
 
         assert torch.allclose(energy, torch.tensor([expected]))
 
-    def test_joint_energy(self):
+    def test_joint_energy(self) -> None:
         """Test joint energy computation."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = ConcreteRBM(config)
@@ -136,7 +135,7 @@ class TestRBMBase:
         total = parts["interaction"] + parts["visible_bias"] + parts["hidden_bias"]
         assert torch.allclose(total, parts["total"])
 
-    def test_free_energy(self):
+    def test_free_energy(self) -> None:
         """Test free energy computation."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = ConcreteRBM(config)
@@ -163,7 +162,7 @@ class TestRBMBase:
             free_energy_exact = -torch.logsumexp(-energies, dim=0)
             assert torch.allclose(free_energy[i], free_energy_exact, atol=1e-5)
 
-    def test_sampling_hidden(self):
+    def test_sampling_hidden(self) -> None:
         """Test hidden unit sampling."""
         config = RBMConfig(visible_units=20, hidden_units=10, seed=42)
         rbm = ConcreteRBM(config)
@@ -186,7 +185,7 @@ class TestRBMBase:
         h2 = rbm.sample_hidden(v)
         assert not torch.allclose(h1, h2)
 
-    def test_sampling_visible(self):
+    def test_sampling_visible(self) -> None:
         """Test visible unit sampling."""
         config = RBMConfig(visible_units=20, hidden_units=10, seed=42)
         rbm = ConcreteRBM(config)
@@ -204,7 +203,7 @@ class TestRBMBase:
         assert v_prob.shape == (32, 20)
         assert torch.all((v_prob >= 0) & (v_prob <= 1))
 
-    def test_temperature_scaling(self):
+    def test_temperature_scaling(self) -> None:
         """Test temperature scaling in sampling."""
         config = RBMConfig(visible_units=20, hidden_units=10, seed=42)
         rbm = ConcreteRBM(config)
@@ -223,7 +222,7 @@ class TestRBMBase:
 
         assert low_temp_entropy < high_temp_entropy
 
-    def test_split_visible_hidden(self):
+    def test_split_visible_hidden(self) -> None:
         """Test splitting concatenated states."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = ConcreteRBM(config)
@@ -236,7 +235,7 @@ class TestRBMBase:
         assert torch.allclose(v, x[:, :5])
         assert torch.allclose(h, x[:, 5:])
 
-    def test_init_from_data(self, synthetic_binary_data, make_data_loader):
+    def test_init_from_data(self, synthetic_binary_data, make_data_loader) -> None:
         """Test initialization from data statistics."""
         config = RBMConfig(visible_units=100, hidden_units=50)
         rbm = ConcreteRBM(config)
@@ -254,7 +253,7 @@ class TestRBMBase:
 
         assert torch.allclose(rbm.vbias, expected_bias, atol=0.1)
 
-    def test_effective_energy(self):
+    def test_effective_energy(self) -> None:
         """Test effective energy with regularization."""
         config = RBMConfig(
             visible_units=5,
@@ -278,7 +277,7 @@ class TestRBMBase:
 
         assert torch.allclose(eff_energy, expected)
 
-    def test_ais_adapter_creation(self):
+    def test_ais_adapter_creation(self) -> None:
         """Test AIS adapter creation."""
         config = RBMConfig(visible_units=5, hidden_units=3)
         rbm = ConcreteRBM(config)
@@ -291,7 +290,7 @@ class TestRBMBase:
 class TestRBMAISAdapter:
     """Test RBM AIS adapter."""
 
-    def test_initialization(self, simple_bernoulli_rbm):
+    def test_initialization(self, simple_bernoulli_rbm) -> None:
         """Test AIS adapter initialization."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -302,7 +301,7 @@ class TestRBMAISAdapter:
         assert torch.allclose(adapter.base_vbias, simple_bernoulli_rbm.vbias)
         assert torch.allclose(adapter.base_hbias, torch.zeros_like(simple_bernoulli_rbm.hbias))
 
-    def test_base_log_partition(self, simple_bernoulli_rbm):
+    def test_base_log_partition(self, simple_bernoulli_rbm) -> None:
         """Test base partition function calculation."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -316,7 +315,7 @@ class TestRBMAISAdapter:
 
         assert abs(log_z_base - expected) < 1e-5
 
-    def test_base_energy(self, simple_bernoulli_rbm):
+    def test_base_energy(self, simple_bernoulli_rbm) -> None:
         """Test base energy computation."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -331,7 +330,7 @@ class TestRBMAISAdapter:
         expected = -(v @ adapter.base_vbias + h @ adapter.base_hbias)
         assert torch.allclose(base_energy, expected)
 
-    def test_interpolated_energy(self, simple_bernoulli_rbm):
+    def test_interpolated_energy(self, simple_bernoulli_rbm) -> None:
         """Test interpolated energy for AIS."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -361,7 +360,7 @@ class TestRBMAISAdapter:
 
         assert torch.allclose(energy_mid, expected, atol=1e-5)
 
-    def test_ais_beta_property(self, simple_bernoulli_rbm):
+    def test_ais_beta_property(self, simple_bernoulli_rbm) -> None:
         """Test AIS beta property usage."""
         adapter = RBMAISAdapter(simple_bernoulli_rbm)
 
@@ -378,7 +377,7 @@ class TestRBMAISAdapter:
 class TestRBMEdgeCases:
     """Test edge cases for RBM."""
 
-    def test_empty_batch(self, simple_bernoulli_rbm):
+    def test_empty_batch(self, simple_bernoulli_rbm) -> None:
         """Test handling of empty batches."""
         v = torch.empty(0, simple_bernoulli_rbm.num_visible)
         h = torch.empty(0, simple_bernoulli_rbm.num_hidden)
@@ -389,7 +388,7 @@ class TestRBMEdgeCases:
         free_energy = simple_bernoulli_rbm.free_energy(v)
         assert free_energy.shape == (0,)
 
-    def test_single_sample(self, simple_bernoulli_rbm):
+    def test_single_sample(self, simple_bernoulli_rbm) -> None:
         """Test single sample handling."""
         v = torch.rand(1, simple_bernoulli_rbm.num_visible)
 
@@ -399,7 +398,7 @@ class TestRBMEdgeCases:
         free_energy = simple_bernoulli_rbm.free_energy(v)
         assert free_energy.shape == (1,)
 
-    def test_large_batch(self, simple_bernoulli_rbm):
+    def test_large_batch(self, simple_bernoulli_rbm) -> None:
         """Test large batch handling."""
         # Large batch size
         v = torch.rand(10000, simple_bernoulli_rbm.num_visible)
@@ -413,7 +412,7 @@ class TestRBMEdgeCases:
         assert not torch.any(torch.isnan(free_energy))
         assert not torch.any(torch.isinf(free_energy))
 
-    def test_numerical_stability(self):
+    def test_numerical_stability(self) -> None:
         """Test numerical stability with extreme values."""
         config = RBMConfig(visible_units=10, hidden_units=5)
         rbm = ConcreteRBM(config)
