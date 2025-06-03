@@ -230,7 +230,9 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def log_function_call(logger: structlog.BoundLogger | None = None) -> Callable[[Callable[P, R]], Callable[P, R]]:
+def log_function_call(
+    logger: structlog.BoundLogger | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Log function calls with arguments and return values.
 
     Args:

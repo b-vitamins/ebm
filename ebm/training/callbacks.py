@@ -37,7 +37,10 @@ class Callback:
         """Call at the start of each epoch."""
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Call at the end of each epoch."""
 
@@ -57,7 +60,10 @@ class Callback:
         """Call before validation."""
 
     def on_validation_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Call after validation."""
 
@@ -125,7 +131,10 @@ class LoggingCallback(Callback):
         )
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Log epoch end."""
         epoch_time = time.time() - self.epoch_start_time
@@ -189,7 +198,10 @@ class MetricsCallback(Callback):
         self.val_metrics = []
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Store training metrics."""
         metrics["epoch"] = trainer.current_epoch
@@ -200,7 +212,10 @@ class MetricsCallback(Callback):
             self._save_metrics()
 
     def on_validation_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Store validation metrics."""
         metrics["epoch"] = trainer.current_epoch
@@ -249,7 +264,10 @@ class CheckpointCallback(Callback):
         self.best_value = float("inf") if mode == "min" else float("-inf")
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Save checkpoint if needed."""
         epoch = trainer.current_epoch
@@ -308,7 +326,10 @@ class EarlyStoppingCallback(Callback):
         self.trainer = trainer
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Check for improvement."""
         if self.monitor not in metrics:
@@ -361,7 +382,10 @@ class VisualizationCallback(Callback):
             self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def on_epoch_end(
-        self, trainer: Trainer, model: EnergyBasedModel, metrics: dict[str, float]
+        self,
+        trainer: Trainer,
+        model: EnergyBasedModel,
+        metrics: dict[str, float],
     ) -> None:
         """Generate and save visualizations."""
         if trainer.current_epoch % self.visualize_every != 0:
@@ -385,13 +409,12 @@ class VisualizationCallback(Callback):
                     visualize_samples(samples, save_path=path)
 
             # Visualize filters for RBMs
-            if hasattr(model, "W"):
-                if self.save_dir:
-                    path = (
-                        self.save_dir
-                        / f"filters_epoch_{trainer.current_epoch}.png"
-                    )
-                    visualize_filters(model.W, save_path=path)
+            if hasattr(model, "W") and self.save_dir:
+                path = (
+                    self.save_dir
+                    / f"filters_epoch_{trainer.current_epoch}.png"
+                )
+                visualize_filters(model.W, save_path=path)
 
 
 class LearningRateSchedulerCallback(Callback):

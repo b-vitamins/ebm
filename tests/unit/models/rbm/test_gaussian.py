@@ -1,9 +1,10 @@
 """Unit tests for Gaussian RBM implementations."""
 
+from collections.abc import Callable
+
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
-from collections.abc import Callable
 
 from ebm.core.config import GaussianRBMConfig
 from ebm.models.rbm.gaussian import GaussianBernoulliRBM, WhitenedGaussianRBM

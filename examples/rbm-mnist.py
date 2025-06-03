@@ -16,8 +16,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import ebm
-from ebm.core.config import ModelConfig
-from ebm.models.base import EnergyBasedModel
 from ebm import (
     AISEstimator,
     BernoulliRBM,
@@ -38,6 +36,8 @@ from ebm import (
     visualize_filters,
     visualize_samples,
 )
+from ebm.core.config import ModelConfig
+from ebm.models.base import EnergyBasedModel
 
 
 def parse_args() -> argparse.Namespace:

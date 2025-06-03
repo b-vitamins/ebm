@@ -1,9 +1,10 @@
 """Unit tests for RBM base class."""
 
+from collections.abc import Callable
+
 import torch
 from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
-from collections.abc import Callable
 
 from ebm.core.config import RBMConfig
 from ebm.models.rbm.base import RBMAISAdapter, RBMBase

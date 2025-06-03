@@ -253,21 +253,20 @@ class TestAISEstimator:
         # Run estimation and check that betas are used
         with patch.object(
             model, "sample_hidden", wraps=model.sample_hidden
-        ) as mock_hidden:
-            with patch.object(
-                model, "sample_visible", wraps=model.sample_visible
-            ):
-                estimator.estimate(show_progress=False)
+        ) as mock_hidden, patch.object(
+            model, "sample_visible", wraps=model.sample_visible
+        ):
+            estimator.estimate(show_progress=False)
 
-                # Check that different betas were used
-                beta_calls = []
-                for call in mock_hidden.call_args_list:
-                    if "beta" in call[1]:
-                        beta_calls.append(call[1]["beta"])
+            # Check that different betas were used
+            beta_calls = []
+            for call in mock_hidden.call_args_list:
+                if "beta" in call[1]:
+                    beta_calls.append(call[1]["beta"])
 
-                # Should have calls with different beta values
-                unique_betas = {float(b) for b in beta_calls if b is not None}
-                assert len(unique_betas) > 1
+            # Should have calls with different beta values
+            unique_betas = {float(b) for b in beta_calls if b is not None}
+            assert len(unique_betas) > 1
 
 
 class TestBridgeSampling:

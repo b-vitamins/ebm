@@ -198,7 +198,7 @@ def visualize_samples(
     save_path: Path | None = None,
     figsize: tuple[int, int] | None = None,
     **kwargs: Any,
-    ) -> Figure:
+) -> Figure:
     """Visualize generated samples.
 
     Args:

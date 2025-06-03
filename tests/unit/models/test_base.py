@@ -550,7 +550,6 @@ class TestEdgeCases:
                 return_parts: bool = False,
             ) -> None:
                 """Unimplemented energy function."""
-                pass
 
             # Missing: free_energy, get_config_class
 

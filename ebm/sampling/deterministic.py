@@ -42,7 +42,7 @@ class MeanFieldSampler(Sampler):
         self.damping = damping
         self.tol = tol
 
-    def sample(  # noqa: C901
+    def sample(
         self,
         model: EnergyBasedModel,
         init_state: Tensor,
