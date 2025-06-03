@@ -71,6 +71,7 @@ class MockRBM(LatentVariableModel):
     def ais_adapter(self):
         """Create AIS adapter."""
         from ebm.models.rbm.base import RBMAISAdapter
+
         return RBMAISAdapter(self)
 
     @property
@@ -82,10 +83,10 @@ class MockRBM(LatentVariableModel):
         return self._dtype
 
     def energy(self, x, *, beta=None, return_parts=False):
-        v = x[:, :self.num_visible]
-        h = x[:, self.num_visible:]
+        v = x[:, : self.num_visible]
+        h = x[:, self.num_visible :]
 
-        interaction = -torch.einsum('bi,bj,ji->b', h, v, self.W)
+        interaction = -torch.einsum("bi,bj,ji->b", h, v, self.W)
         v_term = -(v @ self.vbias)
         h_term = -(h @ self.hbias)
 
@@ -121,11 +122,7 @@ class TestAISEstimator:
     def test_initialization(self):
         """Test AIS estimator initialization."""
         model = MockRBM()
-        estimator = AISEstimator(
-            model=model,
-            num_temps=100,
-            num_chains=50
-        )
+        estimator = AISEstimator(model=model, num_temps=100, num_chains=50)
 
         assert estimator.model is model
         assert estimator.num_temps == 100
@@ -150,19 +147,12 @@ class TestAISEstimator:
         with torch.no_grad():
             model.W.data *= 0.01
 
-        estimator = AISEstimator(
-            model=model,
-            num_temps=50,
-            num_chains=20
-        )
+        estimator = AISEstimator(model=model, num_temps=50, num_chains=20)
 
         # Base partition function
         base_log_z = (model.num_visible + model.num_hidden) * math.log(2)
 
-        log_z = estimator.estimate(
-            base_log_z=base_log_z,
-            show_progress=False
-        )
+        log_z = estimator.estimate(base_log_z=base_log_z, show_progress=False)
 
         assert isinstance(log_z, float)
         assert np.isfinite(log_z)
@@ -174,15 +164,10 @@ class TestAISEstimator:
         """Test estimation with diagnostic information."""
         model = MockRBM(n_visible=4, n_hidden=3)
 
-        estimator = AISEstimator(
-            model=model,
-            num_temps=20,
-            num_chains=10
-        )
+        estimator = AISEstimator(model=model, num_temps=20, num_chains=10)
 
         log_z, diagnostics = estimator.estimate(
-            return_diagnostics=True,
-            show_progress=False
+            return_diagnostics=True, show_progress=False
         )
 
         assert isinstance(log_z, float)
@@ -223,28 +208,25 @@ class TestAISEstimator:
         """Test that temperature schedule is used correctly."""
         model = MockRBM(n_visible=2, n_hidden=2)
 
-        estimator = AISEstimator(
-            model=model,
-            num_temps=5,
-            num_chains=1
-        )
+        estimator = AISEstimator(model=model, num_temps=5, num_chains=1)
 
         # Check beta schedule
         assert torch.allclose(
-            estimator.betas,
-            torch.tensor([0.0, 0.25, 0.5, 0.75, 1.0])
+            estimator.betas, torch.tensor([0.0, 0.25, 0.5, 0.75, 1.0])
         )
 
         # Run estimation and check that betas are used
-        with patch.object(model, 'sample_hidden', wraps=model.sample_hidden) as mock_hidden:
-            with patch.object(model, 'sample_visible', wraps=model.sample_visible):
+        with patch.object(
+            model, "sample_hidden", wraps=model.sample_hidden
+        ) as mock_hidden:
+            with patch.object(model, "sample_visible", wraps=model.sample_visible):
                 estimator.estimate(show_progress=False)
 
                 # Check that different betas were used
                 beta_calls = []
                 for call in mock_hidden.call_args_list:
-                    if 'beta' in call[1]:
-                        beta_calls.append(call[1]['beta'])
+                    if "beta" in call[1]:
+                        beta_calls.append(call[1]["beta"])
 
                 # Should have calls with different beta values
                 unique_betas = {float(b) for b in beta_calls if b is not None}
@@ -259,11 +241,7 @@ class TestBridgeSampling:
         model1 = MockRBM(n_visible=5, n_hidden=3)
         model2 = MockRBM(n_visible=5, n_hidden=3)
 
-        estimator = BridgeSampling(
-            model1=model1,
-            model2=model2,
-            num_samples=100
-        )
+        estimator = BridgeSampling(model1=model1, model2=model2, num_samples=100)
 
         assert estimator.model is model1
         assert estimator.model2 is model2
@@ -280,16 +258,9 @@ class TestBridgeSampling:
             model1.W.data = torch.randn_like(model1.W) * 0.01
             model2.W.data = model1.W.data * 1.1  # 10% larger weights
 
-        estimator = BridgeSampling(
-            model1=model1,
-            model2=model2,
-            num_samples=50
-        )
+        estimator = BridgeSampling(model1=model1, model2=model2, num_samples=50)
 
-        log_ratio, std_err = estimator.estimate(
-            tol=1e-4,
-            max_iter=100
-        )
+        log_ratio, std_err = estimator.estimate(tol=1e-4, max_iter=100)
 
         assert isinstance(log_ratio, float)
         assert isinstance(std_err, float)
@@ -314,7 +285,7 @@ class TestBridgeSampling:
         # Track iterations
 
         # Mock log_debug to track convergence
-        with patch.object(estimator, 'log_debug') as mock_log:
+        with patch.object(estimator, "log_debug") as mock_log:
             log_ratio, _ = estimator.estimate(tol=1e-6, max_iter=1000)
 
             # Should have converged
@@ -337,13 +308,12 @@ class TestBridgeSampling:
 
         estimator = BridgeSampling(model1, model2, num_samples=50)
 
-        with patch.object(estimator, 'log_info'):
+        with patch.object(estimator, "log_info"):
             log_ratio, std_err = estimator.estimate()
 
         # Check sample generation was called
         model1.sample_fantasy_particles.assert_called_once_with(
-            num_samples=50,
-            num_steps=10000
+            num_samples=50, num_steps=10000
         )
         model2.sample_fantasy_particles.assert_called_once()
 
@@ -365,14 +335,10 @@ class TestSimpleIS:
         """Test simple IS initialization."""
         model = MockRBM()
 
-        estimator = SimpleIS(
-            model=model,
-            proposal='uniform',
-            num_samples=1000
-        )
+        estimator = SimpleIS(model=model, proposal="uniform", num_samples=1000)
 
         assert estimator.model is model
-        assert estimator.proposal == 'uniform'
+        assert estimator.proposal == "uniform"
         assert estimator.num_samples == 1000
 
     def test_uniform_proposal(self):
@@ -383,11 +349,7 @@ class TestSimpleIS:
         with torch.no_grad():
             model.W.data *= 0.01
 
-        estimator = SimpleIS(
-            model=model,
-            proposal='uniform',
-            num_samples=500
-        )
+        estimator = SimpleIS(model=model, proposal="uniform", num_samples=500)
 
         log_z, std_err = estimator.estimate()
 
@@ -408,11 +370,7 @@ class TestSimpleIS:
         dataset = torch.utils.data.TensorDataset(data)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=50)
 
-        estimator = SimpleIS(
-            model=model,
-            proposal='data',
-            num_samples=100
-        )
+        estimator = SimpleIS(model=model, proposal="data", num_samples=100)
 
         log_z, std_err = estimator.estimate(data_loader=data_loader)
 
@@ -423,7 +381,7 @@ class TestSimpleIS:
     def test_invalid_proposal(self):
         """Test error on invalid proposal type."""
         model = MockRBM()
-        estimator = SimpleIS(model, proposal='invalid')
+        estimator = SimpleIS(model, proposal="invalid")
 
         with pytest.raises(ValueError, match="Unknown proposal"):
             estimator.estimate()
@@ -454,13 +412,10 @@ class TestRatioEstimator:
         """Test ratio estimator initialization."""
         models = [MockRBM(), MockRBM(), MockRBM()]
 
-        estimator = RatioEstimator(
-            models=models,
-            method='bridge'
-        )
+        estimator = RatioEstimator(models=models, method="bridge")
 
         assert estimator.models == models
-        assert estimator.method == 'bridge'
+        assert estimator.method == "bridge"
         assert estimator.model is models[0]
 
     def test_pairwise_ratios(self):
@@ -475,17 +430,14 @@ class TestRatioEstimator:
             model2.W.data = model1.W.data * 1.5
             model3.W.data = model1.W.data * 2.0
 
-        estimator = RatioEstimator(
-            models=[model1, model2, model3],
-            method='bridge'
-        )
+        estimator = RatioEstimator(models=[model1, model2, model3], method="bridge")
 
         # Mock BridgeSampling to avoid actual computation
-        with patch('ebm.inference.partition.BridgeSampling') as mock_bridge:
+        with patch("ebm.inference.partition.BridgeSampling") as mock_bridge:
             # Set up mock returns
             mock_instance = Mock()
             mock_instance.estimate.side_effect = [
-                (0.5, 0.1),   # log(Z2/Z1)
+                (0.5, 0.1),  # log(Z2/Z1)
                 (1.0, 0.15),  # log(Z3/Z1)
             ]
             mock_bridge.return_value = mock_instance
@@ -513,15 +465,15 @@ class TestRatioEstimator:
         """Test transitivity in ratio computation."""
         models = [MockRBM() for _ in range(4)]
 
-        estimator = RatioEstimator(models, method='bridge')
+        estimator = RatioEstimator(models, method="bridge")
 
         # Mock direct ratios
-        with patch('ebm.inference.partition.BridgeSampling') as mock_bridge:
+        with patch("ebm.inference.partition.BridgeSampling") as mock_bridge:
             mock_instance = Mock()
             mock_instance.estimate.side_effect = [
-                (1.0, 0.1),   # log(Z1/Z0)
-                (2.0, 0.1),   # log(Z2/Z0)
-                (3.0, 0.1),   # log(Z3/Z0)
+                (1.0, 0.1),  # log(Z1/Z0)
+                (2.0, 0.1),  # log(Z2/Z0)
+                (3.0, 0.1),  # log(Z3/Z0)
             ]
             mock_bridge.return_value = mock_instance
 
@@ -541,7 +493,7 @@ class TestRatioEstimator:
         models = [MockRBM()]
 
         with pytest.raises(ValueError):
-            RatioEstimator(models, method='invalid')
+            RatioEstimator(models, method="invalid")
 
 
 class TestEdgeCases:
@@ -554,7 +506,7 @@ class TestEdgeCases:
         estimator = AISEstimator(model, num_temps=10, num_chains=5)
 
         # Should handle gracefully
-        with pytest.raises(Exception):  # Some error expected
+        with pytest.raises(Exception):  # noqa: B017 - error type not specified
             estimator.estimate(show_progress=False)
 
     def test_extreme_temperatures(self):
@@ -583,7 +535,9 @@ class TestEdgeCases:
 
         # Should handle large energies
         log_z, std_err = estimator.estimate()
-        assert np.isfinite(log_z) or np.isinf(log_z)  # May overflow but shouldn't be NaN
+        assert np.isfinite(log_z) or np.isinf(
+            log_z
+        )  # May overflow but shouldn't be NaN
 
     @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
     def test_device_consistency(self):

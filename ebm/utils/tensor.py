@@ -17,9 +17,7 @@ from ..core.types import Device, DType, Shape, TensorLike
 
 
 def ensure_tensor(
-    x: TensorLike,
-    dtype: DType | None = None,
-    device: Device | None = None
+    x: TensorLike, dtype: DType | None = None, device: Device | None = None
 ) -> Tensor:
     """Convert input to tensor with specified dtype and device.
 
@@ -78,9 +76,7 @@ def safe_sqrt(x: Tensor, eps: float = 1e-10) -> Tensor:
 
 
 def log_sum_exp(
-    x: Tensor,
-    dim: int | tuple[int, ...] | None = None,
-    keepdim: bool = False
+    x: Tensor, dim: int | tuple[int, ...] | None = None, keepdim: bool = False
 ) -> Tensor:
     """Compute log(sum(exp(x))) in a numerically stable way.
 
@@ -105,7 +101,7 @@ def batch_outer_product(a: Tensor, b: Tensor) -> Tensor:
     Returns:
         Outer products of shape (batch_size, n, m)
     """
-    return torch.einsum('bi,bj->bij', a, b)
+    return torch.einsum("bi,bj->bij", a, b)
 
 
 def batch_quadratic_form(x: Tensor, A: Tensor) -> Tensor:
@@ -120,10 +116,10 @@ def batch_quadratic_form(x: Tensor, A: Tensor) -> Tensor:
     """
     if A.dim() == 2:
         # Single matrix for all batch elements
-        return torch.einsum('bi,ij,bj->b', x, A, x)
+        return torch.einsum("bi,ij,bj->b", x, A, x)
     else:
         # Different matrix for each batch element
-        return torch.einsum('bi,bij,bj->b', x, A, x)
+        return torch.einsum("bi,bij,bj->b", x, A, x)
 
 
 def batch_mv(A: Tensor, x: Tensor) -> Tensor:
@@ -139,17 +135,15 @@ def batch_mv(A: Tensor, x: Tensor) -> Tensor:
     if A.dim() == 2 and x.dim() == 1:
         return torch.mv(A, x)
     elif A.dim() == 2 and x.dim() == 2:
-        return torch.einsum('nm,bm->bn', A, x)
+        return torch.einsum("nm,bm->bn", A, x)
     elif A.dim() == 3 and x.dim() == 1:
-        return torch.einsum('bnm,m->bn', A, x)
+        return torch.einsum("bnm,m->bn", A, x)
     else:
-        return torch.einsum('bnm,bm->bn', A, x)
+        return torch.einsum("bnm,bm->bn", A, x)
 
 
 def shape_for_broadcast(
-    tensor: Tensor,
-    target_shape: Shape,
-    dim: int | None = None
+    tensor: Tensor, target_shape: Shape, dim: int | None = None
 ) -> Tensor:
     """Reshape tensor for broadcasting with target shape.
 
@@ -200,9 +194,7 @@ def expand_dims_like(tensor: Tensor, reference: Tensor) -> Tensor:
 
 
 def masked_fill_inf(
-    tensor: Tensor,
-    mask: Tensor,
-    value: float = float('-inf')
+    tensor: Tensor, mask: Tensor, value: float = float("-inf")
 ) -> Tensor:
     """Fill masked positions with specified value (default -inf).
 
@@ -231,9 +223,7 @@ def create_causal_mask(size: int, device: Device | None = None) -> Tensor:
 
 
 def create_padding_mask(
-    lengths: Tensor,
-    max_length: int | None = None,
-    device: Device | None = None
+    lengths: Tensor, max_length: int | None = None, device: Device | None = None
 ) -> Tensor:
     """Create padding mask from sequence lengths.
 
@@ -257,25 +247,17 @@ def create_padding_mask(
 
 
 @overload
-def split_tensor(
-    tensor: Tensor,
-    split_size: int,
-    dim: int = 0
-) -> list[Tensor]: ...
+def split_tensor(tensor: Tensor, split_size: int, dim: int = 0) -> list[Tensor]: ...
 
 
 @overload
 def split_tensor(
-    tensor: Tensor,
-    split_sizes: Sequence[int],
-    dim: int = 0
+    tensor: Tensor, split_sizes: Sequence[int], dim: int = 0
 ) -> list[Tensor]: ...
 
 
 def split_tensor(
-    tensor: Tensor,
-    split_size_or_sizes: int | Sequence[int],
-    dim: int = 0
+    tensor: Tensor, split_size_or_sizes: int | Sequence[int], dim: int = 0
 ) -> list[Tensor]:
     """Split tensor along dimension.
 
@@ -293,10 +275,7 @@ def split_tensor(
         return torch.split(tensor, split_size_or_sizes, dim=dim)
 
 
-def concat_tensors(
-    tensors: Sequence[Tensor],
-    dim: int = 0
-) -> Tensor:
+def concat_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
     """Concatenate tensors along dimension.
 
     Args:
@@ -309,10 +288,7 @@ def concat_tensors(
     return torch.cat(tensors, dim=dim)
 
 
-def stack_tensors(
-    tensors: Sequence[Tensor],
-    dim: int = 0
-) -> Tensor:
+def stack_tensors(tensors: Sequence[Tensor], dim: int = 0) -> Tensor:
     """Stack tensors along new dimension.
 
     Args:
@@ -349,12 +325,12 @@ class TensorStatistics:
 
         if self.count == 0:
             self.sum = tensor.sum()
-            self.sum_sq = (tensor ** 2).sum()
+            self.sum_sq = (tensor**2).sum()
             self.min = tensor.min()
             self.max = tensor.max()
         else:
             self.sum += tensor.sum()
-            self.sum_sq += (tensor ** 2).sum()
+            self.sum_sq += (tensor**2).sum()
             self.min = torch.minimum(self.min, tensor.min())
             self.max = torch.maximum(self.max, tensor.max())
 
@@ -373,7 +349,7 @@ class TensorStatistics:
         if self.count == 0:
             return None
         mean = self.sum / self.count
-        variance = (self.sum_sq / self.count) - (mean ** 2)
+        variance = (self.sum_sq / self.count) - (mean**2)
         return variance.sqrt().item()
 
     @property
@@ -386,12 +362,12 @@ class TensorStatistics:
         """Get maximum value."""
         return self.max.item() if self.max is not None else None
 
-    def summary(self) -> Dict[str, float]:
+    def summary(self) -> dict[str, float]:
         """Get summary statistics."""
         return {
-            'count': self.count,
-            'mean': self.mean or 0.0,
-            'std': self.std or 0.0,
-            'min': self.min_value or 0.0,
-            'max': self.max_value or 0.0,
+            "count": self.count,
+            "mean": self.mean or 0.0,
+            "std": self.std or 0.0,
+            "min": self.min_value or 0.0,
+            "max": self.max_value or 0.0,
         }

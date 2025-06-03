@@ -27,10 +27,10 @@ class MockModel(LatentVariableModel):
 
     def free_energy(self, v, *, beta=None):
         # Simple quadratic energy
-        return 0.5 * (v ** 2).sum(dim=-1)
+        return 0.5 * (v**2).sum(dim=-1)
 
     def energy(self, x, *, beta=None, return_parts=False):
-        return self.free_energy(x[:, :self.num_visible], beta=beta)
+        return self.free_energy(x[:, : self.num_visible], beta=beta)
 
     def reconstruct(self, v, num_steps=1):
         # Simple reconstruction with noise
@@ -73,8 +73,8 @@ class TestMetricValue:
         assert metric.current == 0.0
         assert metric.mean == 0.0
         assert metric.std == 0.0
-        assert metric.min == float('inf')
-        assert metric.max == float('-inf')
+        assert metric.min == float("inf")
+        assert metric.max == float("-inf")
         assert metric.count == 0
 
     def test_single_update(self):
@@ -255,18 +255,18 @@ class TestModelEvaluator:
         data = torch.randn(10, 10)
 
         # MSE error
-        error_mse = evaluator.reconstruction_error(data, num_steps=1, metric='mse')
+        error_mse = evaluator.reconstruction_error(data, num_steps=1, metric="mse")
         assert error_mse.shape == (10,)
         assert torch.all(error_mse >= 0)
 
         # MAE error
-        error_mae = evaluator.reconstruction_error(data, num_steps=1, metric='mae')
+        error_mae = evaluator.reconstruction_error(data, num_steps=1, metric="mae")
         assert error_mae.shape == (10,)
         assert torch.all(error_mae >= 0)
 
         # Invalid metric
         with pytest.raises(ValueError, match="Unknown metric"):
-            evaluator.reconstruction_error(data, metric='invalid')
+            evaluator.reconstruction_error(data, metric="invalid")
 
     def test_reconstruction_error_non_latent_model(self):
         """Test error when model is not LatentVariableModel."""
@@ -275,7 +275,9 @@ class TestModelEvaluator:
 
         data = torch.randn(10, 10)
 
-        with pytest.raises(TypeError, match="Reconstruction requires LatentVariableModel"):
+        with pytest.raises(
+            TypeError, match="Reconstruction requires LatentVariableModel"
+        ):
             evaluator.reconstruction_error(data)
 
     def test_log_likelihood_with_partition(self):
@@ -457,7 +459,7 @@ class TestTrainingDynamicsAnalyzer:
             analyzer.update({"loss": 1.0 - 0.1 * i})
 
         # Plateau
-        for i in range(15):
+        for _ in range(15):
             analyzer.update({"loss": 0.1 + np.random.randn() * 0.0001})
 
         is_plateau, steps = analyzer.plateau_detection("loss", threshold=0.001)
@@ -492,11 +494,7 @@ class TestTrainingDynamicsAnalyzer:
             # Plateaued metric
             plateau = 0.5 + np.random.randn() * 0.0001
 
-            analyzer.update({
-                "loss": loss,
-                "accuracy": acc,
-                "plateau_metric": plateau
-            })
+            analyzer.update({"loss": loss, "accuracy": acc, "plateau_metric": plateau})
 
         summary = analyzer.get_summary()
 
