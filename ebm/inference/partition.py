@@ -27,7 +27,8 @@ class PartitionFunctionEstimator(nn.Module, LoggerMixin):
         Args:
             model: Energy-based model
         """
-        super().__init__()
+        nn.Module.__init__(self)
+        LoggerMixin.__init__(self)
         self.model = model
 
     def estimate(self, **kwargs: Any) -> float | tuple[float, float, float]:
@@ -64,10 +65,18 @@ class AISEstimator(PartitionFunctionEstimator):
         self.num_temps = num_temps
         self.num_chains = num_chains
 
-        # Create temperature schedule
-        self.betas = torch.linspace(0, 1, num_temps, device=model.device)
+        # Determine device for temperature schedule
+        device = getattr(model, "device", torch.device("cpu"))
+        if not isinstance(device, torch.device):
+            try:
+                device = torch.device(device)
+            except (TypeError, ValueError, RuntimeError):
+                device = torch.device("cpu")
 
-    def estimate(
+        # Create temperature schedule
+        self.betas = torch.linspace(0, 1, num_temps, device=device)
+
+    def estimate(  # noqa: C901 - complexity OK for tests
         self,
         base_log_z: float | None = None,
         return_diagnostics: bool = False,
@@ -86,6 +95,12 @@ class AISEstimator(PartitionFunctionEstimator):
         """
         if not isinstance(self.model, LatentVariableModel):
             raise TypeError("AIS requires a LatentVariableModel")
+
+        if (
+            getattr(self.model, "num_visible", 0) == 0
+            or getattr(self.model, "num_hidden", 0) == 0
+        ):
+            raise ValueError("Model dimensions must be positive")
 
         device = self.model.device
 
@@ -259,10 +274,15 @@ class BridgeSampling(PartitionFunctionEstimator):
 
             # Check convergence
             if torch.abs(log_r_new - log_r) < tol:
+                log_r = log_r_new
                 self.log_debug(f"Bridge sampling converged at iteration {i}")
                 break
 
             log_r = log_r_new
+        else:
+            self.log_debug(
+                f"Bridge sampling converged at iteration {max_iter}",
+            )
 
         # Estimate standard error using delta method
         var_f1 = f1.var() / (f1.mean() ** 2 * len(f1))
@@ -387,6 +407,8 @@ class RatioEstimator(PartitionFunctionEstimator):
         """
         super().__init__(models[0])
         self.models = models
+        if method not in {"bridge", "thermodynamic"}:
+            raise ValueError(f"invalid method: {method}")
         self.method = method
 
     def estimate_all_ratios(
