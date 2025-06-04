@@ -135,8 +135,11 @@ class RBMBase(LatentVariableModel):
 
         # Compute energy components
         # Interaction term: h^T W v
+        # Dot product between hidden units and their pre-activations. Using the
+        # same label for both tensors ensures a proper element-wise product
+        # followed by summation rather than a product of sums.
         interaction = torch.einsum(
-            "...h,...v->...", hidden, F.linear(visible, self.W)
+            "...h,...h->...", hidden, F.linear(visible, self.W)
         )
 
         # Bias terms
@@ -150,6 +153,9 @@ class RBMBase(LatentVariableModel):
                 "hidden_bias": -h_bias_term,
             }
             if beta is not None:
+                beta = torch.as_tensor(
+                    beta, device=self.device, dtype=self.dtype
+                )
                 beta = shape_for_broadcast(beta, visible.shape[:-1])
                 parts = {k: beta * v for k, v in parts.items()}
             parts["total"] = sum(parts.values())
@@ -159,6 +165,7 @@ class RBMBase(LatentVariableModel):
         energy = -(interaction + v_bias_term + h_bias_term)
 
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, energy.shape)
             energy = beta * energy
 
@@ -184,6 +191,7 @@ class RBMBase(LatentVariableModel):
 
         # Apply temperature scaling if needed
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, pre_h.shape[:-1])
             pre_h = beta * pre_h
             v_bias_term = beta * torch.einsum("...v,v->...", v, self.vbias)
@@ -243,6 +251,7 @@ class RBMBase(LatentVariableModel):
 
         # Apply temperature scaling
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, pre_h.shape[:-1])
             pre_h = beta * pre_h
 
@@ -281,6 +290,7 @@ class RBMBase(LatentVariableModel):
 
         # Apply temperature scaling
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, pre_v.shape[:-1])
             pre_v = beta * pre_v
 
@@ -462,7 +472,7 @@ class RBMAISAdapter(AISInterpolator):
         h_bias = (1 - beta) * self.base_hbias + beta * self.rbm.hbias
 
         # Compute energy with interpolated parameters
-        interaction = torch.einsum("...h,...v->...", h, F.linear(v, self.rbm.W))
+        interaction = torch.einsum("...h,...h->...", h, F.linear(v, self.rbm.W))
         v_bias_term = torch.einsum("...v,v->...", v, v_bias)
         h_bias_term = torch.einsum("...h,h->...", h, h_bias)
 
