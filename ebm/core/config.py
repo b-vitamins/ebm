@@ -29,7 +29,7 @@ class BaseConfig(BaseModel, ABC):
     class Config:
         """Pydantic configuration."""
 
-        frozen = False  # Allow mutation for tests
+        frozen = True
         extra = "allow"  # Permit additional attributes
         use_enum_values = True
         arbitrary_types_allowed = True
@@ -38,6 +38,13 @@ class BaseConfig(BaseModel, ABC):
             torch.device: str,
             Path: str,
         }
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Prevent mutation after initialization."""
+        try:
+            super().__setattr__(name, value)
+        except TypeError as exc:  # Pydantic raises TypeError for frozen models
+            raise AttributeError(str(exc)) from exc
 
     @classmethod
     def from_dict(cls: type[T], config_dict: dict[str, Any]) -> T:
