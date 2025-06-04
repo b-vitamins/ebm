@@ -389,7 +389,7 @@ class TestRBMAISAdapter:
 
         # Manually compute interpolated energy
         interaction = torch.einsum(
-            "...h,...v->...",
+            "...h,...h->...",
             h,
             torch.nn.functional.linear(v, simple_bernoulli_rbm.W),
         )

@@ -338,7 +338,7 @@ class RBMConfig(ModelConfig):
     weight_init: str = Field(
         "xavier_normal", description="Weight initialization method"
     )
-    bias_init: str | float = Field(0.0, description="Bias initialization")
+    bias_init: float | str = Field(0.0, description="Bias initialization")
 
     # Architecture variants
     use_bias: bool = Field(True, description="Use bias terms")
@@ -381,6 +381,16 @@ class RBMConfig(ModelConfig):
             raise ValueError(
                 f"Unknown init method: {v}. Must be one of {valid_methods}"
             )
+        return v
+
+    @validator("bias_init", pre=True)
+    def parse_bias_init(cls, v: str | float) -> str | float:  # noqa: N805
+        """Parse numeric bias initialization values correctly."""
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                return v
         return v
 
 
