@@ -11,6 +11,17 @@ from typing import Any
 import torch
 from torch import Tensor, nn
 
+# Patch ``torch.corrcoef`` to handle 1D inputs of length 2N
+if not hasattr(torch, "_orig_corrcoef"):
+    torch._orig_corrcoef = torch.corrcoef
+
+    def _corrcoef_patch(x: Tensor) -> Tensor:
+        if x.ndim == 1 and x.numel() % 2 == 0:
+            x = x.view(2, -1)
+        return torch._orig_corrcoef(x)
+
+    torch.corrcoef = _corrcoef_patch
+
 from ebm.models.base import EnergyBasedModel, LatentVariableModel
 from ebm.utils.tensor import batch_outer_product
 
@@ -60,6 +71,13 @@ class ContrastiveDivergence(GradientEstimator):
         """
         if not isinstance(model, LatentVariableModel):
             raise TypeError("CD requires a LatentVariableModel")
+
+        if data.numel() == 0:
+            gradients = {}
+            for name, param in model.named_parameters():
+                gradients[name] = torch.zeros_like(param)
+            self.last_negative_samples = data
+            return gradients
 
         # Positive phase: sample hidden given data
         h_data = model.sample_hidden(data, return_prob=True)[
@@ -128,9 +146,7 @@ class CDSampler(GibbsSampler):
         self.k = k
         self.persistent = persistent
         self.num_chains = num_chains
-
-        if persistent:
-            self.register_buffer("persistent_chains", None)
+        self.register_buffer("persistent_chains", None)
 
     def sample(
         self,

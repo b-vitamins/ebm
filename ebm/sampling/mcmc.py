@@ -54,7 +54,7 @@ class ParallelTempering(AnnealedSampler):
             max_beta=max_beta,
         )
         self.swap_every = swap_every
-        self.num_chains = num_chains
+        self.num_chains = num_chains if num_chains is not None else 0
         self.adaptive = adaptive
 
         # Initialize swap statistics
@@ -81,6 +81,7 @@ class ParallelTempering(AnnealedSampler):
             state_shape: Shape of each state
         """
         num_chains = self.num_chains or batch_size
+        self.num_chains = num_chains
         device = next(model.parameters()).device
         dtype = next(model.parameters()).dtype
 
@@ -173,6 +174,9 @@ class ParallelTempering(AnnealedSampler):
 
     def _attempt_swaps(self, model: EnergyBasedModel) -> None:
         """Attempt swaps between adjacent temperature levels."""
+        if self.num_temps < 2:  # noqa: PLR2004
+            return
+
         batch_size = self.chains.shape[0]
 
         # Randomly choose even or odd pairs
@@ -352,8 +356,20 @@ class AnnealedImportanceSampling(AnnealedSampler):
         super().__init__(
             name="AIS", num_temps=num_temps, min_beta=0.0, max_beta=1.0
         )
+        if num_chains <= 0:
+            raise ValueError("num_chains > 0")
         self.num_chains = num_chains
         self.k = k
+
+    def sample(
+        self,
+        model: EnergyBasedModel,
+        init_state: Tensor,
+        num_steps: int = 1,
+        **_kwargs: Any,
+    ) -> Tensor:
+        """Return samples from the target distribution."""
+        raise NotImplementedError("AIS does not support direct sampling")
 
     def estimate_log_partition(
         self,
@@ -381,7 +397,7 @@ class AnnealedImportanceSampling(AnnealedSampler):
         ).round()
 
         # Sample initial visible units from base distribution
-        v = model.sample_visible(h_init, beta=0.0)
+        v = model.sample_visible(h_init, beta=torch.tensor(0.0, device=device))
 
         # Initialize importance weights
         log_w = torch.zeros(self.num_chains, device=device)

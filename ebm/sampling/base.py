@@ -52,6 +52,7 @@ class Sampler(nn.Module, LoggerMixin, ABC):
             name: Optional name for the sampler
         """
         super().__init__()
+        LoggerMixin.__init__(self)
         self.name = name or self.__class__.__name__
         self.state = SamplerState()
 
@@ -274,6 +275,7 @@ class GradientEstimator(nn.Module, LoggerMixin, ABC):
             sampler: Sampler to use for negative phase
         """
         super().__init__()
+        LoggerMixin.__init__(self)
         self.sampler = sampler
 
     @abstractmethod
@@ -354,13 +356,18 @@ class AnnealedSampler(Sampler):
 
     def _create_schedule(self) -> None:
         """Create temperature schedule."""
-        # Geometric schedule often works better than linear
-        log_betas = torch.linspace(
-            torch.log(torch.tensor(self.min_beta)),
-            torch.log(torch.tensor(self.max_beta)),
-            self.num_temps,
-        )
-        self.register_buffer("betas", torch.exp(log_betas))
+        if self.min_beta <= 0:
+            betas = torch.linspace(self.min_beta, self.max_beta, self.num_temps)
+        else:
+            log_betas = torch.linspace(
+                torch.log(torch.tensor(self.min_beta)),
+                torch.log(torch.tensor(self.max_beta)),
+                self.num_temps,
+            )
+            betas = torch.exp(log_betas)
+        betas[0] = self.min_beta
+        betas[-1] = self.max_beta
+        self.register_buffer("betas", betas)
 
     @property
     def temperatures(self) -> Tensor:
