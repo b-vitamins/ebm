@@ -39,56 +39,21 @@ def mock_data_loader() -> Callable[[int, int, int], DataLoader]:
 
 
 @pytest.fixture
-def mock_gradient_estimator() -> type[GradientEstimator]:
+def mock_gradient_estimator() -> GradientEstimator:
     """Provide a mock gradient estimator."""
-
-    class MockGradientEstimator(GradientEstimator):
-        def __init__(
-            self, return_gradients: dict[str, torch.Tensor] | None = None
-        ):
-            # Create a mock sampler
-            mock_sampler = Mock(spec=Sampler)
-            super().__init__(mock_sampler)
-
-            self.return_gradients = return_gradients or {}
-            self.call_count = 0
-            self.last_model = None
-            self.last_data = None
-            self.last_negative_samples = None
-
-        def estimate_gradient(
-            self, model: EnergyBasedModel, data: torch.Tensor, **_kwargs: Any
-        ) -> dict[str, torch.Tensor]:
-            """Return mock gradients."""
-            self.call_count += 1
-            self.last_model = model
-            self.last_data = data
-
-            # Generate mock gradients if not provided
-            if not self.return_gradients:
-                gradients = {}
-                for name, param in model.named_parameters():
-                    if param.requires_grad:
-                        gradients[name] = torch.randn_like(param) * 0.01
-                return gradients
-
-            return self.return_gradients
-
-        def compute_metrics(
-            self,
-            _model: EnergyBasedModel,
-            _data: torch.Tensor,
-            _samples: torch.Tensor,
-        ) -> dict[str, float]:
-            """Return mock metrics."""
-            return {
-                "energy_gap": 1.0,
-                "reconstruction_error": 0.1,
-                "data_energy": -10.0,
-                "sample_energy": -9.0,
-            }
-
-    return MockGradientEstimator
+    estimator = Mock(spec=GradientEstimator)
+    estimator.estimate_gradient.return_value = {
+        "param1": torch.randn(10, 10) * 0.01,
+        "param2": torch.randn(10) * 0.01,
+    }
+    estimator.compute_metrics.return_value = {
+        "energy_gap": 1.0,
+        "reconstruction_error": 0.1,
+        "data_energy": -10.0,
+        "sample_energy": -9.0,
+    }
+    estimator.last_negative_samples = torch.randn(32, 10)
+    return estimator
 
 
 @pytest.fixture

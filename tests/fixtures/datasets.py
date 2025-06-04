@@ -240,3 +240,11 @@ def data_statistics() -> Callable[[torch.Tensor], dict[str, object]]:
         }
 
     return _compute_statistics
+
+
+@pytest.fixture
+def simple_data_loader() -> DataLoader:
+    """Provide a simple data loader used in multiple tests."""
+    data = torch.randn(100, 10)
+    dataset = TensorDataset(data)
+    return DataLoader(dataset, batch_size=32, shuffle=True, drop_last=True)

@@ -11,6 +11,7 @@ from .datasets import (
     make_data_loader,
     make_structured_data,
     mini_mnist_dataset,
+    simple_data_loader,
     synthetic_binary_data,
     synthetic_continuous_data,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "pretrained_rbm",
     "sampler_configs",
     "simple_bernoulli_rbm",
+    "simple_data_loader",
     "small_gaussian_rbm",
     "small_rbm_config",
     "synthetic_binary_data",
