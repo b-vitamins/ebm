@@ -36,6 +36,19 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         LoggerMixin.__init__(obj)
         return obj
 
+    def __setattr__(self, name: str, value: object) -> None:
+        """Allow assigning tensors to parameter attributes."""
+        if (
+            isinstance(value, torch.Tensor)
+            and not isinstance(value, nn.Parameter)
+            and isinstance(
+                getattr(self, name, None),
+                nn.Parameter,
+            )
+        ):
+            value = nn.Parameter(value)
+        super().__setattr__(name, value)
+
     def __init__(self, config: ModelConfig):
         """Initialize the model.
 
@@ -408,6 +421,13 @@ class LatentVariableModel(EnergyBasedModel, ABC):
         for _ in range(num_steps):
             v, _ = self.gibbs_step(v, beta=beta)
         return v
+
+    @abstractmethod
+    def sample_fantasy_particles(
+        self, num_samples: int, num_steps: int
+    ) -> Tensor:
+        """Generate samples via Gibbs sampling for diagnostics."""
+        raise NotImplementedError
 
 
 class AISInterpolator(nn.Module):
