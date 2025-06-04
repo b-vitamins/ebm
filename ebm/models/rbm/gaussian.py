@@ -113,6 +113,7 @@ class GaussianBernoulliRBM(RBMBase):
 
         # Apply temperature scaling to mean
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, mean_v.shape[:-1])
             mean_v = mean_v * beta
             # Temperature also affects variance
@@ -165,8 +166,10 @@ class GaussianBernoulliRBM(RBMBase):
         h_linear = (hidden * self.hbias).sum(dim=-1)
 
         # Interaction term
+        # Interaction term between visible and hidden units. The same label is
+        # used for both operands to perform a proper dot product.
         interaction = torch.einsum(
-            "...v,...h->...", F.linear(v_normalized, self.W.t()), hidden
+            "...h,...h->...", F.linear(v_normalized, self.W.t()), hidden
         )
 
         if return_parts:
@@ -176,6 +179,9 @@ class GaussianBernoulliRBM(RBMBase):
                 "interaction": -interaction,
             }
             if beta is not None:
+                beta = torch.as_tensor(
+                    beta, device=self.device, dtype=self.dtype
+                )
                 beta = shape_for_broadcast(beta, visible.shape[:-1])
                 parts = {k: beta * v for k, v in parts.items()}
             parts["total"] = sum(parts.values())
@@ -185,6 +191,7 @@ class GaussianBernoulliRBM(RBMBase):
         energy = v_quad - h_linear - interaction
 
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, energy.shape)
             energy = beta * energy
 
@@ -215,6 +222,7 @@ class GaussianBernoulliRBM(RBMBase):
 
         # Apply temperature scaling
         if beta is not None:
+            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
             beta = shape_for_broadcast(beta, pre_h.shape[:-1])
             pre_h = beta * pre_h
             v_term = beta * v_term

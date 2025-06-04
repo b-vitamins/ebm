@@ -19,6 +19,10 @@ from _pytest.config import Config
 from _pytest.python import Metafunc
 from pytest_benchmark.fixture import BenchmarkFixture
 
+# Register all fixtures defined in the ``tests.fixtures`` package. This makes
+# them available to any test module without needing explicit imports.
+pytest_plugins = ["tests.fixtures"]
+
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
