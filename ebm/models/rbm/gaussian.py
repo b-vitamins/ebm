@@ -113,11 +113,11 @@ class GaussianBernoulliRBM(RBMBase):
 
         # Apply temperature scaling to mean
         if beta is not None:
-            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
-            beta = shape_for_broadcast(beta, mean_v.shape[:-1])
-            mean_v = mean_v * beta
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, mean_v.shape[:-1])
+            mean_v = mean_v * beta_view
             # Temperature also affects variance
-            sigma = self.sigma / torch.sqrt(beta)
+            sigma = self.sigma / torch.sqrt(beta_view)
         else:
             sigma = self.sigma
 
@@ -179,11 +179,13 @@ class GaussianBernoulliRBM(RBMBase):
                 "interaction": -interaction,
             }
             if beta is not None:
-                beta = torch.as_tensor(
+                beta_t = torch.as_tensor(
                     beta, device=self.device, dtype=self.dtype
                 )
-                beta = shape_for_broadcast(beta, visible.shape[:-1])
-                parts = {k: beta * v for k, v in parts.items()}
+                beta_view = shape_for_broadcast(
+                    beta_t, visible.shape[:-1], dim=0
+                )
+                parts = {k: beta_view * v for k, v in parts.items()}
             parts["total"] = sum(parts.values())
             return parts
 
@@ -191,9 +193,9 @@ class GaussianBernoulliRBM(RBMBase):
         energy = v_quad - h_linear - interaction
 
         if beta is not None:
-            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
-            beta = shape_for_broadcast(beta, energy.shape)
-            energy = beta * energy
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, energy.shape, dim=0)
+            energy = beta_view * energy
 
         return energy
 
@@ -222,10 +224,11 @@ class GaussianBernoulliRBM(RBMBase):
 
         # Apply temperature scaling
         if beta is not None:
-            beta = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
-            beta = shape_for_broadcast(beta, pre_h.shape[:-1])
-            pre_h = beta * pre_h
-            v_term = beta * v_term
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            pre_beta = shape_for_broadcast(beta_t, pre_h.shape)
+            pre_h = pre_beta * pre_h
+            term_beta = shape_for_broadcast(beta_t, v_term.shape, dim=0)
+            v_term = term_beta * v_term
 
         h_term = F.softplus(pre_h).sum(dim=-1)
 

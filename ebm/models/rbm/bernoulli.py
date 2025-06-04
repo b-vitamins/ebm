@@ -191,8 +191,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Apply temperature scaling
         if beta is not None:
-            beta = shape_for_broadcast(beta, pre_h.shape[:-1])
-            pre_h = beta * pre_h
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, pre_h.shape[:-1])
+            pre_h = beta_view * pre_h
 
         # Get probabilities
         prob_h = self.hidden_activation(pre_h)
@@ -232,8 +233,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Apply temperature scaling
         if beta is not None:
-            beta = shape_for_broadcast(beta, pre_v.shape[:-1])
-            pre_v = beta * pre_v
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, pre_v.shape[:-1])
+            pre_v = beta_view * pre_v
 
         # Get probabilities
         prob_v = self.visible_activation(pre_v)
@@ -288,8 +290,13 @@ class CenteredBernoulliRBM(BernoulliRBM):
                 "hidden_bias": -h_bias_term,
             }
             if beta is not None:
-                beta = shape_for_broadcast(beta, visible.shape[:-1])
-                parts = {k: beta * v for k, v in parts.items()}
+                beta_t = torch.as_tensor(
+                    beta, device=self.device, dtype=self.dtype
+                )
+                beta_view = shape_for_broadcast(
+                    beta_t, visible.shape[:-1], dim=0
+                )
+                parts = {k: beta_view * v for k, v in parts.items()}
             parts["total"] = sum(parts.values())
             return parts
 
@@ -297,8 +304,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
         energy = -(interaction + v_bias_term + h_bias_term)
 
         if beta is not None:
-            beta = shape_for_broadcast(beta, energy.shape)
-            energy = beta * energy
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, energy.shape, dim=0)
+            energy = beta_view * energy
 
         return energy
 
@@ -321,9 +329,11 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Apply temperature scaling if needed
         if beta is not None:
-            beta = shape_for_broadcast(beta, pre_h.shape[:-1])
-            pre_h = beta * pre_h
-            v_bias_term = beta * torch.einsum("...v,v->...", v, self.vbias)
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            pre_beta = shape_for_broadcast(beta_t, pre_h.shape)
+            pre_h = pre_beta * pre_h
+            bias_beta = shape_for_broadcast(beta_t, v.shape[:-1], dim=0)
+            v_bias_term = bias_beta * torch.einsum("...v,v->...", v, self.vbias)
         else:
             v_bias_term = torch.einsum("...v,v->...", v, self.vbias)
 
