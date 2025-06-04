@@ -78,6 +78,7 @@ class BernoulliRBM(RBMBase):
         -------
             Dictionary with score w.r.t. each parameter
         """
+        input_device = v.device
         v = self.prepare_input(v)
         v.requires_grad_(True)
 
@@ -98,7 +99,7 @@ class BernoulliRBM(RBMBase):
                 grad = torch.autograd.grad(f.sum(), param, retain_graph=True)[0]
                 scores[name] = -grad  # Negative because we want grad of log p
 
-        scores["visible"] = -score_v
+        scores["visible"] = -score_v.to(input_device)
 
         return scores
 
@@ -123,7 +124,25 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
     def _build_model(self) -> None:
         """Build model parameters including offset terms."""
-        super()._build_model()
+        # Weight and bias parameters
+        self.W = nn.Parameter(
+            torch.empty(self.num_hidden, self.num_visible, dtype=self.dtype)
+        )
+
+        if self.use_bias:
+            self.vbias = nn.Parameter(
+                torch.empty(self.num_visible, dtype=self.dtype)
+            )
+            self.hbias = nn.Parameter(
+                torch.empty(self.num_hidden, dtype=self.dtype)
+            )
+        else:
+            self.register_buffer(
+                "vbias", torch.zeros(self.num_visible, dtype=self.dtype)
+            )
+            self.register_buffer(
+                "hbias", torch.zeros(self.num_hidden, dtype=self.dtype)
+            )
 
         # Offset parameters
         self.v_offset = nn.Parameter(
@@ -132,6 +151,9 @@ class CenteredBernoulliRBM(BernoulliRBM):
         self.h_offset = nn.Parameter(
             torch.zeros(self.num_hidden, dtype=self.dtype)
         )
+
+        # Initialize all parameters
+        self._initialize_parameters()
 
     def _initialize_parameters(self) -> None:
         """Initialize parameters including offsets."""

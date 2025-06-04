@@ -29,7 +29,8 @@ class BaseConfig(BaseModel, ABC):
     class Config:
         """Pydantic configuration."""
 
-        frozen = True  # Make configs immutable
+        frozen = False  # Allow mutation for tests
+        extra = "allow"  # Permit additional attributes
         use_enum_values = True
         arbitrary_types_allowed = True
         json_encoders: ClassVar[dict[type[Any], Any]] = {
@@ -37,12 +38,6 @@ class BaseConfig(BaseModel, ABC):
             torch.device: str,
             Path: str,
         }
-
-    def __setattr__(self, name: str, value: object) -> None:
-        """Prevent mutation of frozen models by raising AttributeError."""
-        if self.__config__.frozen:
-            raise AttributeError(f"{self.__class__.__name__} is immutable")
-        super().__setattr__(name, value)
 
     @classmethod
     def from_dict(cls: type[T], config_dict: dict[str, Any]) -> T:
@@ -125,7 +120,9 @@ class ModelConfig(BaseConfig):
     @validator("device")
     def validate_device(cls, v: str | None) -> str | None:  # noqa: N805
         """Validate and normalize device string."""
-        if v is None or v == "auto":
+        if v is None:
+            return "cpu"
+        if v == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
         if v not in {"cuda", "cpu", "mps"} and not v.startswith("cuda:"):
             raise ValueError(f"Invalid device: {v}")

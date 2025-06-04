@@ -177,11 +177,19 @@ def shape_for_broadcast(
     -------
         Reshaped tensor
     """
-    if tensor.shape == target_shape:
-        return tensor
-
     # Handle scalar
     if tensor.dim() == 0:
+        return tensor
+
+    # Special case for 1D tensors matching first dim only
+    if (
+        tensor.dim() == 1
+        and len(target_shape) == 1
+        and tensor.shape[0] == target_shape[0]
+    ):
+        return tensor.reshape(*target_shape, 1)
+
+    if tensor.shape == target_shape:
         return tensor
 
     # Build new shape
