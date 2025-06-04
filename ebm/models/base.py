@@ -7,6 +7,7 @@ implementing various energy-based models.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,13 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
     energy-based models, including device management, logging, and
     serialization.
     """
+
+    def __new__(cls, *_args: Any, **_kwargs: Any) -> EnergyBasedModel:
+        """Create instance and initialize base classes."""
+        obj = super().__new__(cls)
+        nn.Module.__init__(obj)
+        LoggerMixin.__init__(obj)
+        return obj
 
     def __init__(self, config: ModelConfig):
         """Initialize the model.
@@ -69,9 +77,9 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         """Get model dtype."""
         return self.config.torch_dtype
 
-    @abstractmethod
     def _build_model(self) -> None:
-        """Build model architecture. Must be implemented by subclasses."""
+        """Build model architecture. Can be overridden by subclasses."""
+        raise NotImplementedError
 
     def energy(
         self,
@@ -273,6 +281,28 @@ class LatentVariableModel(EnergyBasedModel, ABC):
     This includes models like RBMs, VAEs, and other models that have
     a clear separation between visible and hidden/latent variables.
     """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Wrap subclass sampling methods to handle float betas."""
+        super().__init_subclass__(**kwargs)
+
+        def _wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+            def wrapper(
+                self: LatentVariableModel,
+                *args: Any,
+                beta: Tensor | float | None = None,
+                **kw: Any,
+            ) -> Tensor | tuple[Tensor, Tensor]:
+                if beta is not None and not isinstance(beta, Tensor):
+                    beta = torch.tensor(beta, device=args[0].device)
+                return func(self, *args, beta=beta, **kw)
+
+            return wrapper
+
+        if hasattr(cls, "sample_hidden"):
+            cls.sample_hidden = _wrap(cls.sample_hidden)
+        if hasattr(cls, "sample_visible"):
+            cls.sample_visible = _wrap(cls.sample_visible)
 
     @abstractmethod
     def sample_hidden(
