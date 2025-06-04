@@ -101,15 +101,15 @@ class DeviceManager:
 
         # Validate device
         if device.type == "cuda":
-            if not torch.cuda.is_available():
-                raise RuntimeError(
-                    "CUDA device requested but CUDA is not available"
-                )
             if (
                 device.index is not None
                 and device.index >= torch.cuda.device_count()
             ):
                 raise RuntimeError("CUDA device index out of range")
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    "CUDA device requested but CUDA is not available"
+                )
         if device.type == "mps" and not (
             hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
         ):
