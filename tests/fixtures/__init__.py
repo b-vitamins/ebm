@@ -8,6 +8,7 @@ from .configs import (
     training_config,
 )
 from .datasets import (
+    make_data_loader,
     make_structured_data,
     mini_mnist_dataset,
     synthetic_binary_data,
@@ -27,24 +28,21 @@ from .models import (
 )
 
 __all__ = [
-    # From configs
     "default_rbm_config",
     "gaussian_rbm_config",
+    "make_data_loader",
     "make_structured_data",
     "make_test_rbm",
     "mini_mnist_dataset",
     "mock_callback",
-    # From mocks
     "mock_data_loader",
     "mock_gradient_estimator",
     "mock_sampler",
     "pretrained_rbm",
     "sampler_configs",
-    # From models
     "simple_bernoulli_rbm",
     "small_gaussian_rbm",
     "small_rbm_config",
-    # From datasets
     "synthetic_binary_data",
     "synthetic_continuous_data",
     "training_config",
