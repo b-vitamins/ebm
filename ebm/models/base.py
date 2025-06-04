@@ -35,6 +35,8 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
             config: Model configuration
         """
         super().__init__()
+        # Initialize logging via LoggerMixin
+        LoggerMixin.__init__(self)
         self.config = config
         self._device_manager = DeviceManager(config.device)
 
@@ -71,7 +73,6 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
     def _build_model(self) -> None:
         """Build model architecture. Must be implemented by subclasses."""
 
-    @abstractmethod
     def energy(
         self,
         x: Tensor,
@@ -90,8 +91,8 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         -------
             Energy values of shape (batch_size,) or dict of components
         """
+        raise NotImplementedError
 
-    @abstractmethod
     def free_energy(self, v: Tensor, *, beta: Tensor | None = None) -> Tensor:
         """Compute free energy by marginalizing latent variables.
 
@@ -103,6 +104,7 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         -------
             Free energy values of shape (batch_size,)
         """
+        raise NotImplementedError
 
     def log_probability(
         self, x: Tensor, *, log_z: float | None = None
@@ -225,9 +227,9 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         return model
 
     @classmethod
-    @abstractmethod
     def get_config_class(cls) -> type[ModelConfig]:
         """Get configuration class for this model."""
+        raise NotImplementedError
 
     def reset_parameters(self) -> None:
         """Reset all model parameters to initial values."""
