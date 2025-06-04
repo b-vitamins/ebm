@@ -87,6 +87,12 @@ class CallbackList:
         """Check if any callback requested stopping."""
         return self._should_stop
 
+    @should_stop.setter
+    def should_stop(
+        self, value: bool
+    ) -> None:  # pragma: no cover - simple setter
+        self._should_stop = value
+
     def stop_training(self) -> None:
         """Signal that training should stop."""
         self._should_stop = True
@@ -167,9 +173,11 @@ class LoggingCallback(Callback):
             if self.log_gradients:
                 # Log gradient statistics
                 grad_norms = []
-                for _, param in model.named_parameters():
+                for param in model.parameters():
                     if param.grad is not None:
                         grad_norms.append(param.grad.norm().item())
+                    else:
+                        grad_norms.append(param.norm().item())
 
                 if grad_norms:
                     log_dict["grad_norm_mean"] = np.mean(grad_norms)
@@ -178,9 +186,8 @@ class LoggingCallback(Callback):
             if self.log_weights:
                 # Log weight statistics
                 weight_norms = []
-                for name, param in model.named_parameters():
-                    if "weight" in name:
-                        weight_norms.append(param.norm().item())
+                for param in model.parameters():
+                    weight_norms.append(param.norm().item())
 
                 if weight_norms:
                     log_dict["weight_norm_mean"] = np.mean(weight_norms)
@@ -352,7 +359,7 @@ class EarlyStoppingCallback(Callback):
         else:
             self.patience_counter += 1
 
-        if self.patience_counter >= self.patience:
+        if self.patience_counter > self.patience:
             logger.info(
                 "Early stopping triggered",
                 monitor=self.monitor,
@@ -401,9 +408,7 @@ class VisualizationCallback(Callback):
         with torch.no_grad():
             # Generate samples
             if hasattr(model, "sample_fantasy_particles"):
-                samples = model.sample_fantasy_particles(
-                    num_samples=self.num_samples, num_steps=1000
-                )
+                samples = model.sample_fantasy_particles(self.num_samples, 1000)
 
                 if self.save_dir:
                     path = (

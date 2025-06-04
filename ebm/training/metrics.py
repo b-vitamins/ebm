@@ -18,8 +18,7 @@ from ebm.models.base import EnergyBasedModel, LatentVariableModel
 
 CORR_DIM = 2
 MIN_HISTORY_LEN = 10
-PLATEAU_STD_WINDOW = 20
-THRESH_MULTIPLIER = 10
+PLATEAU_STD_WINDOW = 5
 
 
 @dataclass
@@ -156,7 +155,7 @@ class ModelEvaluator:
             raise TypeError("Reconstruction requires LatentVariableModel")
 
         # Reconstruct data
-        recon = self.model.reconstruct(data, num_steps=num_steps)
+        recon = self.model.reconstruct(data, num_steps)
 
         # Compute error
         if metric == "mse":
@@ -194,9 +193,7 @@ class ModelEvaluator:
 
         # Generate importance samples
         if hasattr(self.model, "sample_fantasy_particles"):
-            samples = self.model.sample_fantasy_particles(
-                num_samples=num_samples, num_steps=1000
-            )
+            samples = self.model.sample_fantasy_particles(num_samples, 1000)
             sample_energies = self.model.free_energy(samples)
 
             # Simple importance sampling estimate
@@ -234,7 +231,7 @@ class ModelEvaluator:
         # Model energy
         if hasattr(self.model, "sample_fantasy_particles"):
             model_samples = self.model.sample_fantasy_particles(
-                num_samples=num_model_samples, num_steps=1000
+                num_model_samples, 1000
             )
             model_energy = self.model.free_energy(model_samples)
         else:
@@ -435,9 +432,9 @@ class TrainingDynamicsAnalyzer:
         if recent_std < threshold:
             # Find when plateau started
             for i in range(len(values) - 1, -1, -1):
-                if abs(values[i] - values[-1]) > threshold * THRESH_MULTIPLIER:
-                    return True, len(values) - i - 1
-            return True, len(values)
+                if abs(values[i] - values[-1]) > threshold:
+                    return True, max(len(values) - i - 2, 0)
+            return True, len(values) - 1
 
         return False, None
 

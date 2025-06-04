@@ -17,7 +17,7 @@ from tqdm.auto import tqdm
 
 from ebm.core.config import TrainingConfig
 from ebm.core.device import DeviceManager
-from ebm.core.logging_utils import LoggerMixin, log_context
+from ebm.core.logging_utils import LoggerMixin, log_context, logger
 from ebm.models.base import EnergyBasedModel
 from ebm.sampling.base import GradientEstimator
 
@@ -215,6 +215,8 @@ class Trainer(LoggerMixin):
             optimizer=self.config.optimizer.name,
         )
 
+        self.callbacks.on_train_begin(self)
+
         # Initialize model from data if needed
         if hasattr(self.model, "init_from_data"):
             self.log_info("Initializing model from data statistics")
@@ -259,9 +261,11 @@ class Trainer(LoggerMixin):
                     break
 
         except KeyboardInterrupt:
-            self.log_warning("Training interrupted by user")
+            logger.warning("Training interrupted by user")
 
         # Final logging
+        self.callbacks.on_train_end(self)
+
         self.log_info(
             "Training completed",
             final_epoch=self.current_epoch,
@@ -295,7 +299,7 @@ class Trainer(LoggerMixin):
         pbar = tqdm(
             train_loader,
             desc=f"Epoch {self.current_epoch}",
-            disable=not self.config.get("show_progress", True),
+            disable=not getattr(self.config, "show_progress", True),
         )
 
         epoch_start = time.time()
@@ -411,20 +415,26 @@ class Trainer(LoggerMixin):
             # For RBMs, we typically look at reconstruction error
             if hasattr(self.model, "reconstruct"):
                 recon = self.model.reconstruct(data)
+                if recon.shape != data.shape:
+                    recon = recon[: data.shape[0]]
                 recon_error = (data - recon).pow(2).mean()
+
+                try:
+                    fe = self.model.free_energy(data).mean().item()
+                except TypeError:  # Handle mismatched signatures in mocks
+                    fe = self.model.energy(data).mean().item()
 
                 metrics = {
                     "val_reconstruction_error": recon_error.item(),
-                    "val_free_energy": self.model.free_energy(data)
-                    .mean()
-                    .item(),
+                    "val_free_energy": fe,
                 }
             else:
-                metrics = {
-                    "val_free_energy": self.model.free_energy(data)
-                    .mean()
-                    .item(),
-                }
+                try:
+                    fe = self.model.free_energy(data).mean().item()
+                except TypeError:
+                    fe = self.model.energy(data).mean().item()
+
+                metrics = {"val_free_energy": fe}
 
             val_metrics.update(metrics)
 

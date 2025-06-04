@@ -29,7 +29,7 @@ class BaseConfig(BaseModel, ABC):
     class Config:
         """Pydantic configuration."""
 
-        frozen = True
+        frozen = False
         extra = "allow"  # Permit additional attributes
         use_enum_values = True
         arbitrary_types_allowed = True
