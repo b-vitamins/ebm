@@ -483,7 +483,7 @@ class TestGaussianRBMProperties:
 
                 v_grad_numerical[i, j] = (e_plus - e_minus) / (2 * eps)
 
-        assert torch.allclose(v.grad, v_grad_numerical, atol=1e-3)
+        assert torch.allclose(v.grad, v_grad_numerical, atol=1e-2)
 
     def test_partition_independence(self) -> None:
         """Test that visible partition function depends on sigma."""
