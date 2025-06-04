@@ -106,7 +106,10 @@ class GaussianBernoulliRBM(RBMBase):
         -------
             Sampled visible states (and mean if return_prob=True)
         """
-        hidden = self.prepare_input(hidden)
+        # Hidden units should not be whitened even when using
+        # :class:`WhitenedGaussianRBM`.  Use the base implementation to simply
+        # move the tensor to the correct device and dtype.
+        hidden = super().prepare_input(hidden)
 
         # Compute mean of Gaussian
         mean_v = F.linear(hidden, self.W.t(), self.vbias)
@@ -169,7 +172,7 @@ class GaussianBernoulliRBM(RBMBase):
         # Interaction term between visible and hidden units. The same label is
         # used for both operands to perform a proper dot product.
         interaction = torch.einsum(
-            "...h,...h->...", F.linear(v_normalized, self.W.t()), hidden
+            "...h,...h->...", F.linear(v_normalized, self.W), hidden
         )
 
         if return_parts:

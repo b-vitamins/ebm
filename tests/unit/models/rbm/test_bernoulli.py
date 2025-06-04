@@ -418,7 +418,7 @@ class TestBernoulliRBMProperties:
             rbm.hbias.data = torch.tensor([0.2, -0.2])
 
         # Compute partition function by brute force
-        log_z = -float("inf")
+        log_z = torch.tensor(float("-inf"))
 
         for v_bits in range(4):  # 2^2 visible states
             for h_bits in range(4):  # 2^2 hidden states
@@ -430,7 +430,7 @@ class TestBernoulliRBMProperties:
                 )
 
                 energy = rbm.joint_energy(v, h)
-                log_z = torch.logaddexp(log_z, -energy.item())
+                log_z = torch.logaddexp(log_z, -energy.squeeze())
 
         # Test that probabilities sum to 1
         total_prob = 0.0

@@ -35,7 +35,7 @@ class BernoulliRBM(RBMBase):
 
     def _sample_from_prob(self, prob: Tensor) -> Tensor:
         """Sample from Bernoulli distribution."""
-        return torch.bernoulli(prob)
+        return (torch.rand_like(prob) < prob).float()
 
     def log_probability_ratio(
         self, v1: Tensor, v2: Tensor, *, beta: Tensor | None = None
@@ -56,11 +56,20 @@ class BernoulliRBM(RBMBase):
         v1 = self.prepare_input(v1)
         v2 = self.prepare_input(v2)
 
-        # Difference in free energies gives log probability ratio
-        f1 = self.free_energy(v1, beta=beta)
-        f2 = self.free_energy(v2, beta=beta)
+        # Difference in free energies gives log probability ratio.  We compute
+        # the free energies at unit temperature and apply the temperature
+        # scaling afterwards so that ``beta`` simply rescales the result.
+        f1 = self.free_energy(v1)
+        f2 = self.free_energy(v2)
 
-        return f2 - f1  # log(p(v1)/p(v2)) = F(v2) - F(v1)
+        log_ratio = f2 - f1
+
+        if beta is not None:
+            beta_t = torch.as_tensor(beta, device=self.device, dtype=self.dtype)
+            beta_view = shape_for_broadcast(beta_t, log_ratio.shape, dim=0)
+            log_ratio = beta_view * log_ratio
+
+        return log_ratio  # log(p(v1)/p(v2)) = F(v2) - F(v1)
 
     def score_function(
         self, v: Tensor, *, beta: Tensor | None = None
@@ -278,7 +287,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Compute energy components
         interaction = torch.einsum(
-            "...h,...v->...", h_centered, F.linear(v_centered, self.W)
+            "...h,...h->...", h_centered, F.linear(v_centered, self.W)
         )
         v_bias_term = torch.einsum("...v,v->...", visible, self.vbias)
         h_bias_term = torch.einsum("...h,h->...", hidden, self.hbias)
@@ -339,7 +348,13 @@ class CenteredBernoulliRBM(BernoulliRBM):
 
         # Free energy computation
         hidden_term = F.softplus(pre_h).sum(dim=-1)
-        return -v_bias_term - hidden_term
+
+        # Contribution from hidden offsets
+        offset_term = torch.einsum(
+            "h,...h->...", self.h_offset, F.linear(v_centered, self.W)
+        )
+
+        return -v_bias_term + offset_term - hidden_term
 
     def update_offsets(
         self, v_mean: Tensor, h_mean: Tensor, momentum: float = 0.9
@@ -387,7 +402,7 @@ class CenteredBernoulliRBM(BernoulliRBM):
             self.v_offset.copy_(mean_v)
 
             # Adjust visible bias to account for offset
-            self.vbias.add_(F.linear(self.h_offset, self.W))
+            self.vbias.add_(torch.matmul(self.h_offset, self.W))
 
 
 @register_model("sparse_rbm", aliases=["srbm"])

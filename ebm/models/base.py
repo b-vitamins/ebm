@@ -119,7 +119,13 @@ class EnergyBasedModel(nn.Module, LoggerMixin, ABC):
         -------
             Log probabilities of shape (batch_size,)
         """
-        energy = self.energy(x)
+        # ``log_probability`` can be called either with concatenated visible and
+        # hidden states or with only visible states.  In the latter case we
+        # compute the free energy of the visible configuration.
+        if hasattr(self, "num_visible") and x.shape[-1] == self.num_visible:
+            energy = self.free_energy(x)
+        else:
+            energy = self.energy(x)
         log_prob = -energy
 
         if log_z is not None:
