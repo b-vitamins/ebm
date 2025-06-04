@@ -117,8 +117,8 @@ class ModelConfig(BaseConfig):
         None, description="Random seed for reproducibility"
     )
 
-    @validator("device")
-    def validate_device(cls, v: str | None) -> str | None:  # noqa: N805
+    @validator("device", pre=True, always=True)
+    def validate_device(cls, v: str | None) -> str:  # noqa: N805
         """Validate and normalize device string."""
         if v is None:
             return "cpu"

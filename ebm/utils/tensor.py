@@ -181,13 +181,13 @@ def shape_for_broadcast(
     if tensor.dim() == 0:
         return tensor
 
-    # Special case for 1D tensors matching first dim only
+    # Special case for 1D tensors matching first dimension
     if (
         tensor.dim() == 1
         and len(target_shape) == 1
         and tensor.shape[0] == target_shape[0]
     ):
-        return tensor.reshape(*target_shape, 1)
+        return tensor.reshape(*target_shape)
 
     if tensor.shape == target_shape:
         return tensor
